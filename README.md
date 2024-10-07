@@ -161,12 +161,6 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 - **Exporting** - Download extracted data as CSV.
 - **Chained extraction** - Reference previous columns in your extraction questions using brackets "What are the treatments for `{disease}`?".
 
-### Coming soon:
-
-- **Save to memory** - Save extracted data to a WhyHow knowledge graph.
-- **Natural language querying** - Query over extracted data using natural language.
-- **Query functions** - Activate custom functions such as aggregations, summaries, etc., using simple annotation like `#average`.
-
 ---
 
 ## Concepts
