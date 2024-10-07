@@ -1,0 +1,68 @@
+.overlay {
+  position: fixed;
+  z-index: 10000;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+
+  &.horizontal {
+    cursor: col-resize;
+  }
+
+  &.vertical {
+    cursor: row-resize;
+  }
+}
+
+.handle {
+  position: absolute;
+  z-index: 1;
+  background: transparent;
+  transition: background-color 150ms ease 150ms;
+  --active-background: color-mix(
+    in srgb,
+    var(--mantine-color-blue-filled) 50%,
+    transparent
+  );
+
+  &.active {
+    background-color: var(--active-background);
+  }
+
+  &:hover {
+    background-color: var(--active-background);
+  }
+
+  &.top {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 5px;
+    cursor: ns-resize;
+  }
+
+  &.right {
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 5px;
+    cursor: ew-resize;
+  }
+
+  &.bottom {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 5px;
+    cursor: ns-resize;
+  }
+
+  &.left {
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 5px;
+    cursor: ew-resize;
+  }
+}
