@@ -158,7 +158,7 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 - **Customizable extraction rules** - Define rules to guide the extraction process and ensure data quality.
 - **Custom formatting** - Control the output format of your extracted data.
 - **Filtering** - Filter documents based on metadata or extracted data.
-- **Exporting** - Download extracted data as CSV.
+- **Exporting as CSV or Triples ** - Download extracted data as CSV or in Graph Triples.
 - **Chained extraction** - Reference previous columns in your extraction questions using brackets "What are the treatments for `{disease}`?".
 
 ### Coming soon:
