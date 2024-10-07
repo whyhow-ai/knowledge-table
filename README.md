@@ -193,7 +193,8 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 
 - **Contract Management**: Extract key information such as party names, effective dates, and renewal dates.
 - **Financial Reports**: Extract financial data from annual reports or earnings statements.
-- **Compliance Monitoring**: Track clauses or regulations from legal documents.
+- **Research Extraction**: Extract information with key questions of a range of research reports
+- **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
 
 ---
 
