@@ -1,0 +1,23 @@
+#root {
+  min-height: 100dvh;
+}
+
+.mantine-Button-section > .tabler-icon,
+.mantine-Menu-itemSection > .tabler-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.mantine-ActionIcon-icon > .tabler-icon {
+  width: 75%;
+  height: 75%;
+}
+
+.mantine-ThemeIcon-root > .tabler-icon {
+  width: 70%;
+  height: 70%;
+}
+
+.tabler-icon {
+  stroke-width: 1.5;
+}

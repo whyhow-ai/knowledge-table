@@ -1,0 +1,15 @@
+.menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-xs);
+  font-weight: 500;
+  padding: 4px var(--mantine-spacing-xs);
+  margin: 0 calc(var(--mantine-spacing-xs) * -1);
+  border-radius: var(--mantine-radius-default);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mantine-color-gray-light-hover);
+  }
+}
