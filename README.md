@@ -158,14 +158,8 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 - **Customizable extraction rules** - Define rules to guide the extraction process and ensure data quality.
 - **Custom formatting** - Control the output format of your extracted data.
 - **Filtering** - Filter documents based on metadata or extracted data.
-- **Exporting** - Download extracted data as CSV.
+- **Exporting as CSV or Triples** - Download extracted data as CSV or graph triples.
 - **Chained extraction** - Reference previous columns in your extraction questions using brackets "What are the treatments for `{disease}`?".
-
-### Coming soon:
-
-- **Save to memory** - Save extracted data to a WhyHow knowledge graph.
-- **Natural language querying** - Query over extracted data using natural language.
-- **Query functions** - Activate custom functions such as aggregations, summaries, etc., using simple annotation like `#average`.
 
 ---
 
@@ -193,7 +187,8 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 
 - **Contract Management**: Extract key information such as party names, effective dates, and renewal dates.
 - **Financial Reports**: Extract financial data from annual reports or earnings statements.
-- **Compliance Monitoring**: Track clauses or regulations from legal documents.
+- **Research Extraction**: Extract information with key questions of a range of research reports
+- **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
 
 ---
 
