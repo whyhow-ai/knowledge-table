@@ -5,7 +5,7 @@ import pathlib
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowledge_table_api.routers import document, query
+from knowledge_table_api.routers import document, query, graph
 
 app = FastAPI()
 
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(document.router)
 app.include_router(query.router)
+app.include_router(graph.router)
 
 
 def locate() -> None:

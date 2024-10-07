@@ -80,3 +80,76 @@ export async function runQuery(
   });
   return answerSchema.parse(await result.json());
 }
+
+// Helper function to convert any value to a string
+function convertToString(value: any): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+// Helper function to recursively convert all values in an object to strings
+function convertObjectToStrings(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(convertObjectToStrings);
+  } else if (typeof obj === 'object' && obj !== null) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [key, convertObjectToStrings(value)])
+    );
+  } else {
+    return convertToString(obj);
+  }
+}
+
+// Export triples
+export async function exportTriples(tableData: any) {
+  
+  console.log('Exporting triples with data:', tableData);
+  
+  // Convert all data to strings
+  const stringifiedData = convertObjectToStrings(tableData);
+  
+  console.log('Stringified data:', stringifiedData);
+  
+  try {
+    const response = await fetch("http://localhost:8000/graph/export-triples", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(stringifiedData) // Send the stringified data directly
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    console.log('Received blob:', blob);
+
+    // Handle the blob (e.g., download it or process it further)
+    // For example, you could create a link to download the blob:
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'triples.json'; 
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url); 
+
+  } catch (error) {
+    console.error('Error exporting triples:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error;
+  }
+}

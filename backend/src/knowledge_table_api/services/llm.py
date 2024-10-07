@@ -15,6 +15,7 @@ from knowledge_table_api.models.llm_response import (
     StrArrayResponseModel,
 )
 from knowledge_table_api.models.query import Rule
+from knowledge_table_api.models.graph import Table
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -302,3 +303,66 @@ async def decompose_query(query: str) -> dict[str, Any]:
     )
     print(sub_queries)
     return {"sub-queries": sub_queries}
+
+async def generate_schema(data: Table) -> dict[str, Any]:
+    """Generate a schema for the table based on column information and questions."""
+    logger.info("Generating schema.")
+
+    prepared_data = {
+        "documents": list(set(row.document.name for row in data.rows)),
+        "columns": [
+            {
+                "id": column.id,
+                "entity_type": column.prompt.entityType,
+                "type": column.prompt.type,
+                "question": column.prompt.query
+            }
+            for column in data.columns
+        ]
+    }
+
+    # Extract entity types from the prepared data
+    entity_types = [column['entity_type'] for column in prepared_data['columns']]
+
+    schema_prompt = f"""
+    Given the following information about columns in a knowledge table:
+    
+    Documents: {', '.join(prepared_data['documents'])}
+    Columns: {json.dumps(prepared_data['columns'], indent=2)}
+    
+    Generate a schema that includes the following relationships:
+    1. From Document to each entity type (e.g., "Document, contains, Disease")
+    2. Between entity types (e.g., "Disease, treated_by, Treatment")
+    3. Ensure that each entity type is used in at least one relationship with "Document"
+    4. Create meaningful relationships based on the column information, entity types, and questions provided
+
+    The output should be a JSON object containing:
+    - 'relationships': An array of objects, each containing 'head', 'relation', and 'tail'
+
+    For each relationship:
+    - Use the actual entity types (e.g., "Disease", "Treatment") instead of column IDs
+    - Ensure that the head and tail can only be the names of the columns provided: {', '.join(entity_types)}
+    - Create meaningful relationships based on the column information, entity types, and questions provided
+    - Ensure that each entity type is used in at least one relationship with "Document"
+    - Create a relationship between entity types if it makes sense based on the questions
+
+    Do not provide any supporting information. Ensure the output is in plain JSON and parsable via `json.loads()`.
+
+    Schema:"""
+
+    schema_response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": schema_prompt}],
+        max_tokens=2000,
+    )
+
+    # Check if the response is valid
+    if not schema_response.choices or not schema_response.choices[0].message.content:
+        logger.error("Received an empty response from the OpenAI API.")
+        return {"schema": {"relationships": []}}
+
+    try:
+        return {"schema": json.loads(schema_response.choices[0].message.content)}
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON response: {e}")
+        return {"schema": {"relationships": []}}
