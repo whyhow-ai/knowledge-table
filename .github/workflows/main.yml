@@ -1,0 +1,51 @@
+name: Backend unit tests + static analysis
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ./backend[dev]
+
+      - name: Lint with flake8
+        run: |
+          cd backend && flake8 src tests
+
+      - name: Check style with black
+        run: |
+          cd backend && black --check src tests
+
+      - name: Run security check
+        run: |
+          cd backend && bandit -qr -c pyproject.toml src
+
+      - name: Run import check
+        run: |
+          cd backend && isort --check src tests
+
+      - name: Run mypy
+        run: |
+          cd backend && mypy src
+
+      - name: Run unit tests with pytest
+        run: |
+          cd backend && pytest --color=yes tests
