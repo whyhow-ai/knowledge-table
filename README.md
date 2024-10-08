@@ -6,6 +6,7 @@ Our goal is to provide a familiar, spreadsheet-like interface for business users
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/whyhow-ai/knowledge-table)](https://github.com/whyhow-ai/knowledge-table/issues)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table-demo.whyhow.ai/).
 

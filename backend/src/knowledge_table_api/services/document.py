@@ -1,19 +1,19 @@
 """Document service."""
 
+import contextlib
 import logging
 import os
 import tempfile
-from typing import List, Optional
 import uuid
-import contextlib
+from typing import Generator, List, Optional
 
+from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     Docx2txtLoader,
     PyPDFLoader,
     TextLoader,
 )
-from langchain.schema import Document as LangchainDocument
 
 from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
 
@@ -24,10 +24,12 @@ UNSTRUCTURED_API_KEY = os.getenv("UNSTRUCTURED_API_KEY")
 
 if UNSTRUCTURED_API_KEY:
     try:
+        from unstructured.documents.elements import NarrativeText, Text, Title
         from unstructured.partition.auto import partition
-        from unstructured.documents.elements import Text, Title, NarrativeText
     except ImportError:
-        logger.warning("Unstructured is not installed. Install with `pip install .[unstructured]`")
+        logger.warning(
+            "Unstructured is not installed. Install with `pip install .[unstructured]`"
+        )
         partition = None
         Text = Title = NarrativeText = None
 else:
@@ -45,8 +47,9 @@ loader_types = {
     "text/plain": TextLoader,
 }
 
+
 @contextlib.contextmanager
-def temp_file(content: bytes, suffix: str):
+def temp_file(content: bytes, suffix: str) -> Generator[str, None, None]:
     """Context manager for creating and cleaning up temporary files."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
         temp_file.write(content)
@@ -58,15 +61,20 @@ def temp_file(content: bytes, suffix: str):
             os.remove(temp_file_path)
             logger.info(f"Temporary file {temp_file_path} has been deleted.")
 
+
 def unstructured_loader(file_path: str) -> List[LangchainDocument]:
     """
     Unstructured loader for processing documents.
 
-    Args:
-        file_path (str): Path to the file to be processed.
+    Parameters
+    ----------
+    file_path : str
+        Path to the file to be processed.
 
-    Returns:
-        List[LangchainDocument]: List of processed document chunks.
+    Returns
+    -------
+    List[LangchainDocument]
+        List of processed document chunks.
     """
     elements = partition(filename=file_path)
     docs = []
@@ -76,16 +84,25 @@ def unstructured_loader(file_path: str) -> List[LangchainDocument]:
     for element in elements:
         if isinstance(element, (Text, Title, NarrativeText)):
             current_text += element.text + "\n"
-        
+
         if isinstance(element, Title) and current_text:
-            docs.append(LangchainDocument(page_content=current_text, metadata={"page": current_page}))
+            docs.append(
+                LangchainDocument(
+                    page_content=current_text, metadata={"page": current_page}
+                )
+            )
             current_page += 1
             current_text = element.text + "\n"
 
     if current_text:
-        docs.append(LangchainDocument(page_content=current_text, metadata={"page": current_page}))
+        docs.append(
+            LangchainDocument(
+                page_content=current_text, metadata={"page": current_page}
+            )
+        )
 
     return docs
+
 
 async def upload_document(
     content_type: Optional[str], filename: str, file_content: bytes
@@ -93,23 +110,31 @@ async def upload_document(
     """
     Upload and process a document.
 
-    Args:
-        content_type (Optional[str]): MIME type of the uploaded file.
-        filename (str): Name of the uploaded file.
-        file_content (bytes): Content of the uploaded file.
+    Parameters
+    ----------
+    content_type : Optional[str]
+        MIME type of the uploaded file.
+    filename : str
+        Name of the uploaded file.
+    file_content : bytes
+        Content of the uploaded file.
 
-    Returns:
-        Optional[str]: Document ID if successful, None if an error occurred.
+    Returns
+    -------
+    Optional[str]
+        Document ID if successful, None if an error occurred.
 
-    Raises:
-        ValueError: If content type is missing or unsupported.
+    Raises
+    ------
+    ValueError
+        If content type is missing or unsupported.
     """
     document_id = uuid.uuid4().hex
     logger.info(f"Created document_id: {document_id}")
 
     if content_type is None:
         raise ValueError("Content type is missing")
-    
+
     loader = loader_types.get(content_type)
     if loader is None:
         raise ValueError(f"Unsupported file type: {content_type}")
@@ -117,7 +142,9 @@ async def upload_document(
     logger.info(f"{content_type} detected, using loader: {loader}")
 
     try:
-        with temp_file(file_content, os.path.splitext(str(filename))[1]) as temp_file_path:
+        with temp_file(
+            file_content, os.path.splitext(str(filename))[1]
+        ) as temp_file_path:
             logger.info(f"Temp file stored at: {temp_file_path}")
             logger.info("Processing document.")
 
@@ -126,7 +153,9 @@ async def upload_document(
                 try:
                     docs = unstructured_loader(temp_file_path)
                 except Exception as e:
-                    logger.error(f"Unstructured loader failed: {e}. Falling back to default loader.")
+                    logger.error(
+                        f"Unstructured loader failed: {e}. Falling back to default loader."
+                    )
                     document_loader = loader(temp_file_path)
                     docs = document_loader.load()
             else:
