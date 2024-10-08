@@ -1,0 +1,40 @@
+name: Check Changelog
+on:
+  pull_request
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  Check-Changelog:
+    name: Check Changelog Action
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Use paths-filter to detect changes in specific subfolders
+      - name: Filter paths
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+      # Check changelog for backend if there are changes in backend
+      - name: Check Changelog for backend
+        if: steps.changes.outputs.backend == 'true'
+        uses: tarides/changelog-check-action@v2
+        with:
+          changelog: 'backend/CHANGELOG.md'
+
+      # Check changelog for frontend if there are changes in frontend
+      - name: Check Changelog for frontend
+        if: steps.changes.outputs.frontend == 'true'
+        uses: tarides/changelog-check-action@v2
+        with:
+          changelog: 'frontend/CHANGELOG.md'

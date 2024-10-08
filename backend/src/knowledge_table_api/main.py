@@ -5,7 +5,7 @@ import pathlib
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowledge_table_api.routers import document, query, graph
+from knowledge_table_api.routers import document, graph, query
 
 app = FastAPI()
 
