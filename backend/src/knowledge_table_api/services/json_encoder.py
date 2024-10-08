@@ -1,11 +1,19 @@
+"""JSON Encoder."""
+
 import json
 from datetime import date, datetime
 from decimal import Decimal
-from whyhow import Chunk, ChunkMetadata
+from typing import Any, Dict
+
 import numpy as np
+from whyhow import Chunk, ChunkMetadata
+
 
 class CustomJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
+    """Custom JSON encoder that handles a variety of data types."""
+
+    def default(self, obj: Any) -> Any:
+        """Override the default JSON encoding behavior to handle additional data types."""
         if isinstance(obj, bool):
             return str(obj).lower()
         elif isinstance(obj, (datetime, date)):
@@ -24,30 +32,42 @@ class CustomJSONEncoder(json.JSONEncoder):
             return int(obj)
         elif isinstance(obj, np.floating):
             return float(obj)
-        elif hasattr(obj, 'to_dict'):
+        elif hasattr(obj, "to_dict"):
             return obj.to_dict()
-        elif hasattr(obj, '__dict__'):
-            return {key: self.default(value) for key, value in obj.__dict__.items()}
+        elif hasattr(obj, "__dict__"):
+            return {
+                key: self.default(value) for key, value in obj.__dict__.items()
+            }
         try:
             return super().default(obj)
         except TypeError:
             return str(obj)
 
-    def encode_chunk(self, chunk: Chunk):
+    def encode_chunk(self, chunk: Chunk) -> Dict[str, Any]:
+        """Encode a Chunk object into a JSON-serializable dictionary."""
         return {
             "chunk_id": chunk.chunk_id,
-            "created_at": chunk.created_at.isoformat() if chunk.created_at else None,
-            "updated_at": chunk.updated_at.isoformat() if chunk.updated_at else None,
+            "created_at": (
+                chunk.created_at.isoformat() if chunk.created_at else None
+            ),
+            "updated_at": (
+                chunk.updated_at.isoformat() if chunk.updated_at else None
+            ),
             "document_id": chunk.document_id,
             "workspace_ids": chunk.workspace_ids,
-            "metadata": self.encode_chunk_metadata(chunk.metadata) if chunk.metadata else None,
+            "metadata": (
+                self.encode_chunk_metadata(chunk.metadata)
+                if chunk.metadata
+                else None
+            ),
             "content": chunk.content,
             "embedding": self.default(chunk.embedding),
             "tags": chunk.tags,
-            "user_metadata": chunk.user_metadata
+            "user_metadata": chunk.user_metadata,
         }
 
-    def encode_chunk_metadata(self, metadata: ChunkMetadata):
+    def encode_chunk_metadata(self, metadata: ChunkMetadata) -> Dict[str, Any]:
+        """Encode ChunkMetadata object into a JSON-serializable dictionary."""
         return {
             "language": metadata.language,
             "length": metadata.length,
@@ -56,5 +76,5 @@ class CustomJSONEncoder(json.JSONEncoder):
             "index": metadata.index,
             "page": metadata.page,
             "start": metadata.start,
-            "end": metadata.end
+            "end": metadata.end,
         }

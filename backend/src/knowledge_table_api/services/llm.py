@@ -8,6 +8,7 @@ from typing import Any, Literal
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from knowledge_table_api.models.graph import Table
 from knowledge_table_api.models.llm_response import (
     BoolResponseModel,
     IntArrayResponseModel,
@@ -15,7 +16,6 @@ from knowledge_table_api.models.llm_response import (
     StrArrayResponseModel,
 )
 from knowledge_table_api.models.query import Rule
-from knowledge_table_api.models.graph import Table
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -304,6 +304,7 @@ async def decompose_query(query: str) -> dict[str, Any]:
     print(sub_queries)
     return {"sub-queries": sub_queries}
 
+
 async def generate_schema(data: Table) -> dict[str, Any]:
     """Generate a schema for the table based on column information and questions."""
     logger.info("Generating schema.")
@@ -315,21 +316,31 @@ async def generate_schema(data: Table) -> dict[str, Any]:
                 "id": column.id,
                 "entity_type": column.prompt.entityType,
                 "type": column.prompt.type,
-                "question": column.prompt.query
+                "question": column.prompt.query,
             }
             for column in data.columns
-        ]
+        ],
     }
 
+    if not isinstance(prepared_data["columns"], list):
+        raise TypeError("prepared_data['columns'] must be a list")
+
+    if not isinstance(prepared_data["documents"], list) or not all(
+        isinstance(doc, str) for doc in prepared_data["documents"]
+    ):
+        raise TypeError("prepared_data['documents'] must be a list of strings")
+
     # Extract entity types from the prepared data
-    entity_types = [column['entity_type'] for column in prepared_data['columns']]
+    entity_types = [
+        column["entity_type"] for column in prepared_data["columns"]
+    ]
 
     schema_prompt = f"""
     Given the following information about columns in a knowledge table:
-    
+
     Documents: {', '.join(prepared_data['documents'])}
     Columns: {json.dumps(prepared_data['columns'], indent=2)}
-    
+
     Generate a schema that includes the following relationships:
     1. From Document to each entity type (e.g., "Document, contains, Disease")
     2. Between entity types (e.g., "Disease, treated_by, Treatment")
@@ -357,12 +368,17 @@ async def generate_schema(data: Table) -> dict[str, Any]:
     )
 
     # Check if the response is valid
-    if not schema_response.choices or not schema_response.choices[0].message.content:
+    if (
+        not schema_response.choices
+        or not schema_response.choices[0].message.content
+    ):
         logger.error("Received an empty response from the OpenAI API.")
         return {"schema": {"relationships": []}}
 
     try:
-        return {"schema": json.loads(schema_response.choices[0].message.content)}
+        return {
+            "schema": json.loads(schema_response.choices[0].message.content)
+        }
     except json.JSONDecodeError as e:
         logger.error(f"Failed to decode JSON response: {e}")
         return {"schema": {"relationships": []}}
