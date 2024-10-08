@@ -1,4 +1,3 @@
-
 # Knowledge Table
 
 **Knowledge Table** is an open-source package designed to simplify extracting and exploring structured data from unstructured documents. It enables the creation of structured knowledge representations, such as tables and graphs, using a natural language query interface. With customizable extraction rules, fine-tuned formatting options, and data traceability through provenance displayed in the UI, Knowledge Table is adaptable to various use cases.
@@ -10,9 +9,7 @@ Our goal is to provide a familiar, spreadsheet-like interface for business users
 
 For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table-demo.whyhow.ai/).
 
-
 https://github.com/user-attachments/assets/0129ea64-173b-461b-a525-5d870a1e2f41
-
 
 To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/).
 
@@ -118,7 +115,7 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 
    For full installation (including Unstructured and dev tools):
    ```sh
-   pip install .[full]
+   pip install -r requirements.txt
    ```
 
 5. **Start the backend:**
