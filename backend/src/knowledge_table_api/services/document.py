@@ -15,21 +15,28 @@ from langchain_community.document_loaders import (
 )
 from langchain.schema import Document as LangchainDocument
 
-try:
-    from unstructured.partition.auto import partition
-    from unstructured.documents.elements import Text, Title, NarrativeText
-except ImportError:
-    raise ImportError("Unstructured is not installed. Install with `pip install .[unstructured]`")
-
 from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+UNSTRUCTURED_API_KEY = os.getenv("UNSTRUCTURED_API_KEY")
+
+if UNSTRUCTURED_API_KEY:
+    try:
+        from unstructured.partition.auto import partition
+        from unstructured.documents.elements import Text, Title, NarrativeText
+    except ImportError:
+        logger.warning("Unstructured is not installed. Install with `pip install .[unstructured]`")
+        partition = None
+        Text = Title = NarrativeText = None
+else:
+    partition = None
+    Text = Title = NarrativeText = None
+
 # Constants
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
-UNSTRUCTURED_API_KEY = os.getenv("UNSTRUCTURED_API_KEY")
 
 loader_types = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": Docx2txtLoader,

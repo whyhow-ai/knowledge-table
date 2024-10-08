@@ -115,7 +115,7 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 
    For full installation (including Unstructured and dev tools):
    ```sh
-   pip install -r requirements.txt
+   pip install .[full]
    ```
 
 5. **Start the backend:**
