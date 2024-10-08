@@ -101,8 +101,24 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 
 4. **Install the dependencies:**
 
+   For basic installation:
    ```sh
-   pip install -r requirements.txt
+   pip install .
+   ```
+
+   For installation with Unstructured support:
+   ```sh
+   pip install .[unstructured]
+   ```
+
+   For installation with development tools:
+   ```sh
+   pip install .[dev]
+   ```
+
+   For full installation (including Unstructured and dev tools):
+   ```sh
+   pip install .[full]
    ```
 
 5. **Start the backend:**
@@ -151,6 +167,27 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 
 > **Note:** This version of this project uses OpenAI as our initial provider, but the system is designed to be flexible and can be extended to support other AI providers. If you prefer a different provider, please create an issue, submit a PR, or check back soon for updates.
 
+---
+
+## Development
+
+To set up the project for development:
+
+1. Clone the repository
+2. Install the project with development dependencies:
+   ```sh
+   pip install .[dev]
+   ```
+3. Run tests:
+   ```sh
+   pytest
+   ```
+4. Run linters:
+   ```sh
+   flake8
+   black .
+   isort .
+   ```
 ---
 
 ## Features
@@ -206,6 +243,29 @@ Knowledge Table is built to be flexible and customizable, allowing you to extend
 - **Use custom embeddings**.
 - **Scale for larger workloads**.
 
+---
+
+## Optional Integrations
+
+### Unstructured API
+
+Knowledge Table offers optional integration with the Unstructured API for enhanced document processing capabilities. This integration allows for more advanced parsing and extraction from various document types.
+
+To use the Unstructured API integration:
+
+1. Sign up for an API key at [Unstructured.io](https://www.unstructured.io/).
+2. Set the `UNSTRUCTURED_API_KEY` environment variable in the `.env` file, or with your API key:
+   ```
+   export UNSTRUCTURED_API_KEY=your_api_key_here
+   ```
+3. Install the project with Unstructured support:
+   ```
+   pip install .[unstructured]
+   ```
+
+When the `UNSTRUCTURED_API_KEY` is set, Knowledge Table will automatically use the Unstructured API for document processing. If the key is not set or if there's an issue with the Unstructured API, the system will fall back to the default document loaders.
+
+Note: Usage of the Unstructured API may incur costs based on your plan with Unstructured.io.
 ---
 
 ## Roadmap
