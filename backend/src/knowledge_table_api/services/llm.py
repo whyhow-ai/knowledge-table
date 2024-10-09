@@ -19,9 +19,13 @@ from knowledge_table_api.models.llm_response import (
 )
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.prompts import *
+from knowledge_table_api.config import settings
+
+# Initialize OpenAI client with the API key
+openai_client = OpenAI(api_key=settings.openai_api_key)
 
 # Patch the OpenAI client with instructor
-client = instructor.from_openai(OpenAI())
+client = instructor.from_openai(openai_client)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

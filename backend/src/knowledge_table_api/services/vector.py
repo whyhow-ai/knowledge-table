@@ -7,8 +7,8 @@ import re
 import uuid
 from typing import Any, Dict, List
 
+from fastapi import Depends
 import numpy as np
-from dotenv import load_dotenv
 from langchain.schema import Document
 from langchain_openai import OpenAIEmbeddings
 from pydantic import BaseModel, Field
@@ -16,21 +16,11 @@ from pymilvus import DataType, MilvusClient
 
 from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
 from knowledge_table_api.services.llm import decompose_query, get_keywords
-
-load_dotenv()
-MILVUS_DB_USERNAME = os.getenv("MILVUS_DB_USERNAME")
-MILVUS_DB_PASSWORD = os.getenv("MILVUS_DB_PASSWORD")
-COLLECTION_NAME = os.getenv("INDEX_NAME")
-DIMENSIONS_RAW = os.getenv("DIMENSIONS")
-DIMENSIONS = int(DIMENSIONS_RAW) if DIMENSIONS_RAW else None
+from knowledge_table_api.dependencies import get_settings, get_milvus_client
+from knowledge_table_api.config import Settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small", dimensions=DIMENSIONS
-)  # turn this into an env var
-
 
 class MilvusMetadata(BaseModel, extra="forbid"):
     """Metadata for Milvus documents."""
@@ -41,52 +31,54 @@ class MilvusMetadata(BaseModel, extra="forbid"):
     document_id: str
     uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
-
-client = MilvusClient(
-    "./milvus_demo.db", token=f"{MILVUS_DB_USERNAME}:{MILVUS_DB_PASSWORD}"
-)
-
-# If collection doesn't exist, create it
-if not client.has_collection(collection_name=COLLECTION_NAME):
-    schema = client.create_schema(
-        auto_id=False,
-        enable_dynamic_field=True,
+def get_embeddings():
+    settings = get_settings()
+    return OpenAIEmbeddings(
+        model="text-embedding-3-small", 
+        dimensions=settings.dimensions,
+        openai_api_key=settings.openai_api_key
     )
 
-    # add fields to schema
-    schema.add_field(
-        field_name="id",
-        datatype=DataType.VARCHAR,
-        is_primary=True,
-        max_length=36,
-    )
-    schema.add_field(
-        field_name="vector",
-        datatype=DataType.FLOAT_VECTOR,
-        dim=DIMENSIONS,
-    )
-    # prepare index parameters
-    index_params = client.prepare_index_params()
-    index_params.add_index(
-        index_type="AUTOINDEX",
-        field_name="vector",
-        metric_type="COSINE",
-    )
+def ensure_collection_exists(client: MilvusClient, settings: Settings):
+    if not client.has_collection(collection_name=settings.index_name):
+        schema = client.create_schema(
+            auto_id=False,
+            enable_dynamic_field=True,
+        )
 
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        schema=schema,
-        index_params=index_params,
-        consistency_level=0,
-    )
+        schema.add_field(
+            field_name="id",
+            datatype=DataType.VARCHAR,
+            is_primary=True,
+            max_length=36,
+        )
+        schema.add_field(
+            field_name="vector",
+            datatype=DataType.FLOAT_VECTOR,
+            dim=settings.dimensions,
+        )
+        index_params = client.prepare_index_params()
+        index_params.add_index(
+            index_type="AUTOINDEX",
+            field_name="vector",
+            metric_type="COSINE",
+        )
 
+        client.create_collection(
+            collection_name=settings.index_name,
+            schema=schema,
+            index_params=index_params,
+            consistency_level=0,
+        )
 
 async def upsert_vectors(vectors: List[Dict[str, Any]]) -> Dict[str, str]:
-    """Upsert vectors into the Milvus database."""
     logger.info(f"Upserting {len(vectors)} chunks")
+    
+    client = get_milvus_client()
+    settings = get_settings()
 
     upsert_response = client.insert(
-        collection_name=COLLECTION_NAME, data=vectors
+        collection_name=settings.index_name, data=vectors
     )
 
     return {
@@ -95,10 +87,14 @@ async def upsert_vectors(vectors: List[Dict[str, Any]]) -> Dict[str, str]:
 
 
 async def prepare_chunks(
-    document_id: str, chunks: List[Document]
+    document_id: str, 
+    chunks: List[Document]
 ) -> List[Dict[str, Any]]:
     """Prepare chunks for insertion into the Milvus database."""
     logger.info(f"Preparing {len(chunks)} chunks")
+
+    settings = get_settings()
+    embeddings = get_embeddings()
 
     cleaned_chunks = []
     for chunk in chunks:
@@ -139,11 +135,16 @@ async def prepare_chunks(
 
 
 async def vector_search(
-    queries: List[str], document_id: str
+    queries: List[str], 
+    document_id: str, 
 ) -> dict[str, Any]:
     """Perform a vector search on the Milvus database."""
     logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
+    client = get_milvus_client()
+    settings = get_settings()
+    embeddings = get_embeddings()
+    
     final_chunks: List[Dict[str, Any]] = []
 
     for query in queries:
@@ -152,7 +153,7 @@ async def vector_search(
 
         logger.info("Searching...")
         query_response = client.search(
-            collection_name=COLLECTION_NAME,
+            collection_name=settings.index_name,
             data=embedded_query,
             filter=f"document_id == '{document_id}'",
             limit=40,
@@ -189,10 +190,15 @@ async def vector_search(
 
 
 async def keyword_search(
-    query: str, document_id: str, keywords: list[str]
+    query: str, 
+    document_id: str, 
+    keywords: list[str],
 ) -> dict[str, Any]:
     """Perform a keyword search on the Milvus database."""
     logger.info("Performing keyword search.")
+
+    client = get_milvus_client()
+    settings = get_settings()
 
     response = []
     chunk_response = []
@@ -210,7 +216,7 @@ async def keyword_search(
             filter_string = f'(text like "%{clean_keyword}%") && document_id == "{document_id}"'
 
             keyword_response = client.query(
-                collection_name=COLLECTION_NAME,
+                collection_name=settings.index_name,
                 filter=filter_string,
                 output_fields=[
                     "text",
@@ -266,10 +272,16 @@ async def keyword_search(
 
 
 async def hybrid_search(
-    query: str, document_id: str, rules: list[Rule]
+    query: str, 
+    document_id: str, 
+    rules: list[Rule],
 ) -> VectorResponse:
     """Perform a hybrid search on the Milvus database."""
     logger.info("Performing hybrid search.")
+
+    client = get_milvus_client()
+    settings = get_settings()
+    embeddings = get_embeddings()
 
     keywords = None
     sorted_keyword_chunks = []
@@ -311,7 +323,7 @@ async def hybrid_search(
         logger.info("Running query with keyword filters.")
 
         keyword_response = client.query(
-            collection_name=COLLECTION_NAME,
+            collection_name=settings.index_name,
             filter=filter_string,
             output_fields=[
                 "text",
@@ -344,7 +356,7 @@ async def hybrid_search(
 
     # Running search here instead of in the vector_search function to preserve chunk ids and deduplicate
     semantic_response = client.search(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         data=embedded_query,
         filter=f'document_id == "{document_id}"',
         limit=40,
@@ -392,7 +404,9 @@ async def hybrid_search(
 
 
 async def decomposed_search(
-    query: str, document_id: str, rules: List[Rule]
+    query: str, 
+    document_id: str, 
+    rules: List[Rule]
 ) -> Dict[str, Any]:
     """Decomposition query."""
     logger.info("Decomposing query into smaller sub-queries.")
@@ -410,15 +424,21 @@ async def decomposed_search(
     }
 
 
-async def delete_document(document_id: str) -> Dict[str, str]:
+async def delete_document(
+        document_id: str,
+    ) -> Dict[str, str]:
     """Delete a document from the Milvus."""
+
+    client = get_milvus_client()
+    settings = get_settings()
+
     client.delete(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         filter=f'document_id == "{document_id}"',
     )
 
     confirm_delete = client.query(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         filter=f'document_id == "{document_id}"',
     )
 

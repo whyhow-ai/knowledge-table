@@ -7,14 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Integrated Instructor library for enhanced LLM response handling
+- New prompt templates for improved query decomposition and keyword extraction
+
 ### Changed
 
 - Modified `generate_triples` function to skip creation of triples with empty head or tail values
 - Updated `triple_to_dict` function to potentially return `None` for invalid triples
+- Refactored dependency management in vector and query services
+- Removed FastAPI Depends usage from utility functions in vector.py
+- Implemented direct calls to get_milvus_client(), get_settings(), and get_embeddings()
+- Updated hybrid_search, vector_search, and other related functions
+- Modified LLM service to use Instructor for structured outputs
+- Updated query processing to leverage new prompt templates
+
+### Improved
+
+- Enhanced reliability and maintainability of vector and query services
+- Optimized query processing in query.py to align with new dependency approach
+- Improved structured output handling in LLM responses
 
 ### Fixed
 
 - Prevented creation and return of triples with empty string values for head or tail
+- Resolved issues related to incorrect usage of FastAPI's Depends in non-route functions
+- Ensured more predictable behavior in data access and query processing operations
 
 ## [0.1.1] - 2024-10-08
 
