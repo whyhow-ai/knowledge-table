@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Modified `generate_triples` function to skip creation of triples with empty head or tail values
+- Updated `triple_to_dict` function to potentially return `None` for invalid triples
+
+### Fixed
+
+- Prevented creation and return of triples with empty string values for head or tail
+
 ## [0.1.1] - 2024-10-08
 
 ### Added
