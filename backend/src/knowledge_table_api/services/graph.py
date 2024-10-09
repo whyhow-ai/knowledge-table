@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from whyhow import Node, Relation, Triple
 
@@ -70,8 +70,11 @@ def clean_answer(answer: Any) -> Union[str, int, float, bool, None]:
     return None
 
 
-def triple_to_dict(triple: Triple) -> Dict[str, Any]:
+def triple_to_dict(triple: Triple) -> Optional[Dict[str, Any]]:
     """Convert a Triple object to a dictionary."""
+    if triple.head.name == "" or triple.tail.name == "":
+        logger.warning(f"Skipping triple with empty name: {triple}")
+        return None
     return {
         "triple_id": triple.triple_id,
         "head": {"label": triple.head.label, "name": triple.head.name},
@@ -162,6 +165,14 @@ async def generate_triples(
             logger.info(f"Head value: {head_value}, Tail value: {tail_value}")
 
             if head_value is not None and tail_value is not None:
+
+                # Remove empty values
+                if head_value == "" or tail_value == "":
+                    logger.warning(
+                        f"Skipping triple creation due to empty value. Head: '{head_value}', Tail: '{tail_value}'"
+                    )
+                    continue
+
                 head_label = (
                     "Document"
                     if relationship["head"] == "Document"
@@ -207,8 +218,13 @@ async def generate_triples(
                 )
 
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
+    # In the generate_triples function, modify the return statement:
     return {
-        "triples": [triple_to_dict(triple) for triple in triples],
+        "triples": [
+            t
+            for t in (triple_to_dict(triple) for triple in triples)
+            if t is not None
+        ],
         "chunks": chunks,
     }
 
