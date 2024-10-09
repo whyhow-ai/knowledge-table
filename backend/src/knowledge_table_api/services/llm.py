@@ -147,7 +147,7 @@ async def generate_response(
     logger.info(f"Response generated: {llm_response}")
 
     # validated_response: int | str | list[str]
-    if llm_response in [None, "not found", ["not found"]]:
+    if llm_response in [None, "[]", "not found", ["not found"], ""]:
         logger.error("No answer generated. Returning None")
         return {"answer": None}
 
@@ -342,22 +342,20 @@ async def generate_schema(data: Table) -> dict[str, Any]:
     Columns: {json.dumps(prepared_data['columns'], indent=2)}
 
     Generate a schema that includes the following relationships:
-    1. From Document to each entity type (e.g., "Document, contains, Disease")
-    2. Between entity types (e.g., "Disease, treated_by, Treatment")
-    3. Ensure that each entity type is used in at least one relationship with "Document"
-    4. Create meaningful relationships based on the column information, entity types, and questions provided
+    1. Between other columns if relevant (e.g., "Diseases, trea  ted_by, Treatments")
 
     The output should be a JSON object containing:
     - 'relationships': An array of objects, each containing 'head', 'relation', and 'tail'
 
     For each relationship:
-    - Use the actual entity types (e.g., "Disease", "Treatment") instead of column IDs
-    - Ensure that the head and tail can only be the names of the columns provided: {', '.join(entity_types)}
-    - Create meaningful relationships based on the column information, entity types, and questions provided
-    - Ensure that each entity type is used in at least one relationship with "Document"
-    - Create a relationship between entity types if it makes sense based on the questions
+    - Use ONLY the exact column names as provided. The available column names are: {', '.join(entity_types)}
+    - The 'head' and 'tail' in each relationship MUST be one of these exact column names
+    - Create meaningful 'relation' names based on the column information and questions provided
+    - Create a relationship between columns if it makes sense based on the questions
 
-    Do not provide any supporting information. Ensure the output is in plain JSON and parsable via `json.loads()`.
+    Do not use entity types or any other names not in the provided column list.
+    Do not provide any supporting information.
+    Ensure the output is in plain JSON and parsable via `json.loads()`.
 
     Schema:"""
 

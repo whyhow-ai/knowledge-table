@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "knowledge-table-api"
 authors = [{name = "Foo Bar"}]
 description = "A Python API for the Knowledge Table service"
-keywords = ["knowlege", "api"]
+keywords = ["knowledge", "api"]
 classifiers = ["Programming Language :: Python :: 3"]
 requires-python = ">=3.10"
 dependencies = [
@@ -93,16 +93,37 @@ dependencies = [
     "typing_extensions==4.12.2",
     "tzdata==2024.1",
     "ujson==5.10.0",
+    "unstructured",
     "urllib3==2.2.3",
     "uuid==1.30",
     "uvicorn==0.30.6",
-    "whyhow==0.1.7",
+    "whyhow",
     "yarl==1.11.1",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
+unstructured = [
+    "unstructured[all-docs]",
+]
+
 dev = [
+    "bandit[toml]",
+    "black",
+    "flake8",
+    "flake8-docstrings",
+    "isort",
+    "mypy",
+    "pydocstyle[toml]",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-httpx",
+    "pytest",
+    "pytest-html",
+]
+
+full = [
+    "unstructured[all-docs]",
     "bandit[toml]",
     "black",
     "flake8",
