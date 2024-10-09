@@ -5,7 +5,7 @@ import logging
 import os
 import tempfile
 import uuid
-from typing import Generator, List, Optional
+from typing import Any, Callable, Generator, List, Optional, Type
 
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -22,19 +22,34 @@ logger = logging.getLogger(__name__)
 
 UNSTRUCTURED_API_KEY = os.getenv("UNSTRUCTURED_API_KEY")
 
+# Define types for Unstructured components
+PartitionFunction = Callable[..., Any]
+TextType = Type[Any]
+TitleType = Type[Any]
+NarrativeTextType = Type[Any]
+
 if UNSTRUCTURED_API_KEY:
     try:
         from unstructured.documents.elements import NarrativeText, Text, Title
         from unstructured.partition.auto import partition
+
+        partition_func: Optional[PartitionFunction] = partition
+        TextClass: Optional[TextType] = Text
+        TitleClass: Optional[TitleType] = Title
+        NarrativeTextClass: Optional[NarrativeTextType] = NarrativeText
     except ImportError:
         logger.warning(
             "Unstructured is not installed. Install with `pip install .[unstructured]`"
         )
-        partition = None
-        Text = Title = NarrativeText = None
+        partition_func = None
+        TextClass = None
+        TitleClass = None
+        NarrativeTextClass = None
 else:
-    partition = None
-    Text = Title = NarrativeText = None
+    partition_func = None
+    TextClass = None
+    TitleClass = None
+    NarrativeTextClass = None
 
 # Constants
 CHUNK_SIZE = 512
@@ -76,6 +91,11 @@ def unstructured_loader(file_path: str) -> List[LangchainDocument]:
     List[LangchainDocument]
         List of processed document chunks.
     """
+    if partition is None:
+        raise ImportError(
+            "Unstructured is not installed or configured properly"
+        )
+
     elements = partition(filename=file_path)
     docs = []
     current_page = 1
