@@ -147,7 +147,7 @@ async def generate_response(
     logger.info(f"Response generated: {llm_response}")
 
     # validated_response: int | str | list[str]
-    if llm_response in [None, "[]", "not found", ["not found"]]:
+    if llm_response in [None, "[]", "not found", ["not found"], ""]:
         logger.error("No answer generated. Returning None")
         return {"answer": None}
 

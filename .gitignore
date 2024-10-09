@@ -1,1 +1,5 @@
+backend/.python-version
+frontend/bun.lockb
+*.db
+*.db.lock
 .DS_Store
