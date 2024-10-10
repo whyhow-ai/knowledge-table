@@ -4,8 +4,11 @@ from functools import lru_cache
 
 from pymilvus import MilvusClient
 
+from backend.src.knowledge_table_api.services.llm_operations import (
+    LLMFactory,
+    LLMService,
+)
 from knowledge_table_api.core.config import Settings
-from knowledge_table_api.services.llm_service import LLMFactory, LLMService
 
 
 @lru_cache()

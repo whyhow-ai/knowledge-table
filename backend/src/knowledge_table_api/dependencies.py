@@ -5,7 +5,8 @@ from functools import lru_cache
 from pymilvus import MilvusClient
 
 from knowledge_table_api.core.config import Settings
-from knowledge_table_api.services.llm_service import LLMFactory, LLMService
+from knowledge_table_api.services.llm.base import LLMService
+from knowledge_table_api.services.llm.factory import LLMFactory
 
 
 @lru_cache()

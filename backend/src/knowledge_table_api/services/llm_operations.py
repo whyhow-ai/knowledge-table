@@ -16,8 +16,8 @@ from knowledge_table_api.models.llm_response import (
     SubQueriesResponseModel,
 )
 from knowledge_table_api.models.query import Rule
-from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.prompts import (
+from knowledge_table_api.services.llm.base import LLMService
+from knowledge_table_api.services.llm.prompts import (
     BASE_PROMPT,
     BOOL_INSTRUCTIONS,
     DECOMPOSE_QUERY_PROMPT,

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restructured project directory for improved organization and scalability
 - Moved router files to new `api/v1/endpoints` directory
 - Created new `core` directory for fundamental application components
+- Updated llm operations to new services in `services/llm`
 
 ### Improved
 
