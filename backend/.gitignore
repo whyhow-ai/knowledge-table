@@ -165,5 +165,5 @@ cython_debug/
 #.idea/
 
 # Custom
-*milvus*
+*.milvus*
 .tests_static_analysis.sh
