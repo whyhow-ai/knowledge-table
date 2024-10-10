@@ -52,7 +52,9 @@ class MilvusService(VectorDBService):
 
     def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
-        if not self.client.has_collection(collection_name=self.settings.index_name):
+        if not self.client.has_collection(
+            collection_name=self.settings.index_name
+        ):
             schema = self.client.create_schema(
                 auto_id=False,
                 enable_dynamic_field=True,
@@ -83,7 +85,9 @@ class MilvusService(VectorDBService):
                 consistency_level=0,
             )
 
-    async def upsert_vectors(self, vectors: List[Dict[str, Any]]) -> Dict[str, str]:
+    async def upsert_vectors(
+        self, vectors: List[Dict[str, Any]]
+    ) -> Dict[str, str]:
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
 
@@ -95,7 +99,9 @@ class MilvusService(VectorDBService):
             "message": f"Successfully upserted {upsert_response['insert_count']} chunks."
         }
 
-    async def prepare_chunks(self, document_id: str, chunks: List[Document]) -> List[Dict[str, Any]]:
+    async def prepare_chunks(
+        self, document_id: str, chunks: List[Document]
+    ) -> List[Dict[str, Any]]:
         """Prepare chunks for insertion into the Milvus database."""
         logger.info(f"Preparing {len(chunks)} chunks")
 
@@ -111,11 +117,15 @@ class MilvusService(VectorDBService):
 
         texts = [chunk.page_content for chunk in chunks]
 
-        embedded_chunks = [np.array(embeddings.embed_documents(texts)).tolist()]
+        embedded_chunks = [
+            np.array(embeddings.embed_documents(texts)).tolist()
+        ]
 
         datas = []
 
-        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks[0])):
+        for i, (chunk, embedding) in enumerate(
+            zip(chunks, embedded_chunks[0])
+        ):
             if "page" in chunk.metadata:
                 page = chunk.metadata["page"] + 1
             else:
@@ -141,7 +151,9 @@ class MilvusService(VectorDBService):
 
         return datas
 
-    async def vector_search(self, queries: List[str], document_id: str) -> dict[str, Any]:
+    async def vector_search(
+        self, queries: List[str], document_id: str
+    ) -> dict[str, Any]:
         """Perform a vector search on the Milvus database."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
@@ -188,7 +200,9 @@ class MilvusService(VectorDBService):
             "chunks": formatted_output,
         }
 
-    async def keyword_search(self, query: str, document_id: str, keywords: list[str]) -> dict[str, Any]:
+    async def keyword_search(
+        self, query: str, document_id: str, keywords: list[str]
+    ) -> dict[str, Any]:
         """Perform a keyword search on the Milvus database."""
         logger.info("Performing keyword search.")
 
@@ -221,7 +235,9 @@ class MilvusService(VectorDBService):
                 if deserialized_chunks:
                     response.append(keyword)
 
-                    def count_keyword_occurrences(text: str, keyword: str) -> int:
+                    def count_keyword_occurrences(
+                        text: str, keyword: str
+                    ) -> int:
                         return text.lower().count(keyword.lower())
 
                     sorted_keyword_chunks = sorted(
@@ -253,7 +269,9 @@ class MilvusService(VectorDBService):
             "chunks": chunk_response,
         }
 
-    async def hybrid_search(self, query: str, document_id: str, rules: list[Rule]) -> VectorResponse:
+    async def hybrid_search(
+        self, query: str, document_id: str, rules: list[Rule]
+    ) -> VectorResponse:
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
@@ -279,9 +297,13 @@ class MilvusService(VectorDBService):
                     max_length = rule.length
 
         if not keywords:
-            logger.info("No keywords provided, extracting keywords from the query.")
+            logger.info(
+                "No keywords provided, extracting keywords from the query."
+            )
             try:
-                extracted_keywords = await get_keywords(self.llm_service, query)
+                extracted_keywords = await get_keywords(
+                    self.llm_service, query
+                )
                 if extracted_keywords and isinstance(extracted_keywords, list):
                     keywords = extracted_keywords
                 else:
@@ -297,7 +319,9 @@ class MilvusService(VectorDBService):
             like_conditions = " || ".join(
                 [f'text like "%{keyword}%"' for keyword in keywords]
             )
-            filter_string = f'({like_conditions}) && document_id == "{document_id}"'
+            filter_string = (
+                f'({like_conditions}) && document_id == "{document_id}"'
+            )
 
             logger.info("Running query with keyword filters.")
 
@@ -322,7 +346,9 @@ class MilvusService(VectorDBService):
 
             sorted_keyword_chunks = sorted(
                 deserialized_keyword_chunks,
-                key=lambda chunk: count_keywords(chunk["text"], keywords or []),
+                key=lambda chunk: count_keywords(
+                    chunk["text"], keywords or []
+                ),
                 reverse=True,
             )
 
@@ -335,7 +361,12 @@ class MilvusService(VectorDBService):
             data=embedded_query,
             filter=f'document_id == "{document_id}"',
             limit=40,
-            output_fields=["text", "page_number", "document_id", "chunk_number"],
+            output_fields=[
+                "text",
+                "page_number",
+                "document_id",
+                "chunk_number",
+            ],
         )
 
         semantic_chunks = json.dumps(semantic_response, indent=2)
@@ -349,7 +380,9 @@ class MilvusService(VectorDBService):
 
         print(f"Found {len(flattened_semantic_chunks)} semantic chunks.")
 
-        combined_chunks = sorted_keyword_chunks[:20] + flattened_semantic_chunks
+        combined_chunks = (
+            sorted_keyword_chunks[:20] + flattened_semantic_chunks
+        )
 
         combined_sorted_chunks = sorted(
             combined_chunks, key=lambda chunk: chunk["chunk_number"]
