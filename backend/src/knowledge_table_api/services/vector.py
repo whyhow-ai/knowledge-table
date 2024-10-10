@@ -108,9 +108,15 @@ async def prepare_chunks(
 
     datas = []
 
-    # Page numbers only exist in PDF, not docx
     for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks[0])):
-        page = chunk.metadata["page"] + 1
+        # Use the existing page number if available, otherwise calculate a pseudo-page number
+        if "page" in chunk.metadata:
+            page = chunk.metadata["page"] + 1
+        else:
+            # Create a pseudo-page number based on chunk index
+            # Adjust this calculation as needed
+            page = (i // 5) + 1  # Assuming 5 chunks per "page"
+
         metadata = MilvusMetadata(
             text=chunk.page_content,
             page_number=page,
