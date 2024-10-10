@@ -94,12 +94,13 @@ async def generate_response(
     )
 
     try:
-        response = await llm_service.generate_completion(prompt, output_model)
+        model = "gpt-4o-mini"
+        response = await llm_service.generate_completion(prompt, output_model, model)
         result = response.model_dump()
         return {
             "answer": (
                 result.get("answer")
-                if result.get("answer") != "None"
+                if result.get("answer") not in ["None", ["None"]] 
                 else None
             )
         }
