@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Restructured project directory for improved organization and scalability
+- Moved router files to new `api/v1/endpoints` directory
+- Created new `core` directory for fundamental application components
+- Updated llm operations to new services in `services/llm`
+- Updated vector database operations to new services in `services/vector_db`
+
+### Improved
+
+- Separated configuration from dependency injection for better maintainability and clarity
+
+
+## [v0.1.2] - 2024-10-10
+
 ### Added
 
 - Integrated Instructor library for enhanced LLM response handling

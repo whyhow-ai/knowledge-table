@@ -5,7 +5,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from knowledge_table_api.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.query import Answer, QueryRequest
 from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.query import (
