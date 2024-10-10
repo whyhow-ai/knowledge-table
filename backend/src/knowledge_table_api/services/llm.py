@@ -94,7 +94,7 @@ async def generate_response(
     )
 
     try:
-        model = "gpt-4o-mini"
+        model = "gpt-4o"
         response = await llm_service.generate_completion(
             prompt, output_model, model
         )
