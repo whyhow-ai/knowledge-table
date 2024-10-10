@@ -1,11 +1,14 @@
 """Document router."""
 
 import logging
-from typing import Dict
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from knowledge_table_api.models.document import Document
+from knowledge_table_api.schemas.document import (
+    DeleteDocumentResponse,
+    DocumentResponse,
+)
 from knowledge_table_api.services.document import upload_document
 from knowledge_table_api.services.vector import delete_document
 
@@ -14,10 +17,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Document"], prefix="/document")
 
 
-@router.post("", response_model=Document, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED
+)
 async def upload_document_endpoint(
     file: UploadFile = File(...),
-) -> Document:
+) -> DocumentResponse:
     """
     Upload a document and process it.
 
@@ -28,7 +33,7 @@ async def upload_document_endpoint(
 
     Returns
     -------
-    Document
+    DocumentResponse
         The processed document information.
 
     Raises
@@ -78,11 +83,11 @@ async def upload_document_endpoint(
         tag="document_tag",  # TODO: Determine this dynamically
         page_count=10,  # TODO: Determine this dynamically
     )
-    return document
+    return DocumentResponse(**document.dict())
 
 
-@router.delete("/{document_id}", response_model=Dict[str, str])
-async def delete_document_endpoint(document_id: str) -> Dict[str, str]:
+@router.delete("/{document_id}", response_model=DeleteDocumentResponse)
+async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
     """
     Delete a document.
 
@@ -93,8 +98,8 @@ async def delete_document_endpoint(document_id: str) -> Dict[str, str]:
 
     Returns
     -------
-    Dict[str, str]
-        A dictionary containing the deletion status and message.
+    DeleteDocumentResponse
+        A response containing the deletion status and message.
 
     Raises
     ------
@@ -108,8 +113,8 @@ async def delete_document_endpoint(document_id: str) -> Dict[str, str]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
-    return {
-        "id": document_id,
-        "status": delete_document_response["status"],
-        "message": delete_document_response["message"],
-    }
+    return DeleteDocumentResponse(
+        id=document_id,
+        status=delete_document_response["status"],
+        message=delete_document_response["message"],
+    )

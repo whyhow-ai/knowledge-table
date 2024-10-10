@@ -3,10 +3,11 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.models.query import Answer, QueryRequest
+from knowledge_table_api.models.query import Answer
+from knowledge_table_api.schemas.query import QueryRequest, QueryResponse
 from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.query import (
     decomposition_query,
@@ -20,10 +21,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@router.post("", response_model=Answer)
+@router.post("", response_model=QueryResponse)
 async def run_query(
     request: QueryRequest, llm_service: LLMService = Depends(get_llm_service)
-) -> Answer:
+) -> QueryResponse:
     """
     Run a query and generate a response.
 
@@ -48,19 +49,25 @@ async def run_query(
     rules = request.prompt.rules or []
 
     if query_type not in query_functions:
-        raise ValueError(f"Invalid query type: {query_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid query type: {query_type}"
+        )
 
     # Get the appropriate function based on query_type and call it
-    query_response = await query_functions[query_type](
-        request.prompt.query,
-        request.document_id,
-        rules,
-        request.prompt.type,
-        llm_service,
-    )
+    try:
+        query_response = await query_functions[query_type](
+            request.prompt.query,
+            request.document_id,
+            rules,
+            request.prompt.type,
+            llm_service,
+        )
+    except Exception as e:
+        logger.error(f"Error in query function: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     if len(query_response["chunks"]) == 0:
-        return Answer(
+        answer = Answer(
             id=uuid.uuid4().hex,
             document_id=request.document_id,
             prompt_id=request.prompt.id,
@@ -68,13 +75,14 @@ async def run_query(
             chunks=[],
             type=request.prompt.type,
         )
+    else:
+        answer = Answer(
+            id=uuid.uuid4().hex,
+            document_id=request.document_id,
+            prompt_id=request.prompt.id,
+            answer=query_response["answer"],
+            chunks=query_response["chunks"],
+            type=request.prompt.type,
+        )
 
-    answer = Answer(
-        id=uuid.uuid4().hex,
-        document_id=request.document_id,
-        prompt_id=request.prompt.id,
-        answer=query_response["answer"],
-        chunks=query_response["chunks"],
-        type=request.prompt.type,
-    )
-    return answer
+    return QueryResponse(**answer.dict())

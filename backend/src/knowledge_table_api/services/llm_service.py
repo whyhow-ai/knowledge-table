@@ -4,8 +4,7 @@ import json
 import logging
 from typing import Any, List, Literal, Type, Union
 
-from knowledge_table_api.models.graph import Table
-from knowledge_table_api.models.llm_response import (
+from backend.src.knowledge_table_api.models.llm_models import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
@@ -16,6 +15,7 @@ from knowledge_table_api.models.llm_response import (
     SubQueriesResponseModel,
 )
 from knowledge_table_api.models.query import Rule
+from knowledge_table_api.routing_schemas.graph import Table
 from knowledge_table_api.services.llm.base import LLMService
 from knowledge_table_api.services.llm.prompts import (
     BASE_PROMPT,
@@ -197,7 +197,7 @@ async def generate_schema(
         "columns": [
             {
                 "id": column.id,
-                "entity_type": column.prompt.entityType,
+                "entity_type": column.prompt.entity_type,
                 "type": column.prompt.type,
                 "question": column.prompt.query,
             }

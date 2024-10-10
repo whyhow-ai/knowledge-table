@@ -3,7 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from knowledge_table_api.models.query import Rule, VectorResponse
+from knowledge_table_api.models.query import Rule
+from knowledge_table_api.routing_schemas.query import VectorResponse
 
 
 class VectorDBService(ABC):

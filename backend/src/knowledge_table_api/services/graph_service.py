@@ -6,9 +6,12 @@ from typing import Any, Dict, List, Optional, Union
 
 from whyhow import Node, Relation, Triple
 
+from backend.src.knowledge_table_api.services.llm_service import (
+    generate_schema,
+)
 from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.models.graph import ExportData, Table
-from knowledge_table_api.services.llm_operations import generate_schema
+from knowledge_table_api.models.graph import ExportData
+from knowledge_table_api.routing_schemas.graph import Table
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,8 +24,7 @@ def to_dict(obj: Any) -> Dict[str, Any]:
 
 async def parse_table(data: Table) -> Dict[str, Any]:
     """Prepare the table data for schema generation."""
-    # Parse and prepare data
-    table_data = []
+    table_data: List[Dict[str, Any]] = []
 
     for row in data.rows:
         document_data: Dict[str, Any] = {
@@ -39,19 +41,15 @@ async def parse_table(data: Table) -> Dict[str, Any]:
                 )
                 if column:
                     answer_data = {
-                        "entity_type": column.prompt.entityType,
+                        "entity_type": column.prompt.entity_type,
                         "answer": (
-                            cell.answer.answer
-                            if cell.answer.answer is not None
+                            cell.answer.get("answer")
+                            if cell.answer.get("answer") is not None
                             else ""
                         ),
                         "type": column.prompt.type,
                         "query": column.prompt.query,
-                        "chunks": (
-                            cell.answer.chunks
-                            if cell.answer.chunks is not None
-                            else []
-                        ),
+                        "chunks": cell.answer.get("chunks", []),
                     }
                     document_data["answers"].append(answer_data)
 
@@ -102,16 +100,14 @@ async def generate_triples(
         for row in table_data.rows:
             logger.info(f"Processing row: {row.id}")
             triple_id = f"t{len(triples) + 1}"
-            # Set head_column and tail_column to the entityType directly
             head_entity_type = relationship["head"]
             tail_entity_type = relationship["tail"]
 
-            # Find the corresponding columns based on entityType
             head_column = next(
                 (
                     col
                     for col in table_data.columns
-                    if col.prompt.entityType == head_entity_type
+                    if col.prompt.entity_type == head_entity_type
                 ),
                 None,
             )
@@ -119,7 +115,7 @@ async def generate_triples(
                 (
                     col
                     for col in table_data.columns
-                    if col.prompt.entityType == tail_entity_type
+                    if col.prompt.entity_type == tail_entity_type
                 ),
                 None,
             )
@@ -127,7 +123,6 @@ async def generate_triples(
             logger.info(
                 f"Head column: {head_column.id if head_column else 'None'}, Tail column: {tail_column.id if tail_column else 'None'}"
             )
-            # Initialize head_value and tail_value
             head_value = None
             tail_value = None
 
@@ -141,7 +136,9 @@ async def generate_triples(
                     ),
                     None,
                 )
-                head_value = head_cell.answer.answer if head_cell else None
+                head_value = (
+                    head_cell.answer.get("answer") if head_cell else None
+                )
             else:
                 logger.warning(
                     f"No head column found for relationship: {relationship}"
@@ -157,7 +154,9 @@ async def generate_triples(
                     ),
                     None,
                 )
-                tail_value = tail_cell.answer.answer if tail_cell else None
+                tail_value = (
+                    tail_cell.answer.get("answer") if tail_cell else None
+                )
             else:
                 logger.warning(
                     f"No tail column found for relationship: {relationship}"
@@ -166,8 +165,6 @@ async def generate_triples(
             logger.info(f"Head value: {head_value}, Tail value: {tail_value}")
 
             if head_value is not None and tail_value is not None:
-
-                # Remove empty values
                 if head_value == "" or tail_value == "":
                     logger.warning(
                         f"Skipping triple creation due to empty value. Head: '{head_value}', Tail: '{tail_value}'"
@@ -191,13 +188,12 @@ async def generate_triples(
                 triples.append(triple)
                 logger.info(f"Created triple: {triple}")
 
-                # Generate chunks for both head and tail
                 for column_id, cell in [
                     (head_column.id if head_column else None, head_cell),
                     (tail_column.id if tail_column else None, tail_cell),
                 ]:
-                    if column_id and cell and cell.answer.chunks:
-                        for i, chunk in enumerate(cell.answer.chunks):
+                    if column_id and cell and cell.answer.get("chunks"):
+                        for i, chunk in enumerate(cell.answer["chunks"]):
                             chunk_id = f"{triple_id}_{column_id}_c{i+1}"
                             chunks.append(
                                 {
@@ -207,11 +203,9 @@ async def generate_triples(
                                     "triple_id": triple_id,
                                 }
                             )
-                            if triple.chunk_ids is None:
-                                triple.chunk_ids = []
                             triple.chunk_ids.append(chunk_id)
                         logger.info(
-                            f"Added {len(cell.answer.chunks)} chunks for column {column_id}"
+                            f"Added {len(cell.answer['chunks'])} chunks for column {column_id}"
                         )
             else:
                 logger.warning(
@@ -219,11 +213,10 @@ async def generate_triples(
                 )
 
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
-    # In the generate_triples function, modify the return statement:
     return {
         "triples": [
             t
-            for t in (triple_to_dict(triple) for triple in triples)
+            for t in (triple.to_dict() for triple in triples)
             if t is not None
         ],
         "chunks": chunks,

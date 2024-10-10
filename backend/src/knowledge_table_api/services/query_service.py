@@ -3,9 +3,11 @@
 import logging
 from typing import Any, Dict, List, Literal
 
-from backend.src.knowledge_table_api.services.llm_service import LLMService
+from backend.src.knowledge_table_api.services.llm_service import (
+    LLMService,
+    generate_response,
+)
 from knowledge_table_api.models.query import Rule
-from knowledge_table_api.services.llm_operations import generate_response
 from knowledge_table_api.services.vector import (
     decomposed_search,
     hybrid_search,

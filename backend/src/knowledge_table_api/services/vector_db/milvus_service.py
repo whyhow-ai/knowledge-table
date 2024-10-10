@@ -11,15 +11,19 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType
 
+from backend.src.knowledge_table_api.services.llm_service import (
+    LLMService,
+    decompose_query,
+    get_keywords,
+)
 from knowledge_table_api.core.dependencies import (
     get_milvus_client,
     get_settings,
 )
-from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
-from knowledge_table_api.services.llm_operations import (
-    LLMService,
-    decompose_query,
-    get_keywords,
+from knowledge_table_api.routing_schemas.query import (
+    Chunk,
+    Rule,
+    VectorResponse,
 )
 
 from .base import VectorDBService
