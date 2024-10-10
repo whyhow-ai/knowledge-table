@@ -11,8 +11,8 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
-from knowledge_table_api.config import Settings
-from knowledge_table_api.dependencies import get_milvus_client, get_settings
+from knowledge_table_api.core.config import Settings
+from knowledge_table_api.core.dependencies import get_milvus_client, get_settings
 from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
 from knowledge_table_api.services.llm import decompose_query, get_keywords
 from knowledge_table_api.services.llm_service import LLMService

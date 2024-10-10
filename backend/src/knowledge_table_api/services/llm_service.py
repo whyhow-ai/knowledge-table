@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 import instructor
 
-from knowledge_table_api.config import settings
+from knowledge_table_api.core.config import settings
 
 
 class LLMService(ABC):

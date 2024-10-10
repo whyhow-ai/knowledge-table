@@ -11,7 +11,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from whyhow import Chunk, ChunkMetadata
 
-from knowledge_table_api.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.graph import Table
 from knowledge_table_api.services.graph import generate_triples
 from knowledge_table_api.services.llm import generate_schema

@@ -7,8 +7,8 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowledge_table_api.dependencies import get_milvus_client, get_settings
 from knowledge_table_api.api.v1.endpoints import document, graph, query
+from knowledge_table_api.core.dependencies import get_milvus_client, get_settings
 from knowledge_table_api.services.vector import ensure_collection_exists
 
 

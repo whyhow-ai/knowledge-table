@@ -15,7 +15,7 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 
-from knowledge_table_api.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
 
 logging.basicConfig(level=logging.INFO)

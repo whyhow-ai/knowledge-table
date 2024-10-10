@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from whyhow import Node, Relation, Triple
 
-from knowledge_table_api.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.graph import ExportData, Table
 from knowledge_table_api.services.llm import generate_schema
 
