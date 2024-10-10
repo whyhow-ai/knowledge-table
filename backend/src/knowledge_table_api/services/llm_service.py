@@ -13,7 +13,7 @@ class LLMService(ABC):
 
     @abstractmethod
     async def generate_completion(
-        self, prompt: str, response_model: Any
+        self, prompt: str, response_model: Any, model: str = "gpt-4o"
     ) -> Any:
         """Generate a completion from the language model."""
         pass
