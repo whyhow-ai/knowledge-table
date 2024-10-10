@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Integrated Instructor library for enhanced LLM response handling
 - New prompt templates for improved query decomposition and keyword extraction
+- Implemented LLMService abstract base class for decoupling LLM operations
+- Created OpenAIService as a concrete implementation of LLMService
+- Added LLMFactory for creating LLM service instances
 
 ### Changed
 
@@ -22,18 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated hybrid_search, vector_search, and other related functions
 - Modified LLM service to use Instructor for structured outputs
 - Updated query processing to leverage new prompt templates
+- Refactored vector operations to use the new LLMService abstraction
+- Updated document processing pipeline to work with the decoupled LLM service
+- Modified dependency injection to include LLM service creation
+- Adjusted query processing to utilize the new LLM service structure
 
 ### Improved
 
 - Enhanced reliability and maintainability of vector and query services
 - Optimized query processing in query.py to align with new dependency approach
 - Improved structured output handling in LLM responses
+- Enhanced flexibility by allowing easy switching between different LLM providers
+- Improved testability of LLM-dependent components through abstraction
 
 ### Fixed
 
 - Prevented creation and return of triples with empty string values for head or tail
 - Resolved issues related to incorrect usage of FastAPI's Depends in non-route functions
 - Ensured more predictable behavior in data access and query processing operations
+- Resolved issues related to direct OpenAI client usage in vector operations
+- Addressed errors in document upload process due to LLM service changes
 
 ## [0.1.1] - 2024-10-08
 

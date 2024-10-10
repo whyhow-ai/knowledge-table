@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from whyhow import Node, Relation, Triple
 
+from knowledge_table_api.dependencies import get_llm_service
 from knowledge_table_api.models.graph import ExportData, Table
 from knowledge_table_api.services.llm import generate_schema
 
@@ -231,7 +232,8 @@ async def generate_triples(
 
 async def process_table_and_generate_triples(table_data: Table) -> ExportData:
     """Process the table data, generate a schema, and create triples."""
-    schema_result = await generate_schema(table_data)
+    llm_service = get_llm_service()
+    schema_result = await generate_schema(llm_service, table_data)
     schema = schema_result["schema"]
 
     # Print the schema in a readable format
