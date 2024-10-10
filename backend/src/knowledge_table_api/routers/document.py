@@ -1,7 +1,6 @@
 """Document router."""
 
 import logging
-
 from typing import Dict
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
@@ -46,7 +45,9 @@ async def upload_document_endpoint(
     content_type = file.content_type
     filename = file.filename
 
-    logger.info(f"Endpoint received file: {filename}, content type: {content_type}")
+    logger.info(
+        f"Endpoint received file: {filename}, content type: {content_type}"
+    )
 
     try:
         document_id = await upload_document(

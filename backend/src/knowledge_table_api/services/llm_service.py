@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+import instructor
+
 from knowledge_table_api.config import settings
 
 
@@ -26,17 +28,14 @@ class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
 
     def __init__(self) -> None:
-        import instructor
         from langchain_openai import OpenAIEmbeddings
         from openai import OpenAI
-        from pydantic import SecretStr
 
         openai_client = OpenAI(api_key=settings.openai_api_key)
         self.client = instructor.from_openai(openai_client)
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             dimensions=settings.dimensions,
-            openai_api_key=SecretStr(settings.openai_api_key),
         )
 
     async def generate_completion(
