@@ -2,34 +2,23 @@
 
 import json
 import logging
-import os
 import re
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-from dotenv import load_dotenv
 from langchain.schema import Document
-from langchain_openai import OpenAIEmbeddings
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
+from knowledge_table_api.config import Settings
+from knowledge_table_api.dependencies import get_milvus_client, get_settings
 from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
 from knowledge_table_api.services.llm import decompose_query, get_keywords
-
-load_dotenv()
-MILVUS_DB_USERNAME = os.getenv("MILVUS_DB_USERNAME")
-MILVUS_DB_PASSWORD = os.getenv("MILVUS_DB_PASSWORD")
-COLLECTION_NAME = os.getenv("INDEX_NAME")
-DIMENSIONS_RAW = os.getenv("DIMENSIONS")
-DIMENSIONS = int(DIMENSIONS_RAW) if DIMENSIONS_RAW else None
+from knowledge_table_api.services.llm_service import LLMService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small", dimensions=DIMENSIONS
-)  # turn this into an env var
 
 
 class MilvusMetadata(BaseModel, extra="forbid"):
@@ -42,51 +31,54 @@ class MilvusMetadata(BaseModel, extra="forbid"):
     uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
-client = MilvusClient(
-    "./milvus_demo.db", token=f"{MILVUS_DB_USERNAME}:{MILVUS_DB_PASSWORD}"
-)
+def get_embeddings(llm_service: LLMService) -> Any:
+    """Get the embedding function from the LLM service."""
+    return llm_service.get_embeddings()
 
-# If collection doesn't exist, create it
-if not client.has_collection(collection_name=COLLECTION_NAME):
-    schema = client.create_schema(
-        auto_id=False,
-        enable_dynamic_field=True,
-    )
 
-    # add fields to schema
-    schema.add_field(
-        field_name="id",
-        datatype=DataType.VARCHAR,
-        is_primary=True,
-        max_length=36,
-    )
-    schema.add_field(
-        field_name="vector",
-        datatype=DataType.FLOAT_VECTOR,
-        dim=DIMENSIONS,
-    )
-    # prepare index parameters
-    index_params = client.prepare_index_params()
-    index_params.add_index(
-        index_type="AUTOINDEX",
-        field_name="vector",
-        metric_type="COSINE",
-    )
+def ensure_collection_exists(client: MilvusClient, settings: Settings) -> None:
+    """Ensure the collection exists in the Milvus database."""
+    if not client.has_collection(collection_name=settings.index_name):
+        schema = client.create_schema(
+            auto_id=False,
+            enable_dynamic_field=True,
+        )
 
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        schema=schema,
-        index_params=index_params,
-        consistency_level=0,
-    )
+        schema.add_field(
+            field_name="id",
+            datatype=DataType.VARCHAR,
+            is_primary=True,
+            max_length=36,
+        )
+        schema.add_field(
+            field_name="vector",
+            datatype=DataType.FLOAT_VECTOR,
+            dim=settings.dimensions,
+        )
+        index_params = client.prepare_index_params()
+        index_params.add_index(
+            index_type="AUTOINDEX",
+            field_name="vector",
+            metric_type="COSINE",
+        )
+
+        client.create_collection(
+            collection_name=settings.index_name,
+            schema=schema,
+            index_params=index_params,
+            consistency_level=0,
+        )
 
 
 async def upsert_vectors(vectors: List[Dict[str, Any]]) -> Dict[str, str]:
-    """Upsert vectors into the Milvus database."""
+    """Upsert the vectors into the Milvus database."""
     logger.info(f"Upserting {len(vectors)} chunks")
 
+    client = get_milvus_client()
+    settings = get_settings()
+
     upsert_response = client.insert(
-        collection_name=COLLECTION_NAME, data=vectors
+        collection_name=settings.index_name, data=vectors
     )
 
     return {
@@ -95,10 +87,12 @@ async def upsert_vectors(vectors: List[Dict[str, Any]]) -> Dict[str, str]:
 
 
 async def prepare_chunks(
-    document_id: str, chunks: List[Document]
+    document_id: str, chunks: List[Document], llm_service: LLMService
 ) -> List[Dict[str, Any]]:
     """Prepare chunks for insertion into the Milvus database."""
     logger.info(f"Preparing {len(chunks)} chunks")
+
+    embeddings = get_embeddings(llm_service)
 
     cleaned_chunks = []
     for chunk in chunks:
@@ -114,9 +108,15 @@ async def prepare_chunks(
 
     datas = []
 
-    # Page numbers only exist in PDF, not docx
     for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks[0])):
-        page = chunk.metadata["page"] + 1
+        # Use the existing page number if available, otherwise calculate a pseudo-page number
+        if "page" in chunk.metadata:
+            page = chunk.metadata["page"] + 1
+        else:
+            # Create a pseudo-page number based on chunk index
+            # Adjust this calculation as needed
+            page = (i // 5) + 1  # Assuming 5 chunks per "page"
+
         metadata = MilvusMetadata(
             text=chunk.page_content,
             page_number=page,
@@ -139,10 +139,14 @@ async def prepare_chunks(
 
 
 async def vector_search(
-    queries: List[str], document_id: str
+    queries: List[str], document_id: str, llm_service: LLMService
 ) -> dict[str, Any]:
     """Perform a vector search on the Milvus database."""
     logger.info(f"Retrieving vectors for {len(queries)} queries.")
+
+    client = get_milvus_client()
+    settings = get_settings()
+    embeddings = get_embeddings(llm_service)
 
     final_chunks: List[Dict[str, Any]] = []
 
@@ -152,7 +156,7 @@ async def vector_search(
 
         logger.info("Searching...")
         query_response = client.search(
-            collection_name=COLLECTION_NAME,
+            collection_name=settings.index_name,
             data=embedded_query,
             filter=f"document_id == '{document_id}'",
             limit=40,
@@ -189,10 +193,15 @@ async def vector_search(
 
 
 async def keyword_search(
-    query: str, document_id: str, keywords: list[str]
+    query: str,
+    document_id: str,
+    keywords: list[str],
 ) -> dict[str, Any]:
     """Perform a keyword search on the Milvus database."""
     logger.info("Performing keyword search.")
+
+    client = get_milvus_client()
+    settings = get_settings()
 
     response = []
     chunk_response = []
@@ -210,7 +219,7 @@ async def keyword_search(
             filter_string = f'(text like "%{clean_keyword}%") && document_id == "{document_id}"'
 
             keyword_response = client.query(
-                collection_name=COLLECTION_NAME,
+                collection_name=settings.index_name,
                 filter=filter_string,
                 output_fields=[
                     "text",
@@ -266,36 +275,51 @@ async def keyword_search(
 
 
 async def hybrid_search(
-    query: str, document_id: str, rules: list[Rule]
+    query: str, document_id: str, rules: list[Rule], llm_service: LLMService
 ) -> VectorResponse:
     """Perform a hybrid search on the Milvus database."""
     logger.info("Performing hybrid search.")
 
-    keywords = None
+    client = get_milvus_client()
+    settings = get_settings()
+    embeddings = get_embeddings(llm_service)
+
+    keywords: list[str] = []
     sorted_keyword_chunks = []
-    # answer_length = None
+    max_length: Optional[int] = None
 
     if rules:
         for rule in rules:
-            # Assumes "must_return" or "may_return" could be provided, but not both
             if rule.type in ["must_return", "may_return"]:
-                keywords = rule.options
+                if rule.options:
+                    if isinstance(rule.options, list):
+                        keywords.extend(rule.options)
+                    elif isinstance(rule.options, dict):
+                        for value in rule.options.values():
+                            if isinstance(value, list):
+                                keywords.extend(value)
+                            elif isinstance(value, str):
+                                keywords.append(value)
+            elif rule.type == "max_length":
+                max_length = rule.length
 
     # If no keywords were provided, extract them from the query
-    if keywords is None:
+    if not keywords:
         logger.info(
             "No keywords provided, extracting keywords from the query."
         )
         try:
-            keywords = await get_keywords(query)
+            extracted_keywords = await get_keywords(llm_service, query)
+            if extracted_keywords and isinstance(extracted_keywords, list):
+                keywords = extracted_keywords
+            else:
+                logger.info("No keywords found in the query.")
         except Exception as e:
             logger.error(f"An error occurred while getting keywords: {e}")
 
-        if not keywords:
-            logger.info("No keywords found in the query.")
-            keywords = []
-        else:
-            logger.info(f"Extracted {len(keywords)} keywords: {keywords}")
+    logger.info(f"Using keywords: {keywords}")
+    if max_length:
+        logger.info(f"Max length set to: {max_length}")
 
     if keywords:
 
@@ -311,7 +335,7 @@ async def hybrid_search(
         logger.info("Running query with keyword filters.")
 
         keyword_response = client.query(
-            collection_name=COLLECTION_NAME,
+            collection_name=settings.index_name,
             filter=filter_string,
             output_fields=[
                 "text",
@@ -344,7 +368,7 @@ async def hybrid_search(
 
     # Running search here instead of in the vector_search function to preserve chunk ids and deduplicate
     semantic_response = client.search(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         data=embedded_query,
         filter=f'document_id == "{document_id}"',
         limit=40,
@@ -392,16 +416,18 @@ async def hybrid_search(
 
 
 async def decomposed_search(
-    query: str, document_id: str, rules: List[Rule]
+    query: str, document_id: str, rules: List[Rule], llm_service: LLMService
 ) -> Dict[str, Any]:
     """Decomposition query."""
     logger.info("Decomposing query into smaller sub-queries.")
 
     # Break the question into simpler sub-questions, and get the chunks for each
-    decomposition_response = await decompose_query(query)
+    decomposition_response = await decompose_query(
+        llm_service=llm_service, query=query
+    )
 
     sub_query_chunks = await vector_search(
-        decomposition_response["sub-queries"], document_id
+        decomposition_response["sub-queries"], document_id, llm_service
     )
 
     return {
@@ -410,15 +436,20 @@ async def decomposed_search(
     }
 
 
-async def delete_document(document_id: str) -> Dict[str, str]:
+async def delete_document(
+    document_id: str,
+) -> Dict[str, str]:
     """Delete a document from the Milvus."""
+    client = get_milvus_client()
+    settings = get_settings()
+
     client.delete(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         filter=f'document_id == "{document_id}"',
     )
 
     confirm_delete = client.query(
-        collection_name=COLLECTION_NAME,
+        collection_name=settings.index_name,
         filter=f'document_id == "{document_id}"',
     )
 

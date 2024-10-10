@@ -3,9 +3,11 @@
 import logging
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from knowledge_table_api.dependencies import get_llm_service
 from knowledge_table_api.models.query import Answer, QueryRequest
+from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.query import (
     decomposition_query,
     hybrid_query,
@@ -19,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=Answer)
-async def run_query(request: QueryRequest) -> Answer:
+async def run_query(
+    request: QueryRequest, llm_service: LLMService = Depends(get_llm_service)
+) -> Answer:
     """
     Run a query and generate a response.
 
@@ -52,6 +56,7 @@ async def run_query(request: QueryRequest) -> Answer:
         request.document_id,
         rules,
         request.prompt.type,
+        llm_service,
     )
 
     if len(query_response["chunks"]) == 0:

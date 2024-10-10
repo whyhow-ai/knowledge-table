@@ -11,6 +11,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from whyhow import Chunk, ChunkMetadata
 
+from knowledge_table_api.dependencies import get_llm_service
 from knowledge_table_api.models.graph import Table
 from knowledge_table_api.services.graph import generate_triples
 from knowledge_table_api.services.llm import generate_schema
@@ -93,7 +94,8 @@ async def export_triples(request: Table) -> Response:
             f"Raw request data: {json.dumps(jsonable_encoder(request), indent=2)}"
         )
 
-        schema_result = await generate_schema(request)
+        llm_service = get_llm_service()  # Get the LLMService instance
+        schema_result = await generate_schema(llm_service, request)
         schema = schema_result["schema"]
         logger.info(f"Generated schema: {json.dumps(schema, indent=2)}")
 

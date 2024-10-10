@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal
 
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.llm import generate_response
+from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.vector import (
     decomposed_search,
     hybrid_search,
@@ -21,10 +22,11 @@ async def decomposition_query(
     document_id: str,
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
+    llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Decompose the query and generate a response."""
     decomposition_query_response = await decomposed_search(
-        query, document_id, rules
+        query, document_id, rules, llm_service
     )
 
     concatenated_chunks = " ".join(
@@ -32,6 +34,7 @@ async def decomposition_query(
     )
 
     answer = await generate_response(
+        llm_service,
         query,
         concatenated_chunks,
         rules,
@@ -52,15 +55,19 @@ async def hybrid_query(
     document_id: str,
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
+    llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Perform a hybrid search and generate a response."""
-    hybrid_query_response = await hybrid_search(query, document_id, rules)
+    hybrid_query_response = await hybrid_search(
+        query, document_id, rules, llm_service
+    )
 
     concatenated_chunks = " ".join(
         [chunk.content for chunk in hybrid_query_response.chunks]
     )
 
     answer = await generate_response(
+        llm_service,
         query,
         concatenated_chunks,
         rules,
@@ -83,15 +90,19 @@ async def simple_vector_query(
     document_id: str,
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
+    llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Perform a simple vector search and generate a response."""
-    simple_vector_query_response = await vector_search([query], document_id)
+    simple_vector_query_response = await vector_search(
+        [query], document_id, llm_service
+    )
 
     concatenated_chunks = " ".join(
         [chunk["content"] for chunk in simple_vector_query_response["chunks"]]
     )
 
     answer = await generate_response(
+        llm_service,
         query,
         concatenated_chunks,
         rules,

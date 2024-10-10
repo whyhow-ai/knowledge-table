@@ -15,6 +15,7 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 
+from knowledge_table_api.dependencies import get_llm_service
 from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
 
 logging.basicConfig(level=logging.INFO)
@@ -125,7 +126,9 @@ def unstructured_loader(file_path: str) -> List[LangchainDocument]:
 
 
 async def upload_document(
-    content_type: Optional[str], filename: str, file_content: bytes
+    content_type: Optional[str],
+    filename: str,
+    file_content: bytes,
 ) -> Optional[str]:
     """
     Upload and process a document.
@@ -189,7 +192,10 @@ async def upload_document(
             )
             chunks = splitter.split_documents(docs)
 
-            prepared_chunks = await prepare_chunks(document_id, chunks)
+            llm_service = get_llm_service()
+            prepared_chunks = await prepare_chunks(
+                document_id, chunks, llm_service
+            )
 
             logger.info(f"Created {len(prepared_chunks)} vectors.")
 

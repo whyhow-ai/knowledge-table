@@ -2,30 +2,38 @@
 
 import json
 import logging
-import os
-from typing import Any, Literal
-
-from dotenv import load_dotenv
-from openai import OpenAI
+from typing import Any, List, Literal, Type, Union
 
 from knowledge_table_api.models.graph import Table
 from knowledge_table_api.models.llm_response import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
+    KeywordsResponseModel,
+    SchemaResponseModel,
     StrArrayResponseModel,
+    StrResponseModel,
+    SubQueriesResponseModel,
 )
 from knowledge_table_api.models.query import Rule
-
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai_client = OpenAI()
+from knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.services.prompts import (
+    BASE_PROMPT,
+    BOOL_INSTRUCTIONS,
+    DECOMPOSE_QUERY_PROMPT,
+    INT_ARRAY_INSTRUCTIONS,
+    KEYWORD_PROMPT,
+    SCHEMA_PROMPT,
+    SIMILAR_KEYWORDS_PROMPT,
+    STR_ARRAY_INSTRUCTIONS,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 async def generate_response(
+    llm_service: LLMService,
     query: str,
     chunks: str,
     rules: list[Rule],
@@ -34,283 +42,158 @@ async def generate_response(
     """Generate a response from the language model."""
     logger.info(f"Generating response for query: {query} in format: {format}")
 
-    str_rule = None
-    int_rule = None
+    # Set the output model based on the format
+    output_model: Type[
+        Union[
+            BoolResponseModel,
+            IntArrayResponseModel,
+            IntResponseModel,
+            StrArrayResponseModel,
+            StrResponseModel,
+        ]
+    ]
 
-    if rules:
-        for rule in rules:
-            # Assumes "must_return" or "may_return" could be provided, but not both
-            if rule.type in ["must_return", "may_return"]:
-                str_rule = rule
-            elif rule.type == "max_length":
-                int_rule = rule
+    str_rule = next(
+        (rule for rule in rules if rule.type in ["must_return", "may_return"]),
+        None,
+    )
+    int_rule = next(
+        (rule for rule in rules if rule.type == "max_length"), None
+    )
 
-    base_prompt = """
-    Your job is to answer the following question using only the raw context provided in the raw text chunks below.
-
-    """
-
-    question_and_context = f"""
-
-    Question: {query}
-
-    Raw Text Chunks: {chunks}
-
-    """
-
+    format_specific_instructions = ""
     if format == "bool":
-        prompt = (
-            base_prompt
-            + """
-            If the question is not asking for a verification or boolean answer, respond with "not found".
-            You should only return "True", "False", or "not found". Do not provide any supporting information. Do not wrap the response in JSON or Python markers. Just the answer.
-            """
-            + question_and_context
+        format_specific_instructions = BOOL_INSTRUCTIONS
+        output_model = BoolResponseModel
+    elif format in ["str_array", "str"]:
+        str_rule_line = _get_str_rule_line(str_rule, query)
+        int_rule_line = _get_int_rule_line(int_rule)
+        format_specific_instructions = STR_ARRAY_INSTRUCTIONS.substitute(
+            str_rule_line=str_rule_line, int_rule_line=int_rule_line
         )
-    elif format == "str_array" or format == "str":
-        str_rule_line = ""
-        int_rule_line = ""
+        output_model = (
+            StrArrayResponseModel
+            if format == "str_array"
+            else StrResponseModel
+        )
+    elif format in ["int", "int_array"]:
+        int_rule_line = _get_int_rule_line(int_rule)
+        format_specific_instructions = INT_ARRAY_INSTRUCTIONS.substitute(
+            int_rule_line=int_rule_line
+        )
+        output_model = (
+            IntArrayResponseModel
+            if format == "int_array"
+            else IntResponseModel
+        )
 
-        if str_rule:
-            if str_rule.type == "must_return" and str_rule.options:
-                str_rule_line = f"""
-                You should only consider these possible values when answering the qustion: {", ".join([f'"{option}"' for option in str_rule.options])}.
-                If these values do not exist in the raw text chunks, or if they do not correctly answer the question, respond with "not found".
-                """
-
-            elif str_rule.type == "may_return" and str_rule.options:
-                str_rule_line = f"""
-                For example:
-                Query: {query}
-                Response: {", ".join(str_rule.options)}, etc...
-
-                If you cannot find a related, correct answer in the raw text chunks, respond with "not found".
-                """
-        if int_rule:
-            int_rule_line = f"Your answer should only return up to {int_rule.length} strings. If you have to choose between muliple, return those that answer the question the best."
-
-        if format == "str_array" or format == "str":
-            prompt = (
-                base_prompt
-                + f"""
-                Your answer should be in the format of a JSON array of strings.
-
-                {str_rule_line}
-
-                {int_rule_line}
-
-                If the question can be answered in a single string, then answer with a JSON array containing a single string.
-
-                Do not provide any supporting information. Do not wrap the response in JSON or Python markers. Ensure the output is in plain JSON and parsable via `json.loads()`.
-
-                """
-                + question_and_context
-            )
-
-    elif format == "int" or format == "int_array":
-        int_rule_line = ""
-        if int_rule:
-            int_rule_line = f"Your answer should only return up to {int_rule.length} integers. If you have to choose between muliple, return those that answer the question the best."
-        if format == "int_array":
-            prompt = (
-                base_prompt
-                + f"""
-                Your answer should be in the format of a JSON array of integers. If it can be answered in a single integer, then answer with a JSON array containing a single integer.
-
-                {int_rule_line}
-
-                Do not provide any supporting information. Do not wrap the response in JSON or Python markers. The response should be parsable by `json.loads()`.
-
-                """
-                + question_and_context
-            )
-        elif format == "int":
-            prompt = (
-                base_prompt
-                + """
-                Your answer should be in the format of a single integer.
-
-                Do not provide any supporting information. Do not wrap the response in JSON or Python markers.
-
-                """
-                + question_and_context
-            )
-
-    response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}],
-        max_tokens=512,
+    prompt = BASE_PROMPT.substitute(
+        query=query,
+        chunks=chunks,
+        format_specific_instructions=format_specific_instructions,
     )
 
-    llm_response = response.choices[0].message.content
-
-    logger.info(f"Response generated: {llm_response}")
-
-    # validated_response: int | str | list[str]
-    if llm_response in [None, "[]", "not found", ["not found"], ""]:
-        logger.error("No answer generated. Returning None")
-        return {"answer": None}
-
-    elif format == "int":
-        try:
-            if llm_response is not None:
-                validated_int_response = IntResponseModel.validate_response(
-                    int(llm_response)
-                )
-            return {"answer": validated_int_response}
-        except ValueError as e:
-            logger.error(f"Validation error: {e}")
-            return {"answer": None}
-
-    elif format == "int_array":
-        try:
-            if llm_response is None:
-                return {"answer": None}
-            validated_int_arr_response = (
-                IntArrayResponseModel.validate_response(
-                    json.loads(llm_response), int_rule
-                )
+    try:
+        model = "gpt-4o"
+        response = await llm_service.generate_completion(
+            prompt, output_model, model
+        )
+        result = response.model_dump()
+        return {
+            "answer": (
+                result.get("answer")
+                if result.get("answer") not in ["None", ["None"]]
+                else None
             )
-            return {"answer": validated_int_arr_response}
-        except ValueError as e:
-            logger.error(f"Validation error: {e}")
-            return {"answer": None}
-
-    elif format == "bool":
-        try:
-            if llm_response is None:
-                return {"answer": None}
-            validated_bool_response = BoolResponseModel.validate_response(
-                llm_response
-            )
-            return {"answer": validated_bool_response}
-        except ValueError as e:
-            logger.error(f"Validation error: {e}")
-            return {"answer": None}
-
-    elif format == "str":
-        try:
-            if llm_response is None:
-                return {"answer": None}
-            validated_str_response = StrArrayResponseModel.validate_response(
-                json.loads(llm_response), str_rule, int_rule
-            )
-            if validated_str_response is not None:
-                string_out = ", ".join(validated_str_response)
-            else:
-                string_out = ""
-            return {"answer": string_out}
-        except ValueError as e:
-            logger.error(f"Validation error: {e}")
-            return {"answer": None}
-
-    elif format == "str_array":
-        try:
-            if llm_response is None:
-                return {"answer": None}
-            validated_str_arr_response = (
-                StrArrayResponseModel.validate_response(
-                    json.loads(llm_response), str_rule, int_rule
-                )
-            )
-            return {"answer": validated_str_arr_response}
-        except ValueError as e:
-            logger.error(f"Validation error: {e}")
-            return {"answer": None}
-
-    else:
-        logger.error("Invalid response format provided.")
+        }
+    except Exception as e:
+        logger.error(f"Error generating response: {e}")
         return {"answer": None}
 
 
-async def get_keywords(query: str) -> list[str]:
+async def get_keywords(
+    llm_service: LLMService, query: str
+) -> dict[str, list[str] | None]:
     """Extract keywords from a query using the language model."""
-    keyword_prompt = f"""
-    Your job is to extract the most relevant keywords from the query below. Return the keywords as a JSON array of strings.
-    Make sure the words are in their simplest, most common form. Focus on verbs and nouns.
-    Do not wrap the response in JSON or Python markers. If you cannot find any keywords, return an empty array.
+    prompt = KEYWORD_PROMPT.substitute(query=query)
 
-    Query: {query}
-    Keywords:"""
-
-    keyword_response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": keyword_prompt}],
-        max_tokens=256,
-    )
-
-    if keyword_response.choices[0].message.content is None:
-        return []
-    keywords = json.loads(keyword_response.choices[0].message.content)
-    return keywords
+    try:
+        response = await llm_service.generate_completion(
+            prompt, KeywordsResponseModel
+        )
+        keywords = response.keywords
+        return {
+            "keywords": keywords if keywords and keywords != ["None"] else None
+        }
+    except Exception as e:
+        logger.error(f"Error extracting keywords: {e}")
+        return {"keywords": None}
 
 
-async def get_similar_keywords(chunks: str, rule: list[str]) -> dict[str, Any]:
+async def get_similar_keywords(
+    llm_service: LLMService, chunks: str, rule: list[str]
+) -> dict[str, Any]:
     """Retrieve keywords similar to the provided keywords from the text chunks."""
     logger.info(
         f"Retrieving keywords which are similar to the provided keywords: {rule}"
     )
 
-    similar_keywords_prompt = f"""
-    Your job is to retrieve additional keywords which are similar to these words: {rule} from the raw text chunks below.
-    Return only words that are semantically related to these terms and their respective domain. Use only the context provided in the text chunks below.
-
-    Raw Text Chunks: {chunks}
-
-    Your answer should be in the format of a JSON array of concise strings.
-    Do not provide any supporting information. Do not wrap the response in JSON or Python markers. Just the answer.
-    """
-
-    similar_keyword_response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": similar_keywords_prompt}],
-        max_tokens=512,
+    prompt = SIMILAR_KEYWORDS_PROMPT.substitute(
+        rule=rule,
+        chunks=chunks,
     )
 
-    if similar_keyword_response.choices[0].message.content is None:
-        return {"keywords": []}
-    similar_keywords = json.loads(
-        similar_keyword_response.choices[0].message.content
-    )
-    return {"keywords": similar_keywords}
+    try:
+        response = await llm_service.generate_completion(
+            prompt, KeywordsResponseModel
+        )
+        keywords = response.keywords
+        return {
+            "keywords": keywords if keywords and keywords != ["None"] else None
+        }
+    except Exception as e:
+        logger.error(f"Error getting similar keywords: {e}")
+        return {"keywords": None}
 
 
-async def decompose_query(query: str) -> dict[str, Any]:
+async def decompose_query(
+    llm_service: LLMService, query: str
+) -> dict[str, Any]:
     """Decompose a query into multiple sub-queries."""
     logger.info("Decomposing query into multiple sub-queries.")
 
-    similar_keywords_prompt = f"""
-    Your job is to decompose the question below into simple, relevant sub questions.The sub-questions should capture semantic variations of the original question.
+    prompt = DECOMPOSE_QUERY_PROMPT.substitute(query=query)
 
-    If the query is simple enough as is, just return the original query.
-
-    Your response should be in the format of a JSON array of strings. At most, you should return 3 sub-queries.
-    Do not provide any supporting information. Do not wrap the response in JSON or Python markers. The response should be parsable by `json.loads()`.
-
-    Question: {query}
-    Sub Questions:"""
-
-    similar_keyword_response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": similar_keywords_prompt}],
-        max_tokens=512,
-    )
-
-    if similar_keyword_response.choices[0].message.content is None:
-        return {"sub-queries": []}
-    sub_queries = json.loads(
-        similar_keyword_response.choices[0].message.content
-    )
-    print(sub_queries)
-    return {"sub-queries": sub_queries}
+    try:
+        response = await llm_service.generate_completion(
+            prompt, SubQueriesResponseModel
+        )
+        sub_queries = response.sub_queries
+        return {
+            "sub-queries": (
+                sub_queries
+                if sub_queries and sub_queries != ["None"]
+                else None
+            )
+        }
+    except Exception as e:
+        logger.error(f"Error decomposing query: {e}")
+        return {"sub-queries": None}
 
 
-async def generate_schema(data: Table) -> dict[str, Any]:
+async def generate_schema(
+    llm_service: LLMService, data: Table
+) -> dict[str, Any]:
     """Generate a schema for the table based on column information and questions."""
     logger.info("Generating schema.")
 
+    # Ensure documents is a list of strings
+    documents: List[str] = list(
+        set(str(row.document.name) for row in data.rows)
+    )
+
     prepared_data = {
-        "documents": list(set(row.document.name for row in data.rows)),
+        "documents": documents,
         "columns": [
             {
                 "id": column.id,
@@ -322,61 +205,47 @@ async def generate_schema(data: Table) -> dict[str, Any]:
         ],
     }
 
+    # Ensure prepared_data["columns"] is a list
     if not isinstance(prepared_data["columns"], list):
-        raise TypeError("prepared_data['columns'] must be a list")
+        logger.error("prepared_data['columns'] is not a list")
+        return {"schema": None}
 
-    if not isinstance(prepared_data["documents"], list) or not all(
-        isinstance(doc, str) for doc in prepared_data["documents"]
-    ):
-        raise TypeError("prepared_data['documents'] must be a list of strings")
-
-    # Extract entity types from the prepared data
-    entity_types = [
+    entity_types: List[str] = [
         column["entity_type"] for column in prepared_data["columns"]
     ]
 
-    schema_prompt = f"""
-    Given the following information about columns in a knowledge table:
-
-    Documents: {', '.join(prepared_data['documents'])}
-    Columns: {json.dumps(prepared_data['columns'], indent=2)}
-
-    Generate a schema that includes the following relationships:
-    1. Between other columns if relevant (e.g., "Diseases, trea  ted_by, Treatments")
-
-    The output should be a JSON object containing:
-    - 'relationships': An array of objects, each containing 'head', 'relation', and 'tail'
-
-    For each relationship:
-    - Use ONLY the exact column names as provided. The available column names are: {', '.join(entity_types)}
-    - The 'head' and 'tail' in each relationship MUST be one of these exact column names
-    - Create meaningful 'relation' names based on the column information and questions provided
-    - Create a relationship between columns if it makes sense based on the questions
-
-    Do not use entity types or any other names not in the provided column list.
-    Do not provide any supporting information.
-    Ensure the output is in plain JSON and parsable via `json.loads()`.
-
-    Schema:"""
-
-    schema_response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": schema_prompt}],
-        max_tokens=2000,
+    # Ensure we're joining a list of strings
+    prompt = SCHEMA_PROMPT.substitute(
+        documents=", ".join(documents) if documents else "",
+        entity_types=", ".join(entity_types) if entity_types else "",
+        columns=json.dumps(prepared_data["columns"]),
     )
 
-    # Check if the response is valid
-    if (
-        not schema_response.choices
-        or not schema_response.choices[0].message.content
-    ):
-        logger.error("Received an empty response from the OpenAI API.")
-        return {"schema": {"relationships": []}}
-
     try:
-        return {
-            "schema": json.loads(schema_response.choices[0].message.content)
-        }
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to decode JSON response: {e}")
-        return {"schema": {"relationships": []}}
+        response = await llm_service.generate_completion(
+            prompt, SchemaResponseModel
+        )
+        schema = response.model_dump()
+        return {"schema": schema if schema.get("relationships") else None}
+    except Exception as e:
+        logger.error(f"Error generating schema: {e}")
+        return {"schema": None}
+
+
+def _get_str_rule_line(str_rule: Rule | None, query: str) -> str:
+    if str_rule:
+        if str_rule.type == "must_return" and str_rule.options:
+            options_str = ", ".join(
+                f'"{option}"' for option in str_rule.options
+            )
+            return f"You should only consider these possible values when answering the question: {options_str}. If these values do not exist in the raw text chunks, or if they do not correctly answer the question, respond with None."
+        elif str_rule.type == "may_return" and str_rule.options:
+            options_str = ", ".join(str_rule.options)
+            return f"For example: Query: {query} Response: {options_str}, etc... If you cannot find a related, correct answer in the raw text chunks, respond with None."
+    return ""
+
+
+def _get_int_rule_line(int_rule: Rule | None) -> str:
+    if int_rule and int_rule.length is not None:
+        return f"Your answer should only return up to {int_rule.length} items. If you have to choose between multiple, return those that answer the question the best. If you cannot find any suitable answer, respond with None."
+    return ""
