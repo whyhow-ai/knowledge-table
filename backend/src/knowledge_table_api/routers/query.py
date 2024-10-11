@@ -5,7 +5,8 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from knowledge_table_api.dependencies import get_llm_service
+from backend.src.knowledge_table_api.services.vector_index.base import VectorIndex
+from knowledge_table_api.dependencies import get_llm_service, get_vector_index
 from knowledge_table_api.models.query import Answer, QueryRequest
 from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.query import (
@@ -22,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 @router.post("", response_model=Answer)
 async def run_query(
-    request: QueryRequest, llm_service: LLMService = Depends(get_llm_service)
+    request: QueryRequest,
+    llm_service: LLMService = Depends(get_llm_service),
+    vector_index: VectorIndex = Depends(get_vector_index),
 ) -> Answer:
     """
     Run a query and generate a response.
@@ -57,6 +60,7 @@ async def run_query(
         rules,
         request.prompt.type,
         llm_service,
+        vector_index,
     )
 
     if len(query_response["chunks"]) == 0:

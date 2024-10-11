@@ -5,12 +5,9 @@ from typing import Any, Dict, List, Literal
 
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.llm import generate_response
+from backend.src.knowledge_table_api.dependencies import get_vector_index
+from backend.src.knowledge_table_api.services.vector_index.base import VectorIndex
 from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.vector import (
-    decomposed_search,
-    hybrid_search,
-    vector_search,
-)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,9 +20,10 @@ async def decomposition_query(
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
     llm_service: LLMService,
+    vector_index: VectorIndex,
 ) -> Dict[str, Any]:
     """Decompose the query and generate a response."""
-    decomposition_query_response = await decomposed_search(
+    decomposition_query_response = await vector_index.decomposed_search(
         query, document_id, rules, llm_service
     )
 
@@ -56,9 +54,10 @@ async def hybrid_query(
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
     llm_service: LLMService,
+    vector_index: VectorIndex,
 ) -> Dict[str, Any]:
     """Perform a hybrid search and generate a response."""
-    hybrid_query_response = await hybrid_search(
+    hybrid_query_response = await vector_index.hybrid_search(
         query, document_id, rules, llm_service
     )
 
@@ -91,9 +90,10 @@ async def simple_vector_query(
     rules: List[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
     llm_service: LLMService,
+    vector_index: VectorIndex,
 ) -> Dict[str, Any]:
     """Perform a simple vector search and generate a response."""
-    simple_vector_query_response = await vector_search(
+    simple_vector_query_response = await vector_index.vector_search(
         [query], document_id, llm_service
     )
 

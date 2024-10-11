@@ -7,17 +7,15 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowledge_table_api.dependencies import get_milvus_client, get_settings
+from knowledge_table_api.dependencies import get_vector_index
 from knowledge_table_api.routers import document, graph, query
-from knowledge_table_api.services.vector import ensure_collection_exists
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage the FastAPI lifespan for the application."""
-    client = get_milvus_client()
-    settings = get_settings()
-    ensure_collection_exists(client, settings)
+    # Creates the collections in the configured vector database
+    get_vector_index()
     yield
 
 

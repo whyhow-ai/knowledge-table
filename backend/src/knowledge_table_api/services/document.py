@@ -15,8 +15,7 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 
-from knowledge_table_api.dependencies import get_llm_service
-from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
+from knowledge_table_api.dependencies import get_llm_service, get_vector_index
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -93,9 +92,7 @@ def unstructured_loader(file_path: str) -> List[LangchainDocument]:
         List of processed document chunks.
     """
     if partition is None:
-        raise ImportError(
-            "Unstructured is not installed or configured properly"
-        )
+        raise ImportError("Unstructured is not installed or configured properly")
 
     elements = partition(filename=file_path)
     docs = []
@@ -193,13 +190,10 @@ async def upload_document(
             chunks = splitter.split_documents(docs)
 
             llm_service = get_llm_service()
-            prepared_chunks = await prepare_chunks(
+            vector_index = get_vector_index()
+            upserted_response = await vector_index.upsert_vectors(
                 document_id, chunks, llm_service
             )
-
-            logger.info(f"Created {len(prepared_chunks)} vectors.")
-
-            upserted_response = await upsert_vectors(prepared_chunks)
 
             logger.info(upserted_response["message"])
 

@@ -274,6 +274,8 @@ Note: Usage of the Unstructured API may incur costs based on your plan with Unst
   - [ ] GPT-4
   - [ ] Anthropic
 - [ ] Support for more vector databases
+  - [x] Milvus
+  - [x] Qdrant
   - [ ] Weaviate
   - [ ] Chroma
   - [ ] Pinecone
