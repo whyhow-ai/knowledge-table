@@ -39,7 +39,7 @@ async def parse_table(data: Table) -> Dict[str, Any]:
                 )
                 if column:
                     answer_data = {
-                        "entity_type": column.prompt.entity_type,
+                        "entity_type": column.prompt.entityType,
                         "answer": (
                             cell.answer.get("answer")
                             if cell.answer.get("answer") is not None
@@ -96,7 +96,6 @@ async def generate_triples(
 
     for relationship in schema["relationships"]:
         for row in table_data.rows:
-            logger.info(f"Processing row: {row.id}")
             triple_id = f"t{len(triples) + 1}"
             head_entity_type = relationship["head"]
             tail_entity_type = relationship["tail"]
@@ -105,7 +104,7 @@ async def generate_triples(
                 (
                     col
                     for col in table_data.columns
-                    if col.prompt.entity_type == head_entity_type
+                    if col.prompt.entityType == head_entity_type
                 ),
                 None,
             )
@@ -113,14 +112,11 @@ async def generate_triples(
                 (
                     col
                     for col in table_data.columns
-                    if col.prompt.entity_type == tail_entity_type
+                    if col.prompt.entityType == tail_entity_type
                 ),
                 None,
             )
 
-            logger.info(
-                f"Head column: {head_column.id if head_column else 'None'}, Tail column: {tail_column.id if tail_column else 'None'}"
-            )
             head_value = None
             tail_value = None
 
@@ -160,8 +156,6 @@ async def generate_triples(
                     f"No tail column found for relationship: {relationship}"
                 )
 
-            logger.info(f"Head value: {head_value}, Tail value: {tail_value}")
-
             if head_value is not None and tail_value is not None:
                 if head_value == "" or tail_value == "":
                     logger.warning(
@@ -184,7 +178,6 @@ async def generate_triples(
                     chunk_ids=[],
                 )
                 triples.append(triple)
-                logger.info(f"Created triple: {triple}")
 
                 for column_id, cell in [
                     (head_column.id if head_column else None, head_cell),
@@ -204,9 +197,6 @@ async def generate_triples(
                             if triple.chunk_ids is None:
                                 triple.chunk_ids = []
                             triple.chunk_ids.append(chunk_id)
-                        logger.info(
-                            f"Added {len(cell.answer['chunks'])} chunks for column {column_id}"
-                        )
             else:
                 logger.warning(
                     f"Skipping triple creation due to missing values. Head: {head_value}, Tail: {tail_value}"

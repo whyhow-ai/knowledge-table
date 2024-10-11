@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     vector_db_service = VectorDBFactory.create_vector_db_service(
         settings.vector_db_provider, llm_service, settings
     )
-    logger.info(f"Vector DB Service: {vector_db_service}")
 
     if vector_db_service is None:
         logger.error(

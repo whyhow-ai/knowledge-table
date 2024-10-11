@@ -197,7 +197,7 @@ async def generate_schema(
         "columns": [
             {
                 "id": column.id,
-                "entity_type": column.prompt.entity_type,
+                "entity_type": column.prompt.entityType,
                 "type": column.prompt.type,
                 "question": column.prompt.query,
             }
