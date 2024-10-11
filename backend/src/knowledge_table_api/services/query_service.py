@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Literal
 
-from knowledge_table_api.core.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service, get_settings
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.llm_service import (
     LLMService,
@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 async def get_vector_db_service() -> Any:
     """Get the vector database service."""
     llm_service = get_llm_service()
-    vector_db_service = VectorDBFactory.create_vector_db_service(llm_service)
+    settings = get_settings()  # Add this line to get the settings
+    vector_db_service = VectorDBFactory.create_vector_db_service(
+        settings.vector_db_provider, llm_service, settings
+    )
     if vector_db_service is None:
         raise ValueError("Failed to create vector database service")
     return vector_db_service

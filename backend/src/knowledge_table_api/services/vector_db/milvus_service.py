@@ -9,12 +9,9 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 from langchain.schema import Document
 from pydantic import BaseModel, Field
-from pymilvus import DataType
+from pymilvus import DataType, MilvusClient
 
-from knowledge_table_api.core.dependencies import (
-    get_milvus_client,
-    get_settings,
-)
+from knowledge_table_api.core.config import Settings
 from knowledge_table_api.routing_schemas.query import (
     Chunk,
     Rule,
@@ -26,7 +23,7 @@ from knowledge_table_api.services.llm_service import (
     get_keywords,
 )
 
-from .base import VectorDBService
+from knowledge_table_api.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,10 +42,13 @@ class MilvusMetadata(BaseModel, extra="forbid"):
 class MilvusService(VectorDBService):
     """The Milvus service for the vector database."""
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, settings: Settings):
         self.llm_service = llm_service
-        self.client = get_milvus_client()
-        self.settings = get_settings()
+        self.settings = settings
+        self.client = MilvusClient(
+            "./milvus_demo.db",
+            token=f"{settings.milvus_db_username}:{settings.milvus_db_password}",
+        )
 
     def get_embeddings(self) -> Any:
         """Get the embedding function from the LLM service."""

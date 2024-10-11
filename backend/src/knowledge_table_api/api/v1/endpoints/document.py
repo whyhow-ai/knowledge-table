@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-from knowledge_table_api.core.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service, get_settings
 from knowledge_table_api.models.document import Document
 from knowledge_table_api.routing_schemas.document import (
     DeleteDocumentResponse,
@@ -109,9 +109,10 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
     """
     try:
         llm_service = get_llm_service()
+        settings = get_settings()  # Add this line to get the settings
         vector_db_service = VectorDBFactory.create_vector_db_service(
-            llm_service
-        )
+            settings.vector_db_provider, llm_service, settings
+            )
 
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")

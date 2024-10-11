@@ -14,10 +14,10 @@ class Settings(BaseSettings):
     dimensions: int = 768
     embedding_provider: str = "openai"
     llm_provider: str = "openai"
-    openai_api_key: str
+    openai_api_key: str | None = None
 
     # VECTOR DATABASE CONFIG
-    vector_db: str = "milvus-lite"
+    vector_db_provider: str = "milvus-lite"
     index_name: str = "milvus"
     milvus_db_username: str = "root"
     milvus_db_password: str = "Milvus"

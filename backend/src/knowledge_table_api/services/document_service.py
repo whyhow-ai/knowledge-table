@@ -15,8 +15,9 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 
-from knowledge_table_api.core.dependencies import get_llm_service
+from knowledge_table_api.core.dependencies import get_llm_service, get_settings
 from knowledge_table_api.services.vector_db.factory import VectorDBFactory
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -193,8 +194,9 @@ async def upload_document(
             chunks = splitter.split_documents(docs)
 
             llm_service = get_llm_service()
+            settings = get_settings()  # Add this line to get the settings
             vector_db_service = VectorDBFactory.create_vector_db_service(
-                llm_service
+                settings.vector_db_provider, llm_service, settings
             )
 
             if vector_db_service is None:
