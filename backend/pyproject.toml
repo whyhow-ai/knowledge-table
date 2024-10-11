@@ -195,18 +195,21 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
-filterwarnings = [
-    "error",
-    "ignore:There is no current event loop",
-    "ignore:The 'app' shortcut is now deprecated.:DeprecationWarning",
-    "ignore:Using extra keyword arguments on `Field` is deprecated and will be removed:pydantic.warnings.PydanticDeprecatedSince20",
-    "ignore:Support for class-based `config` is deprecated, use ConfigDict instead.:pydantic.warnings.PydanticDeprecatedSince20",
-    "ignore:Exception ignored .* MemoryObjectReceiveStream.__del__:pytest.PytestUnraisableExceptionWarning",
-    "ignore:Unclosed .*:ResourceWarning",
-    "ignore:Pydantic serializer warnings:UserWarning"
+pythonpath = ["src"]
+addopts = "--cov=src/knowledge_table_api -v --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/knowledge_table_api"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError:",
 ]
-testpaths = [
-    "tests",
-]
-addopts = "--cov=src/ -v --cov-report=term-missing --durations=20"
-log_cli = false
+

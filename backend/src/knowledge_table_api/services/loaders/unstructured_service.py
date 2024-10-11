@@ -1,37 +1,47 @@
-"""Unstructured loader service."""
-
-import logging
-import warnings
 from typing import List, Optional
-
-from langchain.schema import Document
-from langchain_unstructured import (
-    UnstructuredLoader as LangchainUnstructuredLoader,
-)
-
 from knowledge_table_api.services.loaders.base import LoaderService
+from langchain.schema import Document
 
-logger = logging.getLogger(__name__)
-
+class UnstructuredDependencyError(ImportError):
+    """Raised when the unstructured dependency is not installed."""
 
 class UnstructuredLoader(LoaderService):
     """Unstructured loader service."""
 
     def __init__(self, unstructured_api_key: Optional[str] = None):
-        """Initialize the UnstructuredLoader."""
+        """Initialize the UnstructuredService."""
         self.unstructured_api_key = unstructured_api_key
-        if not self.unstructured_api_key:
-            warning_message = (
-                "Unstructured API key is not set. "
-                "This may limit functionality or performance. "
-                "Set UNSTRUCTURED_API_KEY in your environment or .env file."
+
+    @staticmethod
+    def _check_unstructured_dependency():
+        try:
+            import unstructured
+            import langchain_unstructured
+        except ImportError:
+            raise UnstructuredDependencyError(
+                "The unstructured package is not installed. "
+                "Please install it with `pip install '.[unstructured]'` "
+                "to use the UnstructuredService."
             )
-            warnings.warn(warning_message, UserWarning)
-            logger.warning(warning_message)
 
     async def load(self, file_path: str) -> List[Document]:
         """Load document from file path."""
-        loader = LangchainUnstructuredLoader(
+        self._check_unstructured_dependency()
+
+        from langchain_unstructured import UnstructuredFileLoader
+
+        loader = UnstructuredFileLoader(
             file_path, unstructured_api_key=self.unstructured_api_key
         )
-        return loader.load()
+        return await loader.aload()
+
+    async def load_and_split(self, file_path: str) -> List[Document]:
+        """Load and split document from file path."""
+        self._check_unstructured_dependency()
+
+        from langchain_unstructured import UnstructuredFileLoader
+
+        loader = UnstructuredFileLoader(
+            file_path, unstructured_api_key=self.unstructured_api_key
+        )
+        return await loader.aload_and_split()
