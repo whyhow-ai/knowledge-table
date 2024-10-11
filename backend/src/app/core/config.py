@@ -4,8 +4,9 @@ This module defines the configuration settings using Pydantic's
 SettingsConfigDict to load environment variables from a .env file.
 """
 
-from typing import List
+from typing import List, Optional
 
+from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 print("Loading config.py from backend/src/app/core/config.py")
@@ -27,7 +28,7 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o"
-    openai_api_key: str
+    openai_api_key: Optional[str] = None
 
     # VECTOR DATABASE CONFIG
     vector_db_provider: str = "milvus-lite"
@@ -44,7 +45,17 @@ class Settings(BaseSettings):
     chunk_overlap: int = 64
 
     # UNSTRUCTURED CONFIG
-    unstructured_api_key: str | None = None
+    unstructured_api_key: Optional[str] = None
+
+    @field_validator("openai_api_key", "unstructured_api_key", mode="before")
+    @classmethod
+    def validate_api_keys(
+        cls, v: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        """Validate the API keys."""
+        if v is None and info.field_name is not None:
+            return info.data.get(info.field_name)
+        return v
 
     model_config = SettingsConfigDict(
         env_file=".env",
