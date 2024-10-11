@@ -4,7 +4,7 @@ from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
-from knowledge_table_api.models.query import Answer, Chunk, Rule
+from knowledge_table_api.models.query import Chunk, Rule
 
 
 class QueryPrompt(BaseModel):
@@ -35,7 +35,12 @@ class VectorResponse(BaseModel):
     chunks: List[Chunk]
 
 
-class QueryResponse(Answer):
-    """Query response schema, inheriting from the Answer model."""
+class QueryResponse(BaseModel):
+    """Query response schema."""
 
-    pass
+    id: str
+    document_id: str
+    prompt_id: str
+    answer: Optional[Union[int, str, bool, List[int], List[str]]]
+    chunks: List[Chunk]
+    type: str

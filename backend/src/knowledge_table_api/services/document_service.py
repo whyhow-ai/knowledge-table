@@ -16,7 +16,7 @@ from langchain_community.document_loaders import (
 )
 
 from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.services.vector import prepare_chunks, upsert_vectors
+from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -193,13 +193,22 @@ async def upload_document(
             chunks = splitter.split_documents(docs)
 
             llm_service = get_llm_service()
-            prepared_chunks = await prepare_chunks(
-                document_id, chunks, llm_service
+            vector_db_service = VectorDBFactory.create_vector_db_service(
+                llm_service
+            )
+
+            if vector_db_service is None:
+                raise ValueError("Failed to create vector database service")
+
+            prepared_chunks = await vector_db_service.prepare_chunks(
+                document_id, chunks
             )
 
             logger.info(f"Created {len(prepared_chunks)} vectors.")
 
-            upserted_response = await upsert_vectors(prepared_chunks)
+            upserted_response = await vector_db_service.upsert_vectors(
+                prepared_chunks
+            )
 
             logger.info(upserted_response["message"])
 

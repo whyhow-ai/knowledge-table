@@ -6,12 +6,10 @@ from typing import Any, Dict, List, Optional, Union
 
 from whyhow import Node, Relation, Triple
 
-from backend.src.knowledge_table_api.services.llm_service import (
-    generate_schema,
-)
 from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.graph import ExportData
 from knowledge_table_api.routing_schemas.graph import Table
+from knowledge_table_api.services.llm_service import generate_schema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -4,13 +4,14 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
+from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.document import Document
-from knowledge_table_api.schemas.document import (
+from knowledge_table_api.routing_schemas.document import (
     DeleteDocumentResponse,
     DocumentResponse,
 )
-from knowledge_table_api.services.document import upload_document
-from knowledge_table_api.services.vector import delete_document
+from knowledge_table_api.services.document_service import upload_document
+from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,17 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         If an error occurs during the deletion process.
     """
     try:
-        delete_document_response = await delete_document(document_id)
+        llm_service = get_llm_service()
+        vector_db_service = VectorDBFactory.create_vector_db_service(
+            llm_service
+        )
+
+        if vector_db_service is None:
+            raise ValueError("Failed to create vector database service")
+
+        delete_document_response = await vector_db_service.delete_document(
+            document_id
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)

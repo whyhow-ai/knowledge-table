@@ -11,11 +11,6 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType
 
-from backend.src.knowledge_table_api.services.llm_service import (
-    LLMService,
-    decompose_query,
-    get_keywords,
-)
 from knowledge_table_api.core.dependencies import (
     get_milvus_client,
     get_settings,
@@ -24,6 +19,11 @@ from knowledge_table_api.routing_schemas.query import (
     Chunk,
     Rule,
     VectorResponse,
+)
+from knowledge_table_api.services.llm_service import (
+    LLMService,
+    decompose_query,
+    get_keywords,
 )
 
 from .base import VectorDBService
@@ -54,7 +54,7 @@ class MilvusService(VectorDBService):
         """Get the embedding function from the LLM service."""
         return self.llm_service.get_embeddings()
 
-    def ensure_collection_exists(self) -> None:
+    async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
         if not self.client.has_collection(
             collection_name=self.settings.index_name

@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
+from langchain.schema import Document as LangchainDocument
+
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.routing_schemas.query import VectorResponse
 
@@ -39,6 +41,25 @@ class VectorDBService(ABC):
         pass
 
     @abstractmethod
+    async def decomposed_search(
+        self, query: str, document_id: str, rules: List[Rule]
+    ) -> Dict[str, Any]:
+        """Decomposition query."""
+        pass
+
+    @abstractmethod
     async def delete_document(self, document_id: str) -> Dict[str, str]:
         """Delete the document from the vector database."""
+        pass
+
+    @abstractmethod
+    async def ensure_collection_exists(self) -> None:
+        """Ensure the collection exists in the vector database."""
+        pass
+
+    @abstractmethod
+    async def prepare_chunks(
+        self, document_id: str, chunks: List[LangchainDocument]
+    ) -> List[Dict[str, Any]]:
+        """Prepare chunks for insertion into the vector database."""
         pass

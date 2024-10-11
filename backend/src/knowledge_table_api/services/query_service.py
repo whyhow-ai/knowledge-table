@@ -1,24 +1,29 @@
-"""Document service."""
+"""Query service."""
 
 import logging
 from typing import Any, Dict, List, Literal
 
-from backend.src.knowledge_table_api.services.llm_service import (
+from knowledge_table_api.core.dependencies import get_llm_service
+from knowledge_table_api.models.query import Rule
+from knowledge_table_api.services.llm_service import (
     LLMService,
     generate_response,
 )
-from knowledge_table_api.models.query import Rule
-from knowledge_table_api.services.vector import (
-    decomposed_search,
-    hybrid_search,
-    vector_search,
-)
+from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Decomposing the query into sub-queries, performing a vector search on each sub-query, and then using the chunks from all to generate an answer to the original question.
+async def get_vector_db_service() -> Any:
+    """Get the vector database service."""
+    llm_service = get_llm_service()
+    vector_db_service = VectorDBFactory.create_vector_db_service(llm_service)
+    if vector_db_service is None:
+        raise ValueError("Failed to create vector database service")
+    return vector_db_service
+
+
 async def decomposition_query(
     query: str,
     document_id: str,
@@ -27,12 +32,13 @@ async def decomposition_query(
     llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Decompose the query and generate a response."""
-    decomposition_query_response = await decomposed_search(
-        query, document_id, rules, llm_service
+    vector_db_service = await get_vector_db_service()
+    decomposition_query_response = await vector_db_service.decomposed_search(
+        query, document_id, rules
     )
 
     concatenated_chunks = " ".join(
-        [chunk["content"] for chunk in decomposition_query_response["chunks"]]
+        [chunk.content for chunk in decomposition_query_response["chunks"]]
     )
 
     answer = await generate_response(
@@ -51,7 +57,6 @@ async def decomposition_query(
     }
 
 
-# Keyword search and vector search are performed, using chunks from both to generate an answer.
 async def hybrid_query(
     query: str,
     document_id: str,
@@ -60,8 +65,9 @@ async def hybrid_query(
     llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Perform a hybrid search and generate a response."""
-    hybrid_query_response = await hybrid_search(
-        query, document_id, rules, llm_service
+    vector_db_service = await get_vector_db_service()
+    hybrid_query_response = await vector_db_service.hybrid_search(
+        query, document_id, rules
     )
 
     concatenated_chunks = " ".join(
@@ -86,7 +92,6 @@ async def hybrid_query(
     return {"answer": answer_value, "chunks": chunks[:10]}
 
 
-# Vector search is performed and the resulting chunks are used to generate an answer.
 async def simple_vector_query(
     query: str,
     document_id: str,
@@ -95,12 +100,13 @@ async def simple_vector_query(
     llm_service: LLMService,
 ) -> Dict[str, Any]:
     """Perform a simple vector search and generate a response."""
-    simple_vector_query_response = await vector_search(
-        [query], document_id, llm_service
+    vector_db_service = await get_vector_db_service()
+    simple_vector_query_response = await vector_db_service.vector_search(
+        [query], document_id
     )
 
     concatenated_chunks = " ".join(
-        [chunk["content"] for chunk in simple_vector_query_response["chunks"]]
+        [chunk.content for chunk in simple_vector_query_response["chunks"]]
     )
 
     answer = await generate_response(

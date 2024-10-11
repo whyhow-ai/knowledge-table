@@ -1,6 +1,6 @@
 """Query model."""
 
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -26,6 +26,6 @@ class Answer(BaseModel):
     id: str
     document_id: str
     prompt_id: str
-    answer: int | str | bool | List[int] | List[str] | None
+    answer: Optional[Union[int, str, bool, List[int], List[str]]]
     chunks: List[Chunk]
-    type: Literal["int", "str", "bool", "int_array", "str_array"]
+    type: str

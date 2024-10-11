@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.query import Answer
-from knowledge_table_api.schemas.query import QueryRequest, QueryResponse
+from knowledge_table_api.routing_schemas.query import QueryRequest
 from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.query import (
+from knowledge_table_api.services.query_service import (
     decomposition_query,
     hybrid_query,
     simple_vector_query,
@@ -21,10 +21,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@router.post("", response_model=QueryResponse)
+@router.post("", response_model=Answer)
 async def run_query(
     request: QueryRequest, llm_service: LLMService = Depends(get_llm_service)
-) -> QueryResponse:
+) -> Answer:
     """
     Run a query and generate a response.
 
@@ -67,7 +67,7 @@ async def run_query(
         raise HTTPException(status_code=500, detail="Internal server error")
 
     if len(query_response["chunks"]) == 0:
-        answer = Answer(
+        return Answer(
             id=uuid.uuid4().hex,
             document_id=request.document_id,
             prompt_id=request.prompt.id,
@@ -75,14 +75,13 @@ async def run_query(
             chunks=[],
             type=request.prompt.type,
         )
-    else:
-        answer = Answer(
-            id=uuid.uuid4().hex,
-            document_id=request.document_id,
-            prompt_id=request.prompt.id,
-            answer=query_response["answer"],
-            chunks=query_response["chunks"],
-            type=request.prompt.type,
-        )
 
-    return QueryResponse(**answer.dict())
+    answer = Answer(
+        id=uuid.uuid4().hex,
+        document_id=request.document_id,
+        prompt_id=request.prompt.id,
+        answer=query_response["answer"],
+        chunks=query_response["chunks"],
+        type=request.prompt.type,
+    )
+    return answer

@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, List, Literal, Type, Union
 
-from backend.src.knowledge_table_api.models.llm_models import (
+from knowledge_table_api.models.llm import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
