@@ -215,10 +215,13 @@ async def generate_triples(
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
     return {
         "triples": [
-            t for t in (triple_to_dict(triple) for triple in triples) if t is not None
+            t
+            for t in (triple_to_dict(triple) for triple in triples)
+            if t is not None
         ],
         "chunks": chunks,
     }
+
 
 async def process_table_and_generate_triples(table_data: Table) -> ExportData:
     """Process the table data, generate a schema, and create triples."""
