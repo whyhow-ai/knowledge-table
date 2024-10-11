@@ -2,28 +2,42 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+import uuid
+from typing import Any, Dict, List, Optional
 
 from whyhow import Node, Relation, Triple
 
 from knowledge_table_api.core.dependencies import get_llm_service
 from knowledge_table_api.models.graph import ExportData
-from knowledge_table_api.routing_schemas.graph import Table
+from knowledge_table_api.models.llm import (
+    SchemaRelationship,
+    SchemaResponseModel,
+)
+from knowledge_table_api.routing_schemas.graph import Row, Table
 from knowledge_table_api.services.llm_service import generate_schema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def to_dict(obj: Any) -> Dict[str, Any]:
-    """Convert an object to a dictionary."""
-    return obj.dict() if hasattr(obj, "dict") else obj.model_dump()
-
-
 async def parse_table(data: Table) -> Dict[str, Any]:
-    """Prepare the table data for schema generation."""
+    """
+    Prepare the table data for schema generation.
+
+    Parameters
+    ----------
+    data : Table
+        The input table data containing rows, columns, and cells.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing parsed table data with document
+        information and answers for each cell.
+    """
     table_data: List[Dict[str, Any]] = []
 
+    # Parse the table data into a list of dictionaries
     for row in data.rows:
         document_data: Dict[str, Any] = {
             "document_name": row.document.name,
@@ -31,6 +45,7 @@ async def parse_table(data: Table) -> Dict[str, Any]:
             "answers": [],
         }
 
+        # Parse the cells into answer data
         for cell in data.cells:
             if cell.rowId == row.id:
                 column = next(
@@ -56,172 +71,349 @@ async def parse_table(data: Table) -> Dict[str, Any]:
     return {"table_data": table_data}
 
 
-def clean_answer(answer: Any) -> Union[str, int, float, bool, None]:
-    """Clean and validate the answer."""
-    if isinstance(answer, (int, float, bool)):
-        return answer
-    elif isinstance(answer, str):
-        return answer.strip() if answer.strip() else None
-    elif isinstance(answer, list):
-        return ", ".join(str(item) for item in answer if item)
-    return None
-
-
-def triple_to_dict(triple: Triple) -> Optional[Dict[str, Any]]:
-    """Convert a Triple object to a dictionary."""
-    if triple.head.name == "" or triple.tail.name == "":
-        logger.warning(f"Skipping triple with empty name: {triple}")
-        return None
-    return {
-        "triple_id": triple.triple_id,
-        "head": {"label": triple.head.label, "name": triple.head.name},
-        "tail": {"label": triple.tail.label, "name": triple.tail.name},
-        "relation": {"name": triple.relation.name},
-        "chunk_ids": triple.chunk_ids,
-    }
-
-
 async def generate_triples(
-    schema: Dict[str, Any], table_data: Table
+    schema: SchemaResponseModel, table_data: Table
 ) -> Dict[str, Any]:
-    """Generate triples and chunks from the given schema and table data."""
-    triples: List[Triple] = []
-    chunks: List[Dict[str, Any]] = []
+    """
+    Generate triples and chunks from the given schema and table data.
+
+    Parameters
+    ----------
+    schema : SchemaResponseModel
+        The schema containing relationships between entities.
+    table_data : Table
+        The table data to process, containing rows, columns, and cells.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary containing generated triples and chunks.
+        The 'triples' key contains a list of triple dictionaries, and the 'chunks'
+        key contains a list of chunk dictionaries.
+    """
+    # Convert the schema to a SchemaResponseModel if it's a dictionary
+    if isinstance(schema, dict):
+        try:
+            schema = SchemaResponseModel(**schema)
+        except Exception as e:
+            logger.error(f"Error converting dict to SchemaResponseModel: {e}")
+            raise ValueError(f"Invalid schema format: {e}")
+    elif not isinstance(schema, SchemaResponseModel):
+        raise TypeError(
+            f"Expected SchemaResponseModel or dict, got {type(schema)}"
+        )
+
+    # Check if relationships is None and set it to an empty list if it is
+    if schema.relationships is None:
+        schema.relationships = []
+
     logger.info(
-        f"Processing schema with {len(schema['relationships'])} relationships"
+        f"Processing schema with {len(schema.relationships)} relationships"
     )
     logger.info(
         f"Table data has {len(table_data.rows)} rows, {len(table_data.columns)} columns, and {len(table_data.cells)} cells"
     )
 
-    for relationship in schema["relationships"]:
-        for row in table_data.rows:
-            triple_id = f"t{len(triples) + 1}"
-            head_entity_type = relationship["head"]
-            tail_entity_type = relationship["tail"]
+    triples = []
+    chunks = []
 
-            head_column = next(
-                (
-                    col
-                    for col in table_data.columns
-                    if col.prompt.entityType == head_entity_type
-                ),
-                None,
-            )
-            tail_column = next(
-                (
-                    col
-                    for col in table_data.columns
-                    if col.prompt.entityType == tail_entity_type
-                ),
-                None,
-            )
-
-            head_value = None
-            tail_value = None
-
-            if head_column:
-                head_cell = next(
-                    (
-                        cell
-                        for cell in table_data.cells
-                        if cell.columnId == head_column.id
-                        and cell.rowId == row.id
-                    ),
-                    None,
-                )
-                head_value = (
-                    head_cell.answer.get("answer") if head_cell else None
-                )
-            else:
-                logger.warning(
-                    f"No head column found for relationship: {relationship}"
-                )
-
-            if tail_column:
-                tail_cell = next(
-                    (
-                        cell
-                        for cell in table_data.cells
-                        if cell.columnId == tail_column.id
-                        and cell.rowId == row.id
-                    ),
-                    None,
-                )
-                tail_value = (
-                    tail_cell.answer.get("answer") if tail_cell else None
-                )
-            else:
-                logger.warning(
-                    f"No tail column found for relationship: {relationship}"
-                )
-
-            if head_value is not None and tail_value is not None:
-                if head_value == "" or tail_value == "":
-                    logger.warning(
-                        f"Skipping triple creation due to empty value. Head: '{head_value}', Tail: '{tail_value}'"
-                    )
-                    continue
-
-                head_label = (
-                    "Document"
-                    if relationship["head"] == "Document"
-                    else relationship["head"]
-                )
-                tail_label = relationship["tail"]
-
-                triple = Triple(
-                    triple_id=triple_id,
-                    head=Node(label=head_label, name=str(head_value)),
-                    tail=Node(label=tail_label, name=str(tail_value)),
-                    relation=Relation(name=relationship["relation"]),
-                    chunk_ids=[],
-                )
-                triples.append(triple)
-
-                for column_id, cell in [
-                    (head_column.id if head_column else None, head_cell),
-                    (tail_column.id if tail_column else None, tail_cell),
-                ]:
-                    if column_id and cell and cell.answer.get("chunks"):
-                        for i, chunk in enumerate(cell.answer["chunks"]):
-                            chunk_id = f"{triple_id}_{column_id}_c{i+1}"
-                            chunks.append(
-                                {
-                                    "chunk_id": chunk_id,
-                                    "content": chunk.get("content", ""),
-                                    "page": chunk.get("page", ""),
-                                    "triple_id": triple_id,
-                                }
-                            )
-                            if triple.chunk_ids is None:
-                                triple.chunk_ids = []
-                            triple.chunk_ids.append(chunk_id)
-            else:
-                logger.warning(
-                    f"Skipping triple creation due to missing values. Head: {head_value}, Tail: {tail_value}"
-                )
+    # Generate triples and chunks for each relationship
+    for relationship in schema.relationships:
+        logger.info(f"Processing relationship: {relationship}")
+        triples_for_relationship = generate_triples_for_relationship(
+            relationship, table_data
+        )
+        triples.extend(triples_for_relationship)
+        chunks.extend(
+            generate_chunks_for_triples(triples_for_relationship, table_data)
+        )
 
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
+
     return {
         "triples": [
-            t
-            for t in (triple_to_dict(triple) for triple in triples)
-            if t is not None
+            triple.model_dump()
+            for triple in triples
+            if triple.head.name and triple.tail.name
         ],
         "chunks": chunks,
     }
 
 
+def generate_triples_for_relationship(
+    relationship: SchemaRelationship, table_data: Table
+) -> List[Triple]:
+    """
+    Generate triples for a single relationship across all rows in the table.
+
+    Parameters
+    ----------
+    relationship : SchemaRelationship
+        The relationship schema to use for triple generation.
+    table_data : Table
+        The table data containing rows to process.
+
+    Returns
+    -------
+    List[Triple]
+        A list of generated Triple objects for the given relationship.
+    """
+    triples = []
+    for row in table_data.rows:
+        try:
+            triple = create_triple_for_row(relationship, row, table_data)
+            if triple:
+                triples.append(triple)
+        except Exception as e:
+            logger.error(f"Error creating triple for row {row.id}: {str(e)}")
+    return triples
+
+
+def create_triple_for_row(
+    relationship: SchemaRelationship, row: Row, table_data: Table
+) -> Optional[Triple]:
+    """
+    Create a single triple for a given relationship and row.
+
+    Parameters
+    ----------
+    relationship : SchemaRelationship
+        The relationship schema to use for triple creation.
+    row : Row
+        The row data to process.
+    table_data : Table
+        The complete table data for context.
+
+    Returns
+    -------
+    Optional[Triple]
+        A Triple object if both head and tail values are found, None otherwise.
+    """
+    head_value = get_cell_value(relationship.head, row, table_data)
+    tail_value = get_cell_value(relationship.tail, row, table_data)
+
+    if head_value and tail_value:
+        triple_id = f"t{uuid.uuid4()}"
+        return Triple(
+            triple_id=triple_id,
+            head=Node(
+                label=get_label(relationship.head), name=str(head_value)
+            ),
+            tail=Node(label=relationship.tail, name=str(tail_value)),
+            relation=Relation(name=relationship.relation),
+            chunk_ids=[],
+        )
+    return None
+
+
+def get_cell_value(
+    entity_type: str, row: Row, table_data: Table
+) -> Optional[str]:
+    """
+    Get the cell value for a given entity type and row.
+
+    Parameters
+    ----------
+    entity_type : str
+        The entity type to look for in the table columns.
+    row : Row
+        The row data to process.
+    table_data : Table
+        The complete table data for context.
+
+    Returns
+    -------
+    Optional[str]
+        The cell value if found, None otherwise.
+    """
+    try:
+        column = next(
+            (
+                col
+                for col in table_data.columns
+                if col.prompt.entityType == entity_type
+            ),
+            None,
+        )
+        if not column:
+            logger.warning(f"No column found for entity type: {entity_type}")
+            return None
+
+        cell = next(
+            (
+                cell
+                for cell in table_data.cells
+                if cell.rowId == row.id and cell.columnId == column.id
+            ),
+            None,
+        )
+        return cell.answer.get("answer") if cell else None
+    except Exception as e:
+        logger.error(
+            f"Error getting cell value for entity type {entity_type}: {str(e)}"
+        )
+        return None
+
+
+def get_label(entity_type: str) -> str:
+    """
+    Get the label for an entity type.
+
+    Parameters
+    ----------
+    entity_type : str
+        The entity type to get the label for.
+
+    Returns
+    -------
+    str
+        'Document' if the entity_type is 'Document', otherwise returns the entity_type itself.
+    """
+    return "Document" if entity_type == "Document" else entity_type
+
+
+def generate_chunks_for_triples(
+    triples: List[Triple], table_data: Table
+) -> List[Dict[str, Any]]:
+    """
+    Generate chunks for a list of triples.
+
+    Parameters
+    ----------
+    triples : List[Triple]
+        The list of triples to generate chunks for.
+    table_data : Table
+        The complete table data for context.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        A list of chunk dictionaries generated for all triples.
+    """
+    chunks = []
+    for triple in triples:
+        chunks.extend(generate_chunks_for_triple(triple, table_data))
+    return chunks
+
+
+def generate_chunks_for_triple(
+    triple: Triple, table_data: Table
+) -> List[Dict[str, Any]]:
+    """
+    Generate chunks for a single triple.
+
+    Parameters
+    ----------
+    triple : Triple
+        The triple to generate chunks for.
+    table_data : Table
+        The complete table data for context.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        A list of chunk dictionaries generated for the given triple.
+        Each chunk dictionary contains 'chunk_id', 'content', 'page', and 'triple_id'.
+    """
+    chunks = []
+
+    # Find the chunks for the head and tail nodes
+    for node in [triple.head, triple.tail]:
+        column = next(
+            (
+                col
+                for col in table_data.columns
+                if col.prompt.entityType == node.label
+            ),
+            None,
+        )
+        if column:
+            cell = next(
+                (
+                    cell
+                    for cell in table_data.cells
+                    if cell.columnId == column.id
+                    and cell.answer.get("answer") == node.name
+                ),
+                None,
+            )
+            if cell and cell.answer.get("chunks"):
+                for i, chunk in enumerate(cell.answer["chunks"]):
+                    chunk_id = f"{triple.triple_id}_{column.id}_c{i+1}"
+                    chunks.append(
+                        {
+                            "chunk_id": chunk_id,
+                            "content": chunk.get("content", ""),
+                            "page": chunk.get("page", ""),
+                            "triple_id": triple.triple_id,
+                        }
+                    )
+                    if triple.chunk_ids is None:
+                        triple.chunk_ids = []
+                    triple.chunk_ids.append(chunk_id)
+    return chunks
+
+
 async def process_table_and_generate_triples(table_data: Table) -> ExportData:
-    """Process the table data, generate a schema, and create triples."""
+    """
+    Process the table data, generate a schema, and create triples.
+
+    This function orchestrates the entire process of generating triples from table data:
+    1. Obtains an LLM service.
+    2. Generates a schema using the LLM service.
+    3. Creates triples based on the generated schema and table data.
+
+    Parameters
+    ----------
+    table_data : Table
+        The input table data to process.
+
+    Returns
+    -------
+    ExportData
+        An ExportData object containing the generated triples and chunks.
+    """
+    # Get the LLM service
     llm_service = get_llm_service()
-    schema_result = await generate_schema(llm_service, table_data)
-    schema = schema_result["schema"]
+    if llm_service is None:
+        logger.error("Failed to create LLM service")
+        return ExportData(triples=[], chunks=[])
 
-    # Print the schema in a readable format
-    logger.info("Generated Schema:")
-    logger.info(json.dumps(schema, indent=2))
+    try:
+        # Generate the schema
+        schema_result = await generate_schema(llm_service, table_data)
 
-    triples_data = await generate_triples(schema, table_data)
-    return ExportData(**triples_data)
+        if not schema_result or "schema" not in schema_result:
+            logger.error("Failed to generate schema: Invalid schema result")
+            return ExportData(triples=[], chunks=[])
+
+        # Convert the schema to a SchemaResponseModel
+        schema_dict = schema_result["schema"]
+        schema = SchemaResponseModel(
+            relationships=[
+                SchemaRelationship(**rel)
+                for rel in schema_dict.get("relationships", [])
+            ]
+        )
+
+        logger.info("Generated Schema:")
+        logger.info(json.dumps(schema.model_dump(), indent=2))
+
+        if not schema.relationships:
+            logger.warning("Generated schema has no relationships")
+            return ExportData(triples=[], chunks=[])
+
+        # Generate triples
+        triples_data = await generate_triples(schema, table_data)
+
+        if not triples_data:
+            logger.warning("No triples generated from the schema")
+            return ExportData(triples=[], chunks=[])
+
+        return ExportData(**triples_data)
+
+    except Exception as e:
+        logger.exception(
+            f"Unexpected error in process_table_and_generate_triples: {e}"
+        )
+        return ExportData(triples=[], chunks=[])

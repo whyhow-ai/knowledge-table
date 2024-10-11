@@ -26,25 +26,35 @@ logger = logging.getLogger(__name__)
 async def export_triples(request: Request) -> Response:
     """Export triples from a table."""
     try:
+
+        # Get the request body
         body = await request.json()
 
-        # Now manually validate the request
+        # Create a Table object from the request body
         try:
+
+            # Validate the request
             export_request = ExportTriplesRequest(**body)
+
             # Create a Table object from the ExportTriplesRequest
             table = Table(
                 columns=export_request.columns,
                 rows=export_request.rows,
                 cells=export_request.cells,
             )
+
         except ValidationError as e:
             raise HTTPException(status_code=422, detail=str(e))
 
-        llm_service = get_llm_service()  # Get the LLMService instance
+        # Create the LLM service
+        llm_service = get_llm_service()
+
+        # Generate the schema
         schema_result = await generate_schema(llm_service, table)
         schema = schema_result["schema"]
         print(f"Generated schema: {json.dumps(schema, indent=2)}")
 
+        # Generate the triples and chunks
         export_data = await generate_triples(schema, table)
         print(
             f"Generated {len(export_data['triples'])} triples and {len(export_data['chunks'])} chunks"
@@ -66,6 +76,7 @@ async def export_triples(request: Request) -> Response:
             response_data.model_dump(), indent=2, default=str
         )
 
+        # Set the response headers
         headers = {
             "Content-Disposition": 'attachment; filename="triples_and_chunks.json"',
             "Content-Type": "application/json",

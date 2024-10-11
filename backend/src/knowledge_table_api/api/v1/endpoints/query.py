@@ -33,6 +33,7 @@ async def run_query(
     2. Hybrid Search: Performs both a keyword search and a vector search, using chunks from both to generate an answer.
     3. Decomposed Search: Breaks down the query into sub-queries, performs a vector search on each sub-query, and then uses the answers and chunks from each to generate an answer to the original question.
     """
+    # Determine the type of query to run
     query_type = request.rag_type  # vector, hybrid, decomposed
 
     # If there's rules, or if the answer is boolean, do hybrid
@@ -46,6 +47,7 @@ async def run_query(
         "vector": simple_vector_query,
     }
 
+    # Get the rules
     rules = request.prompt.rules or []
 
     if query_type not in query_functions:
@@ -66,6 +68,7 @@ async def run_query(
         logger.error(f"Error in query function: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+    # If no chunks are returned, return an empty answer
     if len(query_response["chunks"]) == 0:
         return Answer(
             id=uuid.uuid4().hex,
@@ -76,6 +79,7 @@ async def run_query(
             type=request.prompt.type,
         )
 
+    # Return the answer
     answer = Answer(
         id=uuid.uuid4().hex,
         document_id=request.document_id,

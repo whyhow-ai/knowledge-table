@@ -39,7 +39,27 @@ async def generate_response(
     rules: list[Rule],
     format: Literal["int", "str", "bool", "int_array", "str_array"],
 ) -> dict[str, Any]:
-    """Generate a response from the language model."""
+    """
+    Generate a response from the language model based on the given query and format.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for generating the response.
+    query : str
+        The user's query to be answered.
+    chunks : str
+        The context or relevant text chunks for answering the query.
+    rules : list[Rule]
+        A list of rules to apply when generating the response.
+    format : Literal["int", "str", "bool", "int_array", "str_array"]
+        The desired format of the response.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the generated answer or None if an error occurs.
+    """
     logger.info(f"Generating response for query: {query} in format: {format}")
 
     # Set the output model based on the format
@@ -53,6 +73,7 @@ async def generate_response(
         ]
     ]
 
+    # Get the first rule that is either a must_return or may_return
     str_rule = next(
         (rule for rule in rules if rule.type in ["must_return", "may_return"]),
         None,
@@ -61,6 +82,7 @@ async def generate_response(
         (rule for rule in rules if rule.type == "max_length"), None
     )
 
+    # Set the format specific instructions
     format_specific_instructions = ""
     if format == "bool":
         format_specific_instructions = BOOL_INSTRUCTIONS
@@ -87,6 +109,7 @@ async def generate_response(
             else IntResponseModel
         )
 
+    # Create the base prompt
     prompt = BASE_PROMPT.substitute(
         query=query,
         chunks=chunks,
@@ -94,30 +117,36 @@ async def generate_response(
     )
 
     try:
-        model = "gpt-4o"
-        response = await llm_service.generate_completion(
-            prompt, output_model, model
-        )
-        result = response.model_dump()
-        return {
-            "answer": (
-                result.get("answer")
-                if result.get("answer") not in ["None", ["None"]]
-                else None
-            )
-        }
+        response = await llm_service.generate_completion(prompt, output_model)
+        return {"answer": response.answer}
     except Exception as e:
-        logger.error(f"Error generating response: {e}")
-        return {"answer": None}
+        logger.error(f"Error generating response: {str(e)}")
+        return {"answer": "An error occurred while generating the response."}
 
 
 async def get_keywords(
     llm_service: LLMService, query: str
 ) -> dict[str, list[str] | None]:
-    """Extract keywords from a query using the language model."""
+    """
+    Extract keywords from a query using the language model.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for keyword extraction.
+    query : str
+        The query from which to extract keywords.
+
+    Returns
+    -------
+    dict[str, list[str] | None]
+        A dictionary containing the extracted keywords or None if an error occurs.
+    """
+    # Create the prompt
     prompt = KEYWORD_PROMPT.substitute(query=query)
 
     try:
+        # Generate the response
         response = await llm_service.generate_completion(
             prompt, KeywordsResponseModel
         )
@@ -133,17 +162,36 @@ async def get_keywords(
 async def get_similar_keywords(
     llm_service: LLMService, chunks: str, rule: list[str]
 ) -> dict[str, Any]:
-    """Retrieve keywords similar to the provided keywords from the text chunks."""
+    """
+    Retrieve keywords similar to the provided keywords from the given text chunks.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for finding similar keywords.
+    chunks : str
+        The text chunks to search for similar keywords.
+    rule : list[str]
+        The list of keywords to use as a reference for finding similar ones.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the similar keywords found or None if an error occurs.
+    """
     logger.info(
         f"Retrieving keywords which are similar to the provided keywords: {rule}"
     )
 
+    # Create the prompt
     prompt = SIMILAR_KEYWORDS_PROMPT.substitute(
         rule=rule,
         chunks=chunks,
     )
 
     try:
+
+        # Generate the response
         response = await llm_service.generate_completion(
             prompt, KeywordsResponseModel
         )
@@ -159,12 +207,29 @@ async def get_similar_keywords(
 async def decompose_query(
     llm_service: LLMService, query: str
 ) -> dict[str, Any]:
-    """Decompose a query into multiple sub-queries."""
+    """
+    Decompose a complex query into multiple simpler sub-queries.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for query decomposition.
+    query : str
+        The complex query to be decomposed.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the list of sub-queries or None if an error occurs.
+    """
     logger.info("Decomposing query into multiple sub-queries.")
 
+    # Create the prompt
     prompt = DECOMPOSE_QUERY_PROMPT.substitute(query=query)
 
     try:
+
+        # Generate the response
         response = await llm_service.generate_completion(
             prompt, SubQueriesResponseModel
         )
@@ -184,7 +249,21 @@ async def decompose_query(
 async def generate_schema(
     llm_service: LLMService, data: Table
 ) -> dict[str, Any]:
-    """Generate a schema for the table based on column information and questions."""
+    """
+    Generate a schema for the table based on column information and questions.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for schema generation.
+    data : Table
+        The table data containing information about columns, rows, and documents.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the generated schema or None if an error occurs.
+    """
     logger.info("Generating schema.")
 
     # Ensure documents is a list of strings
@@ -233,6 +312,21 @@ async def generate_schema(
 
 
 def _get_str_rule_line(str_rule: Rule | None, query: str) -> str:
+    """
+    Generate a string rule line based on the given string rule and query.
+
+    Parameters
+    ----------
+    str_rule : Rule | None
+        The string rule to process.
+    query : str
+        The original query for context.
+
+    Returns
+    -------
+    str
+        A formatted string containing instructions based on the rule, or an empty string if no rule is provided.
+    """
     if str_rule:
         if str_rule.type == "must_return" and str_rule.options:
             options_str = ", ".join(
@@ -246,6 +340,19 @@ def _get_str_rule_line(str_rule: Rule | None, query: str) -> str:
 
 
 def _get_int_rule_line(int_rule: Rule | None) -> str:
+    """
+    Generate an integer rule line based on the given integer rule.
+
+    Parameters
+    ----------
+    int_rule : Rule | None
+        The integer rule to process.
+
+    Returns
+    -------
+    str
+        A formatted string containing instructions based on the rule, or an empty string if no rule is provided.
+    """
     if int_rule and int_rule.length is not None:
         return f"Your answer should only return up to {int_rule.length} items. If you have to choose between multiple, return those that answer the question the best. If you cannot find any suitable answer, respond with None."
     return ""

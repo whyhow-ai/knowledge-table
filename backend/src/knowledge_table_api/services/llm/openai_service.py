@@ -15,19 +15,25 @@ class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
 
     def __init__(self) -> None:
+
+        # Initialize the OpenAI client
         openai_client = OpenAI(api_key=settings.openai_api_key)
+
+        # Wrap the OpenAI client with instructor
         self.client = instructor.from_openai(openai_client)
+
+        # Initialize the embeddings
         self.embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
+            model=settings.embedding_model,
             dimensions=settings.dimensions,
         )
 
     async def generate_completion(
-        self, prompt: str, response_model: Any, model: str = "gpt-4o"
+        self, prompt: str, response_model: Any
     ) -> Any:
         """Generate a completion from the language model."""
         response = self.client.chat.completions.create(
-            model=model,
+            model=settings.llm_model,
             response_model=response_model,
             messages=[{"role": "user", "content": prompt}],
         )

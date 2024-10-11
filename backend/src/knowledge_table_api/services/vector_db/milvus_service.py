@@ -58,22 +58,28 @@ class MilvusService(VectorDBService):
         if not self.client.has_collection(
             collection_name=self.settings.index_name
         ):
+            # Create the schema
             schema = self.client.create_schema(
                 auto_id=False,
                 enable_dynamic_field=True,
             )
 
+            # Add the id field
             schema.add_field(
                 field_name="id",
                 datatype=DataType.VARCHAR,
                 is_primary=True,
                 max_length=36,
             )
+
+            # Add the vector field
             schema.add_field(
                 field_name="vector",
                 datatype=DataType.FLOAT_VECTOR,
                 dim=self.settings.dimensions,
             )
+
+            # Add the index
             index_params = self.client.prepare_index_params()
             index_params.add_index(
                 index_type="AUTOINDEX",
@@ -81,6 +87,7 @@ class MilvusService(VectorDBService):
                 metric_type="COSINE",
             )
 
+            # Create the collection
             self.client.create_collection(
                 collection_name=self.settings.index_name,
                 schema=schema,
@@ -94,6 +101,7 @@ class MilvusService(VectorDBService):
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
 
+        # Upsert the vectors
         upsert_response = self.client.insert(
             collection_name=self.settings.index_name, data=vectors
         )
@@ -108,8 +116,10 @@ class MilvusService(VectorDBService):
         """Prepare chunks for insertion into the Milvus database."""
         logger.info(f"Preparing {len(chunks)} chunks")
 
+        # Get the embeddings
         embeddings = self.get_embeddings()
 
+        # Clean the chunks
         cleaned_chunks = []
         for chunk in chunks:
             cleaned_chunks.append(
@@ -118,28 +128,33 @@ class MilvusService(VectorDBService):
 
         logger.info("Generating embeddings.")
 
+        # Embed the chunks
         texts = [chunk.page_content for chunk in chunks]
-
         embedded_chunks = [
             np.array(embeddings.embed_documents(texts)).tolist()
         ]
 
+        # Prepare the data for insertion
         datas = []
 
         for i, (chunk, embedding) in enumerate(
             zip(chunks, embedded_chunks[0])
         ):
+            # Get the page number
             if "page" in chunk.metadata:
                 page = chunk.metadata["page"] + 1
             else:
                 page = (i // 5) + 1  # Assuming 5 chunks per "page"
 
+            # Create the metadata
             metadata = MilvusMetadata(
                 text=chunk.page_content,
                 page_number=page,
                 chunk_number=i,
                 document_id=document_id,
             )
+
+            # Create the data
             data = {
                 "id": metadata.uuid,
                 "vector": embedding,
@@ -160,15 +175,22 @@ class MilvusService(VectorDBService):
         """Perform a vector search on the Milvus database."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
+        # Get the embeddings
         embeddings = self.get_embeddings()
 
+        # Prepare the final chunks
         final_chunks: List[Dict[str, Any]] = []
 
+        # Search for each query
         for query in queries:
             logger.info("Generating embedding.")
+
+            # Embed the query
             embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
 
             logger.info("Searching...")
+
+            # Search the colection
             query_response = self.client.search(
                 collection_name=self.settings.index_name,
                 data=embedded_query,
@@ -182,6 +204,7 @@ class MilvusService(VectorDBService):
                 ],
             )
 
+            # Add the chunks to the final chunks
             final_chunks.extend(
                 item["entity"] for result in query_response for item in result
             )
@@ -189,6 +212,7 @@ class MilvusService(VectorDBService):
         seen_chunks = set()
         formatted_output = []
 
+        # Format the output
         for chunk in final_chunks:
             if chunk["chunk_number"] not in seen_chunks:
                 seen_chunks.add(chunk["chunk_number"])
@@ -213,6 +237,7 @@ class MilvusService(VectorDBService):
         chunk_response = []
         seen_chunks = set()
 
+        # Run the keyword search
         if keywords:
             for keyword in keywords:
                 logger.info(f"Running keyword search for: {keyword}")
@@ -221,6 +246,7 @@ class MilvusService(VectorDBService):
 
                 filter_string = f'(text like "%{clean_keyword}%") && document_id == "{document_id}"'
 
+                # Query the collection
                 keyword_response = self.client.query(
                     collection_name=self.settings.index_name,
                     filter=filter_string,
@@ -235,6 +261,7 @@ class MilvusService(VectorDBService):
                 chunks = json.dumps(keyword_response, indent=2)
                 deserialized_chunks = json.loads(chunks)
 
+                # If there are chunks, add the keyword to the response
                 if deserialized_chunks:
                     response.append(keyword)
 
@@ -243,6 +270,7 @@ class MilvusService(VectorDBService):
                     ) -> int:
                         return text.lower().count(keyword.lower())
 
+                    # Sort the chunks by the number of keyword occurrences
                     sorted_keyword_chunks = sorted(
                         deserialized_chunks,
                         key=lambda chunk: count_keyword_occurrences(
@@ -253,6 +281,7 @@ class MilvusService(VectorDBService):
 
                     chunks_added = 0
 
+                    # Add the chunks to the response
                     for chunk in sorted_keyword_chunks[:5]:
                         if chunk["chunk_number"] not in seen_chunks:
                             chunk_response.append(
@@ -278,12 +307,14 @@ class MilvusService(VectorDBService):
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
+        # Get the embeddings
         embeddings = self.get_embeddings()
 
         keywords: list[str] = []
         sorted_keyword_chunks = []
         max_length: Optional[int] = None
 
+        # Process the rules
         if rules:
             for rule in rules:
                 if rule.type in ["must_return", "may_return"]:
@@ -299,6 +330,7 @@ class MilvusService(VectorDBService):
                 elif rule.type == "max_length":
                     max_length = rule.length
 
+        # If no keywords are provided, extract them from the query
         if not keywords:
             logger.info(
                 "No keywords provided, extracting keywords from the query."
@@ -318,6 +350,7 @@ class MilvusService(VectorDBService):
         if max_length:
             logger.info(f"Max length set to: {max_length}")
 
+        # Run the keyword search
         if keywords:
             like_conditions = " || ".join(
                 [f'text like "%{keyword}%"' for keyword in keywords]
@@ -328,6 +361,7 @@ class MilvusService(VectorDBService):
 
             logger.info("Running query with keyword filters.")
 
+            # Query the collection
             keyword_response = self.client.query(
                 collection_name=self.settings.index_name,
                 filter=filter_string,
@@ -342,11 +376,13 @@ class MilvusService(VectorDBService):
             keyword_chunks = json.dumps(keyword_response, indent=2)
             deserialized_keyword_chunks = json.loads(keyword_chunks)
 
+            # Count the keywords in the chunks
             def count_keywords(text: str, keywords: List[str]) -> int:
                 return sum(
                     text.lower().count(keyword.lower()) for keyword in keywords
                 )
 
+            # Sort the chunks by the number of keywords
             sorted_keyword_chunks = sorted(
                 deserialized_keyword_chunks,
                 key=lambda chunk: count_keywords(
@@ -355,10 +391,12 @@ class MilvusService(VectorDBService):
                 reverse=True,
             )
 
+        # Embed the query
         embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
 
         logger.info("Running semantic similarity search.")
 
+        # Search the collection
         semantic_response = self.client.search(
             collection_name=self.settings.index_name,
             data=embedded_query,
@@ -372,9 +410,11 @@ class MilvusService(VectorDBService):
             ],
         )
 
+        # Deserialize the semantic response
         semantic_chunks = json.dumps(semantic_response, indent=2)
         deserialized_semantic_chunks = json.loads(semantic_chunks)
 
+        # Flatten the semantic response
         flattened_semantic_chunks = [
             item["entity"]
             for sublist in deserialized_semantic_chunks
@@ -383,10 +423,12 @@ class MilvusService(VectorDBService):
 
         print(f"Found {len(flattened_semantic_chunks)} semantic chunks.")
 
+        # Combine the keyword and semantic chunks
         combined_chunks = (
             sorted_keyword_chunks[:20] + flattened_semantic_chunks
         )
 
+        # Sort the chunks by chunk number
         combined_sorted_chunks = sorted(
             combined_chunks, key=lambda chunk: chunk["chunk_number"]
         )
@@ -394,6 +436,7 @@ class MilvusService(VectorDBService):
         seen_chunks = set()
         formatted_output = []
 
+        # Format the output
         for chunk in combined_sorted_chunks:
             if chunk["chunk_number"] not in seen_chunks:
                 formatted_output.append(
@@ -419,6 +462,7 @@ class MilvusService(VectorDBService):
             llm_service=self.llm_service, query=query
         )
 
+        # Get the chunks for each sub-query
         sub_query_chunks = await self.vector_search(
             decomposition_response["sub-queries"], document_id
         )
@@ -435,11 +479,13 @@ class MilvusService(VectorDBService):
             filter=f'document_id == "{document_id}"',
         )
 
+        # Confirm the deletion
         confirm_delete = self.client.query(
             collection_name=self.settings.index_name,
             filter=f'document_id == "{document_id}"',
         )
 
+        # Check if the document was deleted
         chunks = json.dumps(confirm_delete, indent=2)
 
         if len(json.loads(chunks)) == 0:

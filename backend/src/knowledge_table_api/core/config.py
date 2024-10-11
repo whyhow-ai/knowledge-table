@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     # LLM CONFIG
     dimensions: int = 768
     embedding_provider: str = "openai"
+    embedding_model: str = "text-embedding-3-small"
     llm_provider: str = "openai"
+    llm_model: str = "gpt-4o"
     openai_api_key: str | None = None
 
     # VECTOR DATABASE CONFIG

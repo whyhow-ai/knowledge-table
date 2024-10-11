@@ -56,6 +56,7 @@ async def upload_document_endpoint(
             detail="File name is missing",
         )
 
+    # Get file metadata
     content_type = file.content_type
     filename = file.filename
 
@@ -64,13 +65,17 @@ async def upload_document_endpoint(
     )
 
     try:
+        # Create the vector database service
         vector_db_service = VectorDBFactory.create_vector_db_service(
             settings.vector_db_provider, llm_service, settings
         )
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")
 
+        # Create the document service
         document_service = DocumentService(settings, vector_db_service)
+
+        # Upload the document
         document_id = await document_service.upload_document(
             filename, await file.read()
         )
@@ -123,15 +128,21 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         If an error occurs during the deletion process.
     """
     try:
+
+        # Create the LLM service
         llm_service = get_llm_service()
-        settings = get_settings()  # Add this line to get the settings
+
+        # Get the settings
+        settings = get_settings()
+
+        # Create the vector database service
         vector_db_service = VectorDBFactory.create_vector_db_service(
             settings.vector_db_provider, llm_service, settings
         )
-
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")
 
+        # Delete the document
         delete_document_response = await vector_db_service.delete_document(
             document_id
         )

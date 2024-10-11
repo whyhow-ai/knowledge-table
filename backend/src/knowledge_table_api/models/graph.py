@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Chunk(BaseModel):
@@ -43,15 +43,7 @@ class Triple(BaseModel):
     relation: Relation
     chunk_ids: List[str]
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the Triple object into a dictionary."""
-        return {
-            "triple_id": self.triple_id,
-            "head": self.head.model_dump(),
-            "tail": self.tail.model_dump(),
-            "relation": self.relation.model_dump(),
-            "chunk_ids": self.chunk_ids,
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExportData(BaseModel):
@@ -60,9 +52,4 @@ class ExportData(BaseModel):
     triples: List[Triple]
     chunks: List[Dict[str, Any]]
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the ExportData object into a dictionary."""
-        return {
-            "triples": [triple.to_dict() for triple in self.triples],
-            "chunks": self.chunks,
-        }
+    model_config = ConfigDict(from_attributes=True)

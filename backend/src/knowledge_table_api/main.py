@@ -19,11 +19,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage the FastAPI lifespan for the application."""
+    # Get the settings and LLM service
     settings = get_settings()
     llm_service = get_llm_service()
     logger.info(f"LLM Service: {llm_service}")
     logger.info(f"Vector DB Provider: {settings.vector_db_provider}")
 
+    # Create the vector database service
     vector_db_service = VectorDBFactory.create_vector_db_service(
         settings.vector_db_provider, llm_service, settings
     )
@@ -55,6 +57,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include the routers
 app.include_router(document.router)
 app.include_router(query.router)
 app.include_router(graph.router)

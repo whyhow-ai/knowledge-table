@@ -40,15 +40,19 @@ class DocumentService:
     ) -> Optional[str]:
         """Upload a document."""
         try:
+
+            # Generate a document ID
             document_id = self._generate_document_id()
             logger.info(f"Created document_id: {document_id}")
 
+            # Save the file to a temporary location
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=os.path.splitext(filename)[1]
             ) as temp_file:
                 temp_file.write(file_content)
                 temp_file_path = temp_file.name
 
+            # Process the document
             try:
                 chunks = await self._process_document(temp_file_path)
                 prepared_chunks = await self.vector_db_service.prepare_chunks(
@@ -68,12 +72,18 @@ class DocumentService:
     async def _process_document(
         self, file_path: str
     ) -> List[LangchainDocument]:
+        """Process a document."""
+        # Load the document
         docs = await self._load_document(file_path)
+
+        # Split the document into chunks
         chunks = self.splitter.split_documents(docs)
         logger.info(f"Document split into {len(chunks)} chunks")
         return chunks
 
     async def _load_document(self, file_path: str) -> List[LangchainDocument]:
+
+        # Create a loader
         loader = self.loader_factory.create_loader(self.settings)
 
         if loader is None:
@@ -81,6 +91,7 @@ class DocumentService:
                 f"No loader available for configured loader type: {self.settings.loader}"
             )
 
+        # Load the document
         try:
             return await loader.load(file_path)
         except Exception as e:
