@@ -1,14 +1,17 @@
 """Service for interacting with OpenAI models."""
 
-from typing import Any
+import asyncio
+import logging
+from typing import Any, List
 
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
 from app.core.config import settings
 
-from .base import LLMService
+from app.services.llm.base import LLMService
 
+logger = logging.getLogger(__name__)
 
 class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
@@ -27,14 +30,18 @@ class OpenAIService(LLMService):
         self, prompt: str, response_model: Any
     ) -> Any:
         """Generate a completion from the language model."""
-        response = self.client.chat.completions.create(
+        response = self.client.beta.chat.completions.parse(
             model=settings.llm_model,
             messages=[{"role": "user", "content": prompt}],
             response_format=response_model,
         )
-        return response
 
-    async def get_embeddings(self, text: str) -> list[float]:
-        """Generate embeddings for the given text."""
-        embedding = self.embeddings.embed_query(text)
-        return embedding
+        logger.info(f"Generated response: {response.choices[0].message.parsed}")
+        return response.choices[0].message.parsed
+
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """Generate embeddings for the given texts."""
+        # Use asyncio to run the embedding in a separate thread
+        loop = asyncio.get_event_loop()
+        embeddings = await loop.run_in_executor(None, self.embeddings.embed_documents, texts)
+        return embeddings

@@ -4,7 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
@@ -24,6 +24,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     llm_service = get_llm_service()
     logger.info(f"LLM Service: {llm_service}")
     logger.info(f"Vector DB Provider: {settings.vector_db_provider}")
+    logger.info(f"API_V1_STR: {settings.API_V1_STR}")
+    logger.info(f"Document router prefix: {api_router.prefix}/documents")
 
     # Create the vector database service
     vector_db_service = VectorDBFactory.create_vector_db_service(
@@ -52,6 +54,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 # Allow CORS for all origins
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +63,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Received request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Returning response: {response.status_code}")
+    return response
 
 # Include the API router
 app.include_router(api_router, prefix=settings.API_V1_STR)

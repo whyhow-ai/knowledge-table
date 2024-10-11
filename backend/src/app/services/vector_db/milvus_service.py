@@ -46,7 +46,14 @@ class MilvusService(VectorDBService):
         if isinstance(text, str):
             return await self.llm_service.get_embeddings(text)
         else:
-            return [await self.llm_service.get_embeddings(t) for t in text]
+            # Batch the embedding requests
+            batch_size = 20  # Adjust this based on your LLM service's capabilities
+            embeddings = []
+            for i in range(0, len(text), batch_size):
+                batch = text[i:i+batch_size]
+                batch_embeddings = await self.llm_service.get_embeddings(batch)
+                embeddings.extend(batch_embeddings)
+            return embeddings
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
@@ -94,14 +101,28 @@ class MilvusService(VectorDBService):
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
 
-        # Upsert the vectors
-        upsert_response = self.client.insert(
-            collection_name=settings.index_name, data=vectors
-        )
+        batch_size = 1000  # Adjust this based on your Milvus instance's capabilities
+        total_inserted = 0
 
-        return {
-            "message": f"Successfully upserted {upsert_response['insert_count']} chunks."
-        }
+        try:
+            for i in range(0, len(vectors), batch_size):
+                batch = vectors[i:i+batch_size]
+                upsert_response = self.client.insert(
+                    collection_name=settings.index_name,
+                    data=batch
+                )
+                total_inserted += upsert_response['insert_count']
+                logger.info(f"Inserted batch of {upsert_response['insert_count']} chunks.")
+
+            logger.info(f"Successfully upserted {total_inserted} chunks in total.")
+            return {
+                "message": f"Successfully upserted {total_inserted} chunks."
+            }
+        except Exception as e:
+            logger.error(f"Error upserting vectors: {e}")
+            if vectors:
+                logger.error(f"Sample vector data: {vectors[0]}")
+            raise
 
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]
@@ -118,7 +139,7 @@ class MilvusService(VectorDBService):
 
         logger.info("Generating embeddings.")
 
-        # Embed the chunks
+        # Embed all chunks at once
         texts = [chunk.page_content for chunk in chunks]
         embedded_chunks = await self.get_embeddings(texts)
 
@@ -143,17 +164,18 @@ class MilvusService(VectorDBService):
             # Create the data
             data = {
                 "id": metadata.uuid,
-                "vector": embedding,
+                "vector": embedding,  # This should already be a list of floats
                 "text": metadata.text,
                 "page_number": metadata.page_number,
                 "chunk_number": metadata.chunk_number,
                 "document_id": metadata.document_id,
             }
+
             datas.append(data)
 
         logger.info("Chunks processed successfully.")
-
         return datas
+    
 
     async def vector_search(
         self, queries: List[str], document_id: str
@@ -373,63 +395,101 @@ class MilvusService(VectorDBService):
 
         # Embed the query
         embedded_query = await self.get_embeddings(query)
+        
+        logger.info(f"Embedded query type: {type(embedded_query)}")
+        if isinstance(embedded_query, list):
+            logger.info(f"Embedded query length: {len(embedded_query)}")
+            if embedded_query:
+                logger.info(f"First value type: {type(embedded_query[0])}")
+        else:
+            logger.info(f"Embedded query shape: {embedded_query.shape}")
+
+        # Ensure embedded_query is a list of floats
+        if isinstance(embedded_query, list) and all(isinstance(x, float) for x in embedded_query):
+            embedded_query = [embedded_query]  # Wrap in another list as Milvus expects
+        elif isinstance(embedded_query, list) and isinstance(embedded_query[0], list) and all(isinstance(x, float) for x in embedded_query[0]):
+            pass  # It's already in the correct format
+        else:
+            logger.error(f"Unexpected embedding format: {type(embedded_query)}")
+            raise ValueError("Invalid embedding format")
 
         logger.info("Running semantic similarity search.")
+        logger.info(f"Searching for document_id: {document_id}")
 
-        # Search the collection
-        semantic_response = self.client.search(
-            collection_name=settings.index_name,
-            data=[embedded_query],
-            filter=f'document_id == "{document_id}"',
-            limit=40,
-            output_fields=[
-                "text",
-                "page_number",
-                "document_id",
-                "chunk_number",
-            ],
-        )
+        try:
+            # First, let's check if there are any vectors for this document_id
+            count_response = self.client.query(
+                collection_name=settings.index_name,
+                filter=f'document_id == "{document_id}"',
+                output_fields=["count(*)"],
+            )
+            vector_count = count_response[0]['count(*)']
+            logger.info(f"Number of vectors for document_id {document_id}: {vector_count}")
 
-        # Deserialize the semantic response
-        semantic_chunks = json.dumps(semantic_response, indent=2)
-        deserialized_semantic_chunks = json.loads(semantic_chunks)
+            if vector_count == 0:
+                logger.warning(f"No vectors found for document_id: {document_id}")
+                return VectorResponse(message="No data found for the given document.", chunks=[])
 
-        # Flatten the semantic response
-        flattened_semantic_chunks = [
-            item["entity"]
-            for sublist in deserialized_semantic_chunks
-            for item in sublist
-        ]
+            # Now let's perform the search
+            semantic_response = self.client.search(
+                collection_name=settings.index_name,
+                data=embedded_query,
+                filter=f'document_id == "{document_id}"',
+                limit=40,
+                output_fields=[
+                    "text",
+                    "page_number",
+                    "document_id",
+                    "chunk_number",
+                ],
+            )
+            logger.info(f"Number of results from semantic search: {len(semantic_response)}")
+            
+            # # Log the first few results
+            # for i, result in enumerate(semantic_response[:5]):
+            #     for hit in result:
+            #         logger.info(f"Result {i}: document_id={hit['entity']['document_id']}, score={hit['score']}")
 
-        print(f"Found {len(flattened_semantic_chunks)} semantic chunks.")
+            # Flatten the semantic response
+            flattened_semantic_chunks = [
+                hit['entity'] for result in semantic_response for hit in result
+            ]
 
-        # Combine the keyword and semantic chunks
-        combined_chunks = (
-            sorted_keyword_chunks[:20] + flattened_semantic_chunks
-        )
+            logger.info(f"Found {len(flattened_semantic_chunks)} semantic chunks.")
 
-        # Sort the chunks by chunk number
-        combined_sorted_chunks = sorted(
-            combined_chunks, key=lambda chunk: chunk["chunk_number"]
-        )
+            # Combine the keyword and semantic chunks
+            combined_chunks = (
+                (sorted_keyword_chunks[:20] if 'sorted_keyword_chunks' in locals() else []) + 
+                flattened_semantic_chunks
+            )
 
-        seen_chunks = set()
-        formatted_output = []
+            # Sort the chunks by chunk number
+            combined_sorted_chunks = sorted(
+                combined_chunks, key=lambda chunk: chunk["chunk_number"]
+            )
 
-        # Format the output
-        for chunk in combined_sorted_chunks:
-            if chunk["chunk_number"] not in seen_chunks:
-                formatted_output.append(
-                    {"content": chunk["text"], "page": chunk["page_number"]}
-                )
-                seen_chunks.add(chunk["chunk_number"])
+            seen_chunks = set()
+            formatted_output = []
 
-        logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
+            # Format the output
+            for chunk in combined_sorted_chunks:
+                if chunk["chunk_number"] not in seen_chunks:
+                    formatted_output.append(
+                        {"content": chunk["text"], "page": chunk["page_number"]}
+                    )
+                    seen_chunks.add(chunk["chunk_number"])
 
-        return VectorResponse(
-            message="Query processed successfully.",
-            chunks=[Chunk(**chunk) for chunk in formatted_output],
-        )
+            logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
+
+            return VectorResponse(
+                message="Query processed successfully.",
+                chunks=[Chunk(**chunk) for chunk in formatted_output],
+            )
+
+        except Exception as e:
+            logger.error(f"Error during Milvus search: {e}")
+            logger.error(f"Milvus search parameters: collection_name={settings.index_name}, data shape={len(embedded_query)}x{len(embedded_query[0])}")
+            raise
 
     async def decomposed_search(
         self, query: str, document_id: str, rules: List[Rule]

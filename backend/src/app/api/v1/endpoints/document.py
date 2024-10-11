@@ -14,7 +14,7 @@ from app.services.vector_db.factory import VectorDBFactory
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Document"], prefix="/document")
+router = APIRouter(tags=["Document"])
 
 
 @router.post(
@@ -31,8 +31,6 @@ async def upload_document_endpoint(
     ----------
     file : UploadFile
         The file to be uploaded and processed.
-    settings : Settings
-        The application settings.
     llm_service : LLMService
         The LLM service.
 
@@ -46,7 +44,7 @@ async def upload_document_endpoint(
     HTTPException
         If the file name is missing or if an error occurs during processing.
     """
-    if file.filename is None:
+    if not file.filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File name is missing",
@@ -100,7 +98,7 @@ async def upload_document_endpoint(
         tag="document_tag",  # TODO: Determine this dynamically
         page_count=10,  # TODO: Determine this dynamically
     )
-    return DocumentResponse(**document.dict())
+    return DocumentResponse(**document.model_dump())
 
 
 @router.delete("/{document_id}", response_model=DeleteDocumentResponse)
@@ -124,7 +122,6 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         If an error occurs during the deletion process.
     """
     try:
-
         # Create the LLM service
         llm_service = get_llm_service()
 
@@ -133,19 +130,29 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
             settings.vector_db_provider, llm_service
         )
         if vector_db_service is None:
-            raise ValueError("Failed to create vector database service")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create vector database service",
+            )
 
         # Delete the document
         delete_document_response = await vector_db_service.delete_document(
             document_id
         )
+
+        return DeleteDocumentResponse(
+            id=document_id,
+            status=delete_document_response["status"],
+            message=delete_document_response["message"],
+        )
+
+    except ValueError as ve:
+        logger.error(f"ValueError in delete_document_endpoint: {str(ve)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)
+        )
     except Exception as e:
+        logger.error(f"Unexpected error in delete_document_endpoint: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-
-    return DeleteDocumentResponse(
-        id=document_id,
-        status=delete_document_response["status"],
-        message=delete_document_response["message"],
-    )

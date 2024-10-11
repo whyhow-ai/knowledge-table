@@ -15,11 +15,16 @@ from app.services.query_service import (
     simple_vector_query,
 )
 
-router = APIRouter(tags=["Query"], prefix="/query")
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+router = APIRouter(tags=["query"])
+logger.info("Query router initialized")
+
+@router.get("/test")
+async def test_query_router():
+    logger.info("Query test endpoint called")
+    return {"message": "Query router is working"}
 
 @router.post("", response_model=Answer)
 async def run_query(
@@ -33,6 +38,7 @@ async def run_query(
     2. Hybrid Search: Performs both a keyword search and a vector search, using chunks from both to generate an answer.
     3. Decomposed Search: Breaks down the query into sub-queries, performs a vector search on each sub-query, and then uses the answers and chunks from each to generate an answer to the original question.
     """
+    logger.info(f"Query endpoint called with request: {request}")
     # Determine the type of query to run
     query_type = request.rag_type  # vector, hybrid, decomposed
 
