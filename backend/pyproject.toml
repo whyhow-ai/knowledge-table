@@ -108,6 +108,7 @@ dynamic = ["version"]
 unstructured = [
     "unstructured",
     "unstructured[all-docs]",
+    "langchain-unstructured"
 ]
 
 dev = [
@@ -128,6 +129,7 @@ dev = [
 full = [
     "unstructured",
     "unstructured[all-docs]",
+    "langchain-unstructured",
     "bandit[toml]",
     "black",
     "flake8",
