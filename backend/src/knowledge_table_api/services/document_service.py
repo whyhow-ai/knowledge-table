@@ -18,7 +18,6 @@ from langchain_community.document_loaders import (
 from knowledge_table_api.core.dependencies import get_llm_service, get_settings
 from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

@@ -112,7 +112,7 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         settings = get_settings()  # Add this line to get the settings
         vector_db_service = VectorDBFactory.create_vector_db_service(
             settings.vector_db_provider, llm_service, settings
-            )
+        )
 
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")

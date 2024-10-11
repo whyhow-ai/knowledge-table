@@ -5,13 +5,15 @@ from functools import lru_cache
 from knowledge_table_api.core.config import Settings
 from knowledge_table_api.services.llm.factory import LLMFactory
 from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 from knowledge_table_api.services.vector_db.base import VectorDBService
+from knowledge_table_api.services.vector_db.factory import VectorDBFactory
+
 
 @lru_cache()
 def get_settings() -> Settings:
     """Get the settings for the application."""
     return Settings()
+
 
 def get_llm_service() -> LLMService:
     """Get the LLM service for the application."""
@@ -23,11 +25,14 @@ def get_llm_service() -> LLMService:
         )
     return llm_service
 
+
 def get_vectordb_service() -> VectorDBService:
     """Get the vector database service for the application."""
     settings = get_settings()
     llm_service = get_llm_service()
-    vectordb_service = VectorDBFactory.create_vectordb_service(settings.vector_db_provider, llm_service, settings)
+    vectordb_service = VectorDBFactory.create_vector_db_service(
+        settings.vector_db_provider, llm_service, settings
+    )
     if vectordb_service is None:
         raise ValueError(
             f"Failed to create vector database service for provider: {settings.vector_db_provider}"

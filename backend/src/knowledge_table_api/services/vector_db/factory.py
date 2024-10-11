@@ -15,7 +15,10 @@ class VectorDBFactory:
     """The factory for the vector database services."""
 
     @staticmethod
-    def create_vector_db_service(provider: str, llm_service: LLMService, settings: Settings) -> Optional[VectorDBService]:
+    def create_vector_db_service(
+        provider: str, llm_service: LLMService, settings: Settings
+    ) -> Optional[VectorDBService]:
+        """Create the vector database service."""
         if provider.lower() == "milvus-lite":
             return MilvusService(llm_service, settings)
         # Add other vector database providers here

@@ -22,7 +22,6 @@ from knowledge_table_api.services.llm_service import (
     decompose_query,
     get_keywords,
 )
-
 from knowledge_table_api.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)
