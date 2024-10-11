@@ -117,40 +117,7 @@ class QdrantIndex(VectorIndex):
 
         embeddings = llm_service.get_embeddings()
 
-        keywords: list[str] = []
-        sorted_keyword_chunks = []
-        max_length: Optional[int] = None
-
-        if rules:
-            for rule in rules:
-                if rule.type in ["must_return", "may_return"]:
-                    if rule.options:
-                        if isinstance(rule.options, list):
-                            keywords.extend(rule.options)
-                        elif isinstance(rule.options, dict):
-                            for value in rule.options.values():
-                                if isinstance(value, list):
-                                    keywords.extend(value)
-                                elif isinstance(value, str):
-                                    keywords.append(value)
-                elif rule.type == "max_length":
-                    max_length = rule.length
-
-        # If no keywords were provided, extract them from the query
-        if not keywords:
-            logger.info("No keywords provided, extracting keywords from the query.")
-            try:
-                extracted_keywords = await get_keywords(llm_service, query)
-                if extracted_keywords and isinstance(extracted_keywords, list):
-                    keywords = extracted_keywords
-                else:
-                    logger.info("No keywords found in the query.")
-            except Exception as e:
-                logger.error(f"An error occurred while getting keywords: {e}")
-
-        logger.info(f"Using keywords: {keywords}")
-        if max_length:
-            logger.info(f"Max length set to: {max_length}")
+        keywords = await self.extract_keywords(query, rules, llm_service)
 
         if keywords:
             like_conditions = [

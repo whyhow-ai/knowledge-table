@@ -8,6 +8,7 @@ from langchain.schema import Document
 import numpy as np
 from pydantic import BaseModel, Field
 
+from backend.src.knowledge_table_api.services.llm import get_keywords
 from backend.src.knowledge_table_api.services.llm_service import LLMService
 
 
@@ -94,3 +95,28 @@ class VectorIndex(ABC):
             datas.append(data)
 
         return datas
+
+    async def extract_keywords(
+        self, query: str, rules: list[Rule], llm_service: LLMService
+    ) -> list[str]:
+
+        keywords = []
+        if rules:
+            for rule in rules:
+                if rule.type in ["must_return", "may_return"]:
+                    if rule.options:
+                        if isinstance(rule.options, list):
+                            keywords.extend(rule.options)
+                        elif isinstance(rule.options, dict):
+                            for value in rule.options.values():
+                                if isinstance(value, list):
+                                    keywords.extend(value)
+                                elif isinstance(value, str):
+                                    keywords.append(value)
+
+        if not keywords:
+            extracted_keywords = await get_keywords(llm_service, query)
+            if extracted_keywords and isinstance(extracted_keywords, list):
+                keywords = extracted_keywords
+
+        return keywords
