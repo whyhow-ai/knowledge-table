@@ -201,6 +201,8 @@ async def generate_triples(
                                     "triple_id": triple_id,
                                 }
                             )
+                            if triple.chunk_ids is None:
+                                triple.chunk_ids = []
                             triple.chunk_ids.append(chunk_id)
                         logger.info(
                             f"Added {len(cell.answer['chunks'])} chunks for column {column_id}"
@@ -213,13 +215,10 @@ async def generate_triples(
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
     return {
         "triples": [
-            t
-            for t in (triple.to_dict() for triple in triples)
-            if t is not None
+            t for t in (triple_to_dict(triple) for triple in triples) if t is not None
         ],
         "chunks": chunks,
     }
-
 
 async def process_table_and_generate_triples(table_data: Table) -> ExportData:
     """Process the table data, generate a schema, and create triples."""
