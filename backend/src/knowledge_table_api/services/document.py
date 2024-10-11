@@ -92,7 +92,9 @@ def unstructured_loader(file_path: str) -> List[LangchainDocument]:
         List of processed document chunks.
     """
     if partition is None:
-        raise ImportError("Unstructured is not installed or configured properly")
+        raise ImportError(
+            "Unstructured is not installed or configured properly"
+        )
 
     elements = partition(filename=file_path)
     docs = []

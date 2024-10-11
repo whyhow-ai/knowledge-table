@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 from .base import VectorIndex
@@ -12,7 +11,7 @@ class VectorIndexFactory:
     @staticmethod
     def create_vector_index(provider: str = "milvus") -> Optional[VectorIndex]:
         """Create a language model service."""
-        if provider == "milvus":
+        if provider == "milvus-lite":
             return MilvusIndex()
         elif provider == "qdrant":
             return QdrantIndex()

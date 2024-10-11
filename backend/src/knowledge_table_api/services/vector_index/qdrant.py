@@ -3,15 +3,15 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from dotenv import load_dotenv
-from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
-from knowledge_table_api.services.llm import decompose_query, get_keywords
-from knowledge_table_api.services.vector_index.base import VectorIndex
 from langchain.schema import Document
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from qdrant_client import QdrantClient, models
 
-from backend.src.knowledge_table_api.dependencies import get_settings
-from backend.src.knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.config import Settings
+from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
+from knowledge_table_api.services.llm import decompose_query
+from knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 # Load environment variables
 load_dotenv()
@@ -38,10 +38,12 @@ class QdrantConfig(BaseSettings):
 
 class QdrantIndex(VectorIndex):
     def __init__(self):
-        settings = get_settings()
+        settings = Settings()
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
-        self.client = QdrantClient(**QdrantConfig().model_dump(exclude_none=True))
+        self.client = QdrantClient(
+            **QdrantConfig().model_dump(exclude_none=True)
+        )
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,
@@ -75,7 +77,7 @@ class QdrantIndex(VectorIndex):
 
         for query in queries:
             logger.info("Generating embedding.")
-            embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
+            embedded_query = np.array(embeddings.embed_query(query)).tolist()
             logger.info("Searching...")
 
             query_response = self.client.query_points(
@@ -83,7 +85,7 @@ class QdrantIndex(VectorIndex):
                 query=embedded_query,
                 limit=40,
                 with_payload=True,
-                filter=models.Filter(
+                query_filter=models.Filter(
                     must=[
                         models.FieldCondition(
                             key="document_id",
@@ -111,22 +113,30 @@ class QdrantIndex(VectorIndex):
         )
 
     async def hybrid_search(
-        self, query: str, document_id: str, rules: list[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: list[Rule],
+        llm_service: LLMService,
     ) -> VectorResponse:
         logger.info("Performing hybrid search.")
 
         embeddings = llm_service.get_embeddings()
 
+        sorted_keyword_chunks = []
         keywords = await self.extract_keywords(query, rules, llm_service)
 
         if keywords:
             like_conditions = [
-                models.FieldCondition(key="text", match=models.MatchText(text=keyword))
+                models.FieldCondition(
+                    key="text", match=models.MatchText(text=keyword)
+                )
                 for keyword in keywords
             ]
             _filter = models.Filter(
                 must=models.FieldCondition(
-                    key="document_id", match=models.MatchValue(value=document_id)
+                    key="document_id",
+                    match=models.MatchValue(value=document_id),
                 ),
                 should=like_conditions,
             )
@@ -134,21 +144,25 @@ class QdrantIndex(VectorIndex):
             logger.info("Running query with keyword filters.")
             keyword_response = self.client.query_points(
                 collection_name=self.collection_name,
-                filter=_filter,
+                query_filter=_filter,
                 with_payload=True,
             ).points
             keyword_response = [point.payload for point in keyword_response]
 
             def count_keywords(text: str, keywords: List[str]) -> int:
-                return sum(text.lower().count(keyword.lower()) for keyword in keywords)
+                return sum(
+                    text.lower().count(keyword.lower()) for keyword in keywords
+                )
 
             sorted_keyword_chunks = sorted(
                 keyword_response,
-                key=lambda chunk: count_keywords(chunk["text"], keywords or []),
+                key=lambda chunk: count_keywords(
+                    chunk["text"], keywords or []
+                ),
                 reverse=True,
             )
 
-        embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
+        embedded_query = np.array(embeddings.embed_query(query)).tolist()
         logger.info("Running semantic similarity search.")
 
         semantic_response = self.client.query_points(
@@ -157,7 +171,8 @@ class QdrantIndex(VectorIndex):
             query_filter=models.Filter(
                 must=[
                     models.FieldCondition(
-                        key="document_id", match=models.MatchValue(value=document_id)
+                        key="document_id",
+                        match=models.MatchValue(value=document_id),
                     )
                 ]
             ),
@@ -199,7 +214,11 @@ class QdrantIndex(VectorIndex):
 
     # Decomposition query
     async def decomposed_search(
-        self, query: str, document_id: str, rules: List[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: List[Rule],
+        llm_service: LLMService,
     ) -> Dict[str, Any]:
         logger.info("Decomposing query into smaller sub-queries.")
         decomposition_response = await decompose_query(query)
@@ -215,13 +234,17 @@ class QdrantIndex(VectorIndex):
     async def delete_document(self, document_id: str) -> Dict[str, str]:
         self.client.delete(
             collection_name=self.collection_name,
-            filter=models.Filter(
+            points_selector=models.Filter(
                 must=[
                     models.FieldCondition(
-                        key="document_id", match=models.MatchValue(value=document_id)
+                        key="document_id",
+                        match=models.MatchValue(value=document_id),
                     )
                 ]
             ),
             wait=True,
         )
-        return {"message": "Successfully deleted document."}
+        return {
+            "status": "success",
+            "message": "Document deleted successfully.",
+        }

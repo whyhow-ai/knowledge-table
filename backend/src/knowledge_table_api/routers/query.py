@@ -5,7 +5,6 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from backend.src.knowledge_table_api.services.vector_index.base import VectorIndex
 from knowledge_table_api.dependencies import get_llm_service, get_vector_index
 from knowledge_table_api.models.query import Answer, QueryRequest
 from knowledge_table_api.services.llm_service import LLMService
@@ -14,6 +13,7 @@ from knowledge_table_api.services.query import (
     hybrid_query,
     simple_vector_query,
 )
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 router = APIRouter(tags=["Query"], prefix="/query")
 

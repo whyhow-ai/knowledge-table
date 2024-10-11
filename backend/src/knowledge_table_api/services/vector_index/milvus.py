@@ -1,18 +1,16 @@
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 from langchain.schema import Document
 from pymilvus import DataType, MilvusClient
 
-from backend.src.knowledge_table_api.services.vector_index.base import (
-    VectorIndex,
-)
-from knowledge_table_api.dependencies import get_settings
+from knowledge_table_api.config import Settings
 from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
-from knowledge_table_api.services.llm import decompose_query, get_keywords
+from knowledge_table_api.services.llm import decompose_query
 from knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 class MilvusIndex(VectorIndex):
     def __init__(self):
-        settings = get_settings()
+        settings = Settings()
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
         self.client = MilvusClient(
             "./milvus_demo.db",
             token=f"{settings.milvus_db_username}:{settings.milvus_db_password}",
         )
-        self.ensure_collection_exists(self.client, settings)
+        self.ensure_collection_exists()
 
     async def upsert_vectors(
         self, document_id: str, chunks: List[Document], llm_service: LLMService
@@ -47,7 +45,9 @@ class MilvusIndex(VectorIndex):
 
     def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
-        if not self.client.has_collection(collection_name=self.collection_name):
+        if not self.client.has_collection(
+            collection_name=self.collection_name
+        ):
             schema = self.client.create_schema(
                 auto_id=False,
                 enable_dynamic_field=True,
@@ -130,13 +130,18 @@ class MilvusIndex(VectorIndex):
         }
 
     async def hybrid_search(
-        self, query: str, document_id: str, rules: list[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: list[Rule],
+        llm_service: LLMService,
     ) -> VectorResponse:
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
         embeddings = llm_service.get_embeddings()
 
+        sorted_keyword_chunks = []
         keywords = await self.extract_keywords(query, rules, llm_service)
 
         if keywords:
@@ -145,7 +150,9 @@ class MilvusIndex(VectorIndex):
             like_conditions = " || ".join(
                 [f'text like "%{keyword}%"' for keyword in keywords]
             )
-            filter_string = f'({like_conditions}) && document_id == "{document_id}"'
+            filter_string = (
+                f'({like_conditions}) && document_id == "{document_id}"'
+            )
 
             # Run Milvus query
             logger.info("Running query with keyword filters.")
@@ -166,12 +173,16 @@ class MilvusIndex(VectorIndex):
 
             # Count up the keyword occurrences
             def count_keywords(text: str, keywords: List[str]) -> int:
-                return sum(text.lower().count(keyword.lower()) for keyword in keywords)
+                return sum(
+                    text.lower().count(keyword.lower()) for keyword in keywords
+                )
 
             # Sort chunks by the number of keyword occurrences
             sorted_keyword_chunks = sorted(
                 deserialized_keyword_chunks,
-                key=lambda chunk: count_keywords(chunk["text"], keywords or []),
+                key=lambda chunk: count_keywords(
+                    chunk["text"], keywords or []
+                ),
                 reverse=True,
             )
 
@@ -186,7 +197,12 @@ class MilvusIndex(VectorIndex):
             data=embedded_query,
             filter=f'document_id == "{document_id}"',
             limit=40,
-            output_fields=["text", "page_number", "document_id", "chunk_number"],
+            output_fields=[
+                "text",
+                "page_number",
+                "document_id",
+                "chunk_number",
+            ],
         )
 
         semantic_chunks = json.dumps(semantic_response, indent=2)
@@ -201,7 +217,9 @@ class MilvusIndex(VectorIndex):
         print(f"Found {len(flattened_semantic_chunks)} semantic chunks.")
 
         # Combine the top results from keyword and semantic searches
-        combined_chunks = sorted_keyword_chunks[:20] + flattened_semantic_chunks
+        combined_chunks = (
+            sorted_keyword_chunks[:20] + flattened_semantic_chunks
+        )
 
         # Sort the combined results by chunk number
         combined_sorted_chunks = sorted(
@@ -229,7 +247,11 @@ class MilvusIndex(VectorIndex):
         )
 
     async def decomposed_search(
-        self, query: str, document_id: str, rules: List[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: List[Rule],
+        llm_service: LLMService,
     ) -> Dict[str, Any]:
         """Decomposition query."""
         logger.info("Decomposing query into smaller sub-queries.")

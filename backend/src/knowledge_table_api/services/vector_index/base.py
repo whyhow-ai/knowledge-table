@@ -3,13 +3,13 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from knowledge_table_api.models.query import Rule, VectorResponse
-from langchain.schema import Document
 import numpy as np
+from langchain.schema import Document
 from pydantic import BaseModel, Field
 
-from backend.src.knowledge_table_api.services.llm import get_keywords
-from backend.src.knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.models.query import Rule, VectorResponse
+from knowledge_table_api.services.llm import get_keywords
+from knowledge_table_api.services.llm_service import LLMService
 
 
 class Metadata(BaseModel, extra="forbid"):
@@ -35,13 +35,21 @@ class VectorIndex(ABC):
 
     @abstractmethod
     async def hybrid_search(
-        self, query: str, document_id: str, rules: list[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: list[Rule],
+        llm_service: LLMService,
     ) -> VectorResponse:
         pass
 
     @abstractmethod
     async def decomposed_search(
-        self, query: str, document_id: str, rules: List[Rule], llm_service: LLMService
+        self,
+        query: str,
+        document_id: str,
+        rules: List[Rule],
+        llm_service: LLMService,
     ) -> Dict[str, Any]:
         pass
 
@@ -59,17 +67,23 @@ class VectorIndex(ABC):
 
         cleaned_chunks = []
         for chunk in chunks:
-            cleaned_chunks.append(re.sub("/(\r\n|\n|\r)/gm", "", chunk.page_content))
+            cleaned_chunks.append(
+                re.sub("/(\r\n|\n|\r)/gm", "", chunk.page_content)
+            )
 
         texts = [chunk.page_content for chunk in chunks]
 
         embeddings = llm_service.get_embeddings()
 
-        embedded_chunks = [np.array(embeddings.embed_documents(texts)).tolist()]
+        embedded_chunks = [
+            np.array(embeddings.embed_documents(texts)).tolist()
+        ]
 
         datas = []
 
-        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks[0])):
+        for i, (chunk, embedding) in enumerate(
+            zip(chunks, embedded_chunks[0])
+        ):
             # Use the existing page number if available, otherwise calculate a pseudo-page number
             if "page" in chunk.metadata:
                 page = chunk.metadata["page"] + 1

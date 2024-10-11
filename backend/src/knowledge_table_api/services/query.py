@@ -3,11 +3,11 @@
 import logging
 from typing import Any, Dict, List, Literal
 
+from knowledge_table_api.dependencies import get_vector_index
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.llm import generate_response
-from backend.src.knowledge_table_api.dependencies import get_vector_index
-from backend.src.knowledge_table_api.services.vector_index.base import VectorIndex
 from knowledge_table_api.services.llm_service import LLMService
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

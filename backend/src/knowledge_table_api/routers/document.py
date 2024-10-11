@@ -3,11 +3,12 @@
 import logging
 from typing import Dict
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from knowledge_table_api.dependencies import get_vector_index
 from knowledge_table_api.models.document import Document
 from knowledge_table_api.services.document import upload_document
-from knowledge_table_api.services.vector import delete_document
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,10 @@ async def upload_document_endpoint(
 
 
 @router.delete("/{document_id}", response_model=Dict[str, str])
-async def delete_document_endpoint(document_id: str) -> Dict[str, str]:
+async def delete_document_endpoint(
+    document_id: str,
+    vector_index: VectorIndex = Depends(get_vector_index),
+) -> Dict[str, str]:
     """
     Delete a document.
 
@@ -102,7 +106,9 @@ async def delete_document_endpoint(document_id: str) -> Dict[str, str]:
         If an error occurs during the deletion process.
     """
     try:
-        delete_document_response = await delete_document(document_id)
+        delete_document_response = await vector_index.delete_document(
+            document_id
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)

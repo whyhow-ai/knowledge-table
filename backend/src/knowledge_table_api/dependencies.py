@@ -2,12 +2,10 @@
 
 from functools import lru_cache
 
-from pymilvus import MilvusClient
-
-from backend.src.knowledge_table_api.services.vector_index import VectorIndexFactory
-from backend.src.knowledge_table_api.services.vector_index.base import VectorIndex
 from knowledge_table_api.config import Settings
 from knowledge_table_api.services.llm_service import LLMFactory, LLMService
+from knowledge_table_api.services.vector_index import VectorIndexFactory
+from knowledge_table_api.services.vector_index.base import VectorIndex
 
 
 @lru_cache()
@@ -32,5 +30,7 @@ def get_vector_index() -> VectorIndex:
     settings = get_settings()
     vector_index = VectorIndexFactory.create_vector_index(settings.vector_db)
     if vector_index is None:
-        raise ValueError(f"Invalid value for vector database : {settings.vector_db}")
+        raise ValueError(
+            f"Invalid value for vector database : {settings.vector_db}"
+        )
     return vector_index
