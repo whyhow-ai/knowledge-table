@@ -4,9 +4,8 @@ import json
 import logging
 import re
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-import numpy as np
 from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
@@ -45,13 +44,18 @@ class MilvusService(VectorDBService):
         self.llm_service = llm_service
         self.settings = settings
         self.client = MilvusClient(
-            "./milvus_demo.db",
-            token=f"{settings.milvus_db_username}:{settings.milvus_db_password}",
+            uri=settings.milvus_db_uri,
+            token=settings.milvus_db_token,
         )
 
-    def get_embeddings(self) -> Any:
-        """Get the embedding function from the LLM service."""
-        return self.llm_service.get_embeddings()
+    async def get_embeddings(
+        self, text: Union[str, List[str]]
+    ) -> Union[List[float], List[List[float]]]:
+        """Get embeddings for the given text using the LLM service."""
+        if isinstance(text, str):
+            return await self.llm_service.get_embeddings(text)
+        else:
+            return [await self.llm_service.get_embeddings(t) for t in text]
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
@@ -116,9 +120,6 @@ class MilvusService(VectorDBService):
         """Prepare chunks for insertion into the Milvus database."""
         logger.info(f"Preparing {len(chunks)} chunks")
 
-        # Get the embeddings
-        embeddings = self.get_embeddings()
-
         # Clean the chunks
         cleaned_chunks = []
         for chunk in chunks:
@@ -130,16 +131,12 @@ class MilvusService(VectorDBService):
 
         # Embed the chunks
         texts = [chunk.page_content for chunk in chunks]
-        embedded_chunks = [
-            np.array(embeddings.embed_documents(texts)).tolist()
-        ]
+        embedded_chunks = await self.get_embeddings(texts)
 
         # Prepare the data for insertion
         datas = []
 
-        for i, (chunk, embedding) in enumerate(
-            zip(chunks, embedded_chunks[0])
-        ):
+        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks)):
             # Get the page number
             if "page" in chunk.metadata:
                 page = chunk.metadata["page"] + 1
@@ -175,9 +172,6 @@ class MilvusService(VectorDBService):
         """Perform a vector search on the Milvus database."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
-        # Get the embeddings
-        embeddings = self.get_embeddings()
-
         # Prepare the final chunks
         final_chunks: List[Dict[str, Any]] = []
 
@@ -186,14 +180,14 @@ class MilvusService(VectorDBService):
             logger.info("Generating embedding.")
 
             # Embed the query
-            embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
+            embedded_query = await self.get_embeddings(query)
 
             logger.info("Searching...")
 
             # Search the colection
             query_response = self.client.search(
                 collection_name=self.settings.index_name,
-                data=embedded_query,
+                data=[embedded_query],
                 filter=f"document_id == '{document_id}'",
                 limit=40,
                 output_fields=[
@@ -307,9 +301,6 @@ class MilvusService(VectorDBService):
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
-        # Get the embeddings
-        embeddings = self.get_embeddings()
-
         keywords: list[str] = []
         sorted_keyword_chunks = []
         max_length: Optional[int] = None
@@ -392,14 +383,14 @@ class MilvusService(VectorDBService):
             )
 
         # Embed the query
-        embedded_query = [np.array(embeddings.embed_query(query)).tolist()]
+        embedded_query = await self.get_embeddings(query)
 
         logger.info("Running semantic similarity search.")
 
         # Search the collection
         semantic_response = self.client.search(
             collection_name=self.settings.index_name,
-            data=embedded_query,
+            data=[embedded_query],
             filter=f'document_id == "{document_id}"',
             limit=40,
             output_fields=[

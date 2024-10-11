@@ -1,9 +1,12 @@
 """Factory for creating language model services."""
 
+import logging
 from typing import Optional
 
-from .base import LLMService
-from .openai_service import OpenAIService
+from knowledge_table_api.services.llm.base import LLMService
+from knowledge_table_api.services.llm.openai_service import OpenAIService
+
+logger = logging.getLogger(__name__)
 
 
 class LLMFactory:
@@ -12,6 +15,7 @@ class LLMFactory:
     @staticmethod
     def create_llm_service(provider: str = "openai") -> Optional[LLMService]:
         """Create a language model service."""
+        logger.info(f"Creating LLM service for provider: {provider}")
         if provider == "openai":
             return OpenAIService()
         # Add more providers here when needed

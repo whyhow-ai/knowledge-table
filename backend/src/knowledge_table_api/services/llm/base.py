@@ -15,6 +15,6 @@ class LLMService(ABC):
         pass
 
     @abstractmethod
-    def get_embeddings(self) -> Any:
-        """Get the embeddings for the language model."""
+    async def get_embeddings(self, text: str) -> list[float]:
+        """Get the embeddings for the given text."""
         pass

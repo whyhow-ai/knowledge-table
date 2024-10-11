@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,6 +56,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+async def read_root() -> Dict[str, str]:
+    """Root endpoint."""
+    return {"message": "hello, world."}
+
 
 # Include the routers
 app.include_router(document.router)

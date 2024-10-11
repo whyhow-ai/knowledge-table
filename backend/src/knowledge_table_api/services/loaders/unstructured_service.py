@@ -1,9 +1,15 @@
+"""Unstructured loader service."""
+
 from typing import List, Optional
-from knowledge_table_api.services.loaders.base import LoaderService
+
 from langchain.schema import Document
+
+from knowledge_table_api.services.loaders.base import LoaderService
+
 
 class UnstructuredDependencyError(ImportError):
     """Raised when the unstructured dependency is not installed."""
+
 
 class UnstructuredLoader(LoaderService):
     """Unstructured loader service."""
@@ -13,10 +19,10 @@ class UnstructuredLoader(LoaderService):
         self.unstructured_api_key = unstructured_api_key
 
     @staticmethod
-    def _check_unstructured_dependency():
+    def _check_unstructured_dependency() -> None:
         try:
-            import unstructured
-            import langchain_unstructured
+            import langchain_unstructured  # noqa: F401
+            import unstructured  # noqa: F401
         except ImportError:
             raise UnstructuredDependencyError(
                 "The unstructured package is not installed. "

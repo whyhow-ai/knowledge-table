@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     # VECTOR DATABASE CONFIG
     vector_db_provider: str = "milvus-lite"
     index_name: str = "milvus"
-    milvus_db_username: str = "root"
-    milvus_db_password: str = "Milvus"
+    milvus_db_uri: str = "./milvus_demo.db"
+    milvus_db_token: str = "root:Milvus"
 
     # QUERY CONFIG
     query_type: str = "hybrid"

@@ -2,7 +2,6 @@
 
 from typing import Any
 
-import instructor
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
@@ -15,12 +14,8 @@ class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
 
     def __init__(self) -> None:
-
         # Initialize the OpenAI client
-        openai_client = OpenAI(api_key=settings.openai_api_key)
-
-        # Wrap the OpenAI client with instructor
-        self.client = instructor.from_openai(openai_client)
+        self.client = OpenAI(api_key=settings.openai_api_key)
 
         # Initialize the embeddings
         self.embeddings = OpenAIEmbeddings(
@@ -34,11 +29,12 @@ class OpenAIService(LLMService):
         """Generate a completion from the language model."""
         response = self.client.chat.completions.create(
             model=settings.llm_model,
-            response_model=response_model,
             messages=[{"role": "user", "content": prompt}],
+            response_format=response_model,
         )
         return response
 
-    def get_embeddings(self) -> Any:
-        """Get the embeddings for the language model."""
-        return self.embeddings
+    async def get_embeddings(self, text: str) -> list[float]:
+        """Generate embeddings for the given text."""
+        embedding = self.embeddings.embed_query(text)
+        return embedding
