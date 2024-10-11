@@ -3,6 +3,7 @@
 from functools import lru_cache
 
 from knowledge_table_api.core.config import Settings
+from knowledge_table_api.services.document_service import DocumentService
 from knowledge_table_api.services.llm.factory import LLMFactory
 from knowledge_table_api.services.llm_service import LLMService
 from knowledge_table_api.services.vector_db.base import VectorDBService
@@ -38,3 +39,10 @@ def get_vectordb_service() -> VectorDBService:
             f"Failed to create vector database service for provider: {settings.vector_db_provider}"
         )
     return vectordb_service
+
+
+def get_document_service() -> DocumentService:
+    """Get the document service for the application."""
+    settings = get_settings()
+    vector_db_service = get_vectordb_service()
+    return DocumentService(settings, vector_db_service)

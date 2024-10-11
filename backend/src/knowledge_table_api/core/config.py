@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # QUERY CONFIG
     query_type: str = "hybrid"
 
+    # DOCUMENT PROCESSING CONFIG
+    loader: str = "pypdf"
+    chunk_size: int = 512
+    chunk_overlap: int = 64
+
     # UNSTRUCTURED CONFIG
     unstructured_api_key: str | None = None
 

@@ -2,15 +2,17 @@
 
 import logging
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from knowledge_table_api.core.config import Settings
 from knowledge_table_api.core.dependencies import get_llm_service, get_settings
 from knowledge_table_api.models.document import Document
 from knowledge_table_api.routing_schemas.document import (
     DeleteDocumentResponse,
     DocumentResponse,
 )
-from knowledge_table_api.services.document_service import upload_document
+from knowledge_table_api.services.document_service import DocumentService
+from knowledge_table_api.services.llm.base import LLMService
 from knowledge_table_api.services.vector_db.factory import VectorDBFactory
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,8 @@ router = APIRouter(tags=["Document"], prefix="/document")
 )
 async def upload_document_endpoint(
     file: UploadFile = File(...),
+    settings: Settings = Depends(get_settings),
+    llm_service: LLMService = Depends(get_llm_service),
 ) -> DocumentResponse:
     """
     Upload a document and process it.
@@ -31,6 +35,10 @@ async def upload_document_endpoint(
     ----------
     file : UploadFile
         The file to be uploaded and processed.
+    settings : Settings
+        The application settings.
+    llm_service : LLMService
+        The LLM service.
 
     Returns
     -------
@@ -56,8 +64,15 @@ async def upload_document_endpoint(
     )
 
     try:
-        document_id = await upload_document(
-            content_type, filename, await file.read()
+        vector_db_service = VectorDBFactory.create_vector_db_service(
+            settings.vector_db_provider, llm_service, settings
+        )
+        if vector_db_service is None:
+            raise ValueError("Failed to create vector database service")
+
+        document_service = DocumentService(settings, vector_db_service)
+        document_id = await document_service.upload_document(
+            filename, await file.read()
         )
     except ValueError as ve:
         logger.error(f"ValueError in upload_document_endpoint: {str(ve)}")
