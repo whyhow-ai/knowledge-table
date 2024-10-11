@@ -17,10 +17,10 @@ class Settings(BaseSettings):
     openai_api_key: str
 
     # VECTOR DATABASE CONFIG
-    vector_db: str = "milvus-lite"
+    vector_db: str = "milvus"
     index_name: str = "milvus"
-    milvus_db_username: str = "root"
-    milvus_db_password: str = "Milvus"
+    milvus_db_uri: str = "./milvus_demo.db"
+    milvus_db_token: str = "root:Milvus"
 
     # QUERY CONFIG
     query_type: str = "hybrid"

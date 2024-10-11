@@ -18,8 +18,8 @@ def get_milvus_client() -> MilvusClient:
     """Get the Milvus client for the application."""
     settings = get_settings()
     return MilvusClient(
-        "./milvus_demo.db",
-        token=f"{settings.milvus_db_username}:{settings.milvus_db_password}",
+        uri=settings.milvus_db_uri,
+        token=settings.milvus_db_token,
     )
 
 
