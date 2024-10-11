@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from langchain.schema import Document
 
-from knowledge_table_api.services.loaders.base import LoaderService
+from app.services.loaders.base import LoaderService
 
 
 class UnstructuredDependencyError(ImportError):

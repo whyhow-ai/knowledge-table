@@ -4,16 +4,13 @@ import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from knowledge_table_api.core.config import Settings
-from knowledge_table_api.core.dependencies import get_llm_service, get_settings
-from knowledge_table_api.models.document import Document
-from knowledge_table_api.routing_schemas.document import (
-    DeleteDocumentResponse,
-    DocumentResponse,
-)
-from knowledge_table_api.services.document_service import DocumentService
-from knowledge_table_api.services.llm.base import LLMService
-from knowledge_table_api.services.vector_db.factory import VectorDBFactory
+from app.core.config import settings
+from app.core.dependencies import get_llm_service
+from app.models.document import Document
+from app.schemas.document import DeleteDocumentResponse, DocumentResponse
+from app.services.document_service import DocumentService
+from app.services.llm.base import LLMService
+from app.services.vector_db.factory import VectorDBFactory
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +22,6 @@ router = APIRouter(tags=["Document"], prefix="/document")
 )
 async def upload_document_endpoint(
     file: UploadFile = File(...),
-    settings: Settings = Depends(get_settings),
     llm_service: LLMService = Depends(get_llm_service),
 ) -> DocumentResponse:
     """
@@ -67,13 +63,13 @@ async def upload_document_endpoint(
     try:
         # Create the vector database service
         vector_db_service = VectorDBFactory.create_vector_db_service(
-            settings.vector_db_provider, llm_service, settings
+            settings.vector_db_provider, llm_service
         )
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")
 
         # Create the document service
-        document_service = DocumentService(settings, vector_db_service)
+        document_service = DocumentService(vector_db_service)
 
         # Upload the document
         document_id = await document_service.upload_document(
@@ -132,12 +128,9 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         # Create the LLM service
         llm_service = get_llm_service()
 
-        # Get the settings
-        settings = get_settings()
-
         # Create the vector database service
         vector_db_service = VectorDBFactory.create_vector_db_service(
-            settings.vector_db_provider, llm_service, settings
+            settings.vector_db_provider, llm_service
         )
         if vector_db_service is None:
             raise ValueError("Failed to create vector database service")

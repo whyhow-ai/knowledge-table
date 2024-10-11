@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Separated configuration from dependency injection for better maintainability and clarity
 - Created new `utils` directory for fundamental application components
-- Seperated Pydantic models into `models` and `routing_schemas` directories
+- Seperated Pydantic models into `models` and `schemas` directories
 
 
 ## [v0.1.2] - 2024-10-10

@@ -5,7 +5,7 @@ from typing import List
 from langchain.schema import Document as LangchainDocument
 from langchain_community.document_loaders import PyPDFLoader
 
-from knowledge_table_api.services.loaders.base import LoaderService
+from app.services.loaders.base import LoaderService
 
 
 class PDFLoader(LoaderService):

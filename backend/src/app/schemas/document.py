@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from knowledge_table_api.models.document import Document
+from app.models.document import Document
 
 
 class DocumentCreate(BaseModel):

@@ -7,14 +7,11 @@ from typing import Any, Dict, List, Optional
 
 from whyhow import Node, Relation, Triple
 
-from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.models.graph import ExportData
-from knowledge_table_api.models.llm import (
-    SchemaRelationship,
-    SchemaResponseModel,
-)
-from knowledge_table_api.routing_schemas.graph import Row, Table
-from knowledge_table_api.services.llm_service import generate_schema
+from app.core.dependencies import get_llm_service
+from app.models.graph import ExportData
+from app.models.llm import SchemaRelationship, SchemaResponseModel
+from app.schemas.graph import Row, Table
+from app.services.llm_service import generate_schema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

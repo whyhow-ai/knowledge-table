@@ -2,23 +2,22 @@
 
 from functools import lru_cache
 
-from knowledge_table_api.core.config import Settings
-from knowledge_table_api.services.document_service import DocumentService
-from knowledge_table_api.services.llm.factory import LLMFactory
-from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.vector_db.base import VectorDBService
-from knowledge_table_api.services.vector_db.factory import VectorDBFactory
+from app.core.config import Settings, settings
+from app.services.document_service import DocumentService
+from app.services.llm.factory import LLMFactory
+from app.services.llm_service import LLMService
+from app.services.vector_db.base import VectorDBService
+from app.services.vector_db.factory import VectorDBFactory
 
 
 @lru_cache()
 def get_settings() -> Settings:
     """Get the settings for the application."""
-    return Settings()
+    return settings
 
 
 def get_llm_service() -> LLMService:
     """Get the LLM service for the application."""
-    settings = get_settings()
     llm_service = LLMFactory.create_llm_service(settings.llm_provider)
     if llm_service is None:
         raise ValueError(
@@ -29,10 +28,9 @@ def get_llm_service() -> LLMService:
 
 def get_vectordb_service() -> VectorDBService:
     """Get the vector database service for the application."""
-    settings = get_settings()
     llm_service = get_llm_service()
     vectordb_service = VectorDBFactory.create_vector_db_service(
-        settings.vector_db_provider, llm_service, settings
+        settings.vector_db_provider, llm_service
     )
     if vectordb_service is None:
         raise ValueError(
@@ -43,6 +41,5 @@ def get_vectordb_service() -> VectorDBService:
 
 def get_document_service() -> DocumentService:
     """Get the document service for the application."""
-    settings = get_settings()
     vector_db_service = get_vectordb_service()
-    return DocumentService(settings, vector_db_service)
+    return DocumentService(vector_db_service)

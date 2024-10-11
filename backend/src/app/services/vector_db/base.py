@@ -5,8 +5,8 @@ from typing import Any, Dict, List
 
 from langchain.schema import Document as LangchainDocument
 
-from knowledge_table_api.models.query import Rule
-from knowledge_table_api.routing_schemas.query import VectorResponse
+from app.models.query import Rule
+from app.schemas.query import VectorResponse
 
 
 class VectorDBService(ABC):

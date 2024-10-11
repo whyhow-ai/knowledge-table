@@ -6,15 +6,15 @@ import logging
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import ValidationError
 
-from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.models.graph import ExportData
-from knowledge_table_api.routing_schemas.graph import (
+from app.core.dependencies import get_llm_service
+from app.models.graph import ExportData
+from app.schemas.graph import (
     ExportTriplesRequest,
     ExportTriplesResponse,
     Table,
 )
-from knowledge_table_api.services.graph_service import generate_triples
-from knowledge_table_api.services.llm_service import generate_schema
+from app.services.graph_service import generate_triples
+from app.services.llm_service import generate_schema
 
 router = APIRouter(tags=["Graph"], prefix="/graph")
 

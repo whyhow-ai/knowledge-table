@@ -5,11 +5,11 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from knowledge_table_api.core.dependencies import get_llm_service
-from knowledge_table_api.models.query import Answer
-from knowledge_table_api.routing_schemas.query import QueryRequest
-from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.query_service import (
+from app.core.dependencies import get_llm_service
+from app.models.query import Answer
+from app.schemas.query import QueryRequest
+from app.services.llm_service import LLMService
+from app.services.query_service import (
     decomposition_query,
     hybrid_query,
     simple_vector_query,

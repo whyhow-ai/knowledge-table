@@ -1,16 +1,16 @@
 """Main module for the Knowledge Table API service."""
 
 import logging
-import pathlib
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowledge_table_api.api.v1.endpoints import document, graph, query
-from knowledge_table_api.core.dependencies import get_llm_service, get_settings
-from knowledge_table_api.services.vector_db.factory import VectorDBFactory
+from app.api.v1.api import api_router
+from app.core.config import settings
+from app.core.dependencies import get_llm_service, get_settings
+from app.services.vector_db.factory import VectorDBFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Create the vector database service
     vector_db_service = VectorDBFactory.create_vector_db_service(
-        settings.vector_db_provider, llm_service, settings
+        settings.vector_db_provider, llm_service
     )
 
     if vector_db_service is None:
@@ -46,7 +46,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
+)
 
 # Allow CORS for all origins
 app.add_middleware(
@@ -57,6 +61,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include the API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
 
 @app.get("/")
 async def read_root() -> Dict[str, str]:
@@ -64,14 +71,11 @@ async def read_root() -> Dict[str, str]:
     return {"message": "hello, world."}
 
 
-# Include the routers
-app.include_router(document.router)
-app.include_router(query.router)
-app.include_router(graph.router)
-
-
+# The locate() function can be kept if it's used elsewhere in your project
 def locate() -> None:
     """Find absolute path to this file and format for uvicorn."""
+    import pathlib
+
     file_path = pathlib.Path(__file__).resolve()
     current_path = pathlib.Path.cwd()
 

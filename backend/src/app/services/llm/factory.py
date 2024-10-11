@@ -3,8 +3,8 @@
 import logging
 from typing import Optional
 
-from knowledge_table_api.services.llm.base import LLMService
-from knowledge_table_api.services.llm.openai_service import OpenAIService
+from app.services.llm.base import LLMService
+from app.services.llm.openai_service import OpenAIService
 
 logger = logging.getLogger(__name__)
 

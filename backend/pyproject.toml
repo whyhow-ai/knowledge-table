@@ -142,7 +142,7 @@ full = [
 ]
 
 [project.scripts]
-knowledge-table-locate = "knowledge_table_api.main:locate"
+knowledge-table-locate = "app.main:locate"
 
 [tool.setuptools]
 zip-safe = false
@@ -154,7 +154,7 @@ where = ["src"]
 namespaces = false
 
 [tool.setuptools.dynamic]
-version = {attr = "knowledge_table_api.__version__"}
+version = {attr = "app.__version__"}
 
 [tool.pydocstyle]
 convention = "numpy"
@@ -211,6 +211,6 @@ filterwarnings = [
 testpaths = [
     "tests",
 ]
-addopts = "--cov=src/knowledge_table_api -v --cov-report=term-missing --durations=20"
+addopts = "--cov=src/app -v --cov-report=term-missing --durations=20"
 log_cli = false
 

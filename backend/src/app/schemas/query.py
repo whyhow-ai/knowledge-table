@@ -4,7 +4,7 @@ from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
-from knowledge_table_api.models.query import Chunk, Rule
+from app.models.query import Chunk, Rule
 
 
 class QueryPrompt(BaseModel):

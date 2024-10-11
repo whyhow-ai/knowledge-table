@@ -5,7 +5,7 @@ from typing import Any
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
-from knowledge_table_api.core.config import settings
+from app.core.config import settings
 
 from .base import LLMService
 

@@ -9,9 +9,9 @@ from typing import List, Optional
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from knowledge_table_api.core.config import Settings
-from knowledge_table_api.services.loaders.factory import LoaderFactory
-from knowledge_table_api.services.vector_db.base import VectorDBService
+from app.core.config import settings
+from app.services.loaders.factory import LoaderFactory
+from app.services.vector_db.base import VectorDBService
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +21,14 @@ class DocumentService:
 
     def __init__(
         self,
-        settings: Settings,
         vector_db_service: VectorDBService,
     ):
         """Document service."""
-        self.settings = settings
         self.vector_db_service = vector_db_service
         self.loader_factory = LoaderFactory()
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.settings.chunk_size,
-            chunk_overlap=self.settings.chunk_overlap,
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
         )
 
     async def upload_document(
@@ -84,11 +82,11 @@ class DocumentService:
     async def _load_document(self, file_path: str) -> List[LangchainDocument]:
 
         # Create a loader
-        loader = self.loader_factory.create_loader(self.settings)
+        loader = self.loader_factory.create_loader()
 
         if loader is None:
             raise ValueError(
-                f"No loader available for configured loader type: {self.settings.loader}"
+                f"No loader available for configured loader type: {settings.loader}"
             )
 
         # Load the document

@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, List, Literal, Type, Union
 
-from knowledge_table_api.models.llm import (
+from app.models.llm import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
@@ -14,10 +14,10 @@ from knowledge_table_api.models.llm import (
     StrResponseModel,
     SubQueriesResponseModel,
 )
-from knowledge_table_api.models.query import Rule
-from knowledge_table_api.routing_schemas.graph import Table
-from knowledge_table_api.services.llm.base import LLMService
-from knowledge_table_api.services.llm.prompts import (
+from app.models.query import Rule
+from app.schemas.graph import Table
+from app.services.llm.base import LLMService
+from app.services.llm.prompts import (
     BASE_PROMPT,
     BOOL_INSTRUCTIONS,
     DECOMPOSE_QUERY_PROMPT,
