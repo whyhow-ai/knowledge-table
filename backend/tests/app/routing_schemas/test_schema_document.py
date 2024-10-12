@@ -1,8 +1,15 @@
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
-from datetime import datetime
-from app.schemas.document import DocumentCreate, DocumentResponse, DeleteDocumentResponse
+
 from app.models.document import Document
+from app.schemas.document import (
+    DeleteDocumentResponse,
+    DocumentCreate,
+    DocumentResponse,
+)
+
 
 class TestDocumentCreateSchema:
     def test_valid_document_create(self):
@@ -11,7 +18,7 @@ class TestDocumentCreateSchema:
             "name": "Test Document",
             "author": "John Doe",
             "tag": "test",
-            "page_count": 10
+            "page_count": 10,
         }
 
         # When
@@ -28,7 +35,7 @@ class TestDocumentCreateSchema:
         invalid_document_data = {
             "name": "Test Document",
             "author": "John Doe",
-            "tag": "test"
+            "tag": "test",
             # Missing 'page_count' field
         }
 
@@ -42,15 +49,16 @@ class TestDocumentCreateSchema:
             "name": "Test Document",
             "author": "John Doe",
             "tag": "test",
-            "page_count": "10"  # Should be an integer, not a string
+            "page_count": "10",  # Should be an integer, not a string
         }
 
         # When / Then
         with pytest.raises(ValidationError) as exc_info:
             DocumentCreate(**invalid_document_data)
-        
+
         # Additional assertion to check the error message
         assert "Input should be a valid integer" in str(exc_info.value)
+
 
 class TestDocumentResponseSchema:
     def test_valid_document_response(self):
@@ -62,7 +70,7 @@ class TestDocumentResponseSchema:
             "tag": "test",
             "page_count": 10,
             "created_at": datetime(2023, 4, 1, 12, 0, 0),
-            "updated_at": datetime(2023, 4, 1, 12, 0, 0)
+            "updated_at": datetime(2023, 4, 1, 12, 0, 0),
         }
 
         # When
@@ -82,13 +90,14 @@ class TestDocumentResponseSchema:
         # Then
         assert issubclass(document_response, Document)
 
+
 class TestDeleteDocumentResponseSchema:
     def test_valid_delete_document_response(self):
         # Given
         delete_response_data = {
             "id": "doc123",
             "status": "success",
-            "message": "Document deleted successfully"
+            "message": "Document deleted successfully",
         }
 
         # When
@@ -103,7 +112,7 @@ class TestDeleteDocumentResponseSchema:
         # Given
         invalid_delete_response_data = {
             "id": "doc123",
-            "status": "success"
+            "status": "success",
             # Missing 'message' field
         }
 

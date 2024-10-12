@@ -42,10 +42,12 @@ class OpenAIService(LLMService):
         return response.choices[0].message.parsed
 
     async def get_embeddings(self, text: str) -> List[float]:
-        """Generate embeddings for the given text."""
-        # Use asyncio to run the embedding in a separate thread
+        """Get embeddings for text."""
         loop = asyncio.get_event_loop()
         embeddings = await loop.run_in_executor(
-            None, self.embeddings.embed_query, text
+            None, self._get_embeddings_sync, text
         )
         return embeddings
+
+    def _get_embeddings_sync(self, text: str) -> List[float]:
+        return self.embeddings.embed_query(text)

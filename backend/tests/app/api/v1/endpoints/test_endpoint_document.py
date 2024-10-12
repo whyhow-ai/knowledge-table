@@ -59,7 +59,9 @@ async def test_upload_document_endpoint(
     # Given
     mock_llm_service_instance = Mock()
     # Mock any methods of the LLM service that are called during the test
-    mock_llm_service_instance.some_method = AsyncMock(return_value="mocked_response")
+    mock_llm_service_instance.some_method = AsyncMock(
+        return_value="mocked_response"
+    )
     mock_get_llm_service.return_value = mock_llm_service_instance
 
     mock_vector_db_factory.return_value = Mock()
@@ -93,7 +95,11 @@ async def test_upload_document_endpoint(
 @patch("app.api.v1.endpoints.document.DocumentService")
 @patch("app.api.v1.endpoints.document.get_llm_service")
 async def test_upload_document_endpoint_errors(
-    mock_get_llm_service, mock_doc_service, mock_vector_db_factory, exception, expected_status
+    mock_get_llm_service,
+    mock_doc_service,
+    mock_vector_db_factory,
+    exception,
+    expected_status,
 ):
     # Given
     mock_llm_service_instance = Mock()
@@ -146,7 +152,9 @@ async def test_upload_document_endpoint_none_document_id(
 ):
     # Given
     mock_llm_service_instance = Mock()
-    mock_llm_service_instance.some_method = AsyncMock(return_value="mocked_response")
+    mock_llm_service_instance.some_method = AsyncMock(
+        return_value="mocked_response"
+    )
     mock_get_llm_service.return_value = mock_llm_service_instance
 
     mock_vector_db_factory.return_value = AsyncMock()
@@ -178,7 +186,9 @@ async def test_delete_document_endpoint_none_vector_db_service(
 ):
     # Given
     mock_llm_service_instance = Mock()
-    mock_llm_service_instance.some_method = AsyncMock(return_value="mocked_response")
+    mock_llm_service_instance.some_method = AsyncMock(
+        return_value="mocked_response"
+    )
     mock_get_llm_service.return_value = mock_llm_service_instance
 
     mock_vector_db_factory.return_value = None
@@ -227,7 +237,9 @@ async def test_delete_document_endpoint(
 ):
     # Given
     mock_llm_service_instance = Mock()
-    mock_llm_service_instance.some_method = AsyncMock(return_value="mocked_response")
+    mock_llm_service_instance.some_method = AsyncMock(
+        return_value="mocked_response"
+    )
     mock_get_llm_service.return_value = mock_llm_service_instance
 
     mock_vector_db_service = AsyncMock()
@@ -290,7 +302,9 @@ async def test_upload_document_endpoint_logging(
 ):
     # Given
     mock_llm_service_instance = Mock()
-    mock_llm_service_instance.some_method = AsyncMock(return_value="mocked_response")
+    mock_llm_service_instance.some_method = AsyncMock(
+        return_value="mocked_response"
+    )
     mock_get_llm_service.return_value = mock_llm_service_instance
 
     mock_vector_db_factory.return_value = Mock()

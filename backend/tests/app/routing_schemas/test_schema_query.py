@@ -4,8 +4,14 @@
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.query import QueryPrompt, QueryRequest, VectorResponse, QueryResponse
+
 from app.models.query import Chunk, Rule
+from app.schemas.query import (
+    QueryPrompt,
+    QueryRequest,
+    QueryResponse,
+    VectorResponse,
+)
 
 
 class TestQueryPrompt:
@@ -15,7 +21,7 @@ class TestQueryPrompt:
             "query": "What is the patient's age?",
             "type": "int",
             "entity_type": "patient",
-            "rules": [Rule(type="max_length", length=120)]
+            "rules": [Rule(type="max_length", length=120)],
         }
         prompt = QueryPrompt(**prompt_data)
         assert prompt.id == "1"
@@ -31,7 +37,7 @@ class TestQueryPrompt:
             "id": "1",
             "query": "What is the patient's age?",
             "type": "float",  # Invalid type
-            "entity_type": "patient"
+            "entity_type": "patient",
         }
         with pytest.raises(ValidationError):
             QueryPrompt(**invalid_data)
@@ -41,7 +47,7 @@ class TestQueryPrompt:
             "id": "1",
             "query": "What is the patient's name?",
             "type": "str",
-            "entity_type": "patient"
+            "entity_type": "patient",
         }
         prompt = QueryPrompt(**prompt_data)
         assert prompt.rules is None
@@ -56,9 +62,9 @@ class TestQueryRequest:
                 "id": "1",
                 "query": "What is the patient's age?",
                 "type": "int",
-                "entity_type": "patient"
+                "entity_type": "patient",
             },
-            "rag_type": "hybrid"
+            "rag_type": "hybrid",
         }
         request = QueryRequest(**request_data)
         assert request.document_id == "doc123"
@@ -73,8 +79,8 @@ class TestQueryRequest:
                 "id": "1",
                 "query": "What is the patient's name?",
                 "type": "str",
-                "entity_type": "patient"
-            }
+                "entity_type": "patient",
+            },
         }
         request = QueryRequest(**request_data)
         assert request.rag_type == "hybrid"
@@ -86,9 +92,9 @@ class TestQueryRequest:
                 "id": "1",
                 "query": "What is the patient's name?",
                 "type": "str",
-                "entity_type": "patient"
+                "entity_type": "patient",
             },
-            "rag_type": "invalid_type"
+            "rag_type": "invalid_type",
         }
         with pytest.raises(ValidationError):
             QueryRequest(**invalid_data)
@@ -100,8 +106,8 @@ class TestVectorResponse:
             "message": "Success",
             "chunks": [
                 Chunk(content="Sample content", page=1),
-                Chunk(content="More content", page=2)
-            ]
+                Chunk(content="More content", page=2),
+            ],
         }
         response = VectorResponse(**response_data)
         assert response.message == "Success"
@@ -119,9 +125,9 @@ class TestQueryResponse:
             "answer": 25,
             "chunks": [
                 Chunk(content="Sample content", page=1),
-                Chunk(content="More content", page=2)
+                Chunk(content="More content", page=2),
             ],
-            "type": "int"
+            "type": "int",
         }
         response = QueryResponse(**response_data)
         assert response.id == "resp1"
@@ -137,7 +143,7 @@ class TestQueryResponse:
             ("str", "John Doe"),
             ("bool", True),
             ("int_array", [1, 2, 3]),
-            ("str_array", ["apple", "banana", "cherry"])
+            ("str_array", ["apple", "banana", "cherry"]),
         ]
         for type_, answer in test_cases:
             response_data = {
@@ -146,7 +152,7 @@ class TestQueryResponse:
                 "prompt_id": "1",
                 "answer": answer,
                 "chunks": [],
-                "type": type_
+                "type": type_,
             }
             response = QueryResponse(**response_data)
             assert response.answer == answer
@@ -159,7 +165,7 @@ class TestQueryResponse:
             "prompt_id": "1",
             "answer": None,
             "chunks": [],
-            "type": "str"
+            "type": "str",
         }
         response = QueryResponse(**response_data)
         assert response.answer is None

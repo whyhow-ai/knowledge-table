@@ -4,9 +4,16 @@
 
 import pytest
 from pydantic import ValidationError
+
 from app.schemas.graph import (
-    Prompt, Cell, Column, Document, Row, Table,
-    ExportTriplesRequest, ExportTriplesResponse
+    Cell,
+    Column,
+    Document,
+    ExportTriplesRequest,
+    ExportTriplesResponse,
+    Prompt,
+    Row,
+    Table,
 )
 
 
@@ -17,7 +24,7 @@ class TestPrompt:
             "id": "1",
             "query": "What is the person's name?",
             "rules": ["rule1", "rule2"],
-            "type": "text"
+            "type": "text",
         }
         prompt = Prompt(**prompt_data)
         assert prompt.entityType == "person"
@@ -31,7 +38,7 @@ class TestPrompt:
             "entityType": "person",
             "id": "1",
             "query": "What is the person's name?",
-            "rules": ["rule1", "rule2"]
+            "rules": ["rule1", "rule2"],
             # Missing 'type' field
         }
         with pytest.raises(ValidationError):
@@ -44,7 +51,7 @@ class TestCell:
             "answer": {"text": "John Doe"},
             "columnId": "col1",
             "dirty": True,
-            "rowId": "row1"
+            "rowId": "row1",
         }
         cell = Cell(**cell_data)
         assert cell.answer == {"text": "John Doe"}
@@ -57,7 +64,7 @@ class TestCell:
             "answer": {"text": "John Doe"},
             "columnId": "col1",
             "dirty": "true",
-            "rowId": "row1"
+            "rowId": "row1",
         }
         cell = Cell(**cell_data)
         assert cell.dirty == "true"
@@ -72,10 +79,10 @@ class TestColumn:
                 "id": "1",
                 "query": "What is the person's name?",
                 "rules": ["rule1"],
-                "type": "text"
+                "type": "text",
             },
             "width": 100,
-            "hidden": False
+            "hidden": False,
         }
         column = Column(**column_data)
         assert column.id == "col1"
@@ -91,10 +98,10 @@ class TestColumn:
                 "id": "1",
                 "query": "What is the person's name?",
                 "rules": ["rule1"],
-                "type": "text"
+                "type": "text",
             },
             "width": "100px",
-            "hidden": "false"
+            "hidden": "false",
         }
         column = Column(**column_data)
         assert column.width == "100px"
@@ -108,7 +115,7 @@ class TestDocument:
             "name": "Test Document",
             "author": "John Doe",
             "tag": "test",
-            "page_count": 10
+            "page_count": 10,
         }
         document = Document(**document_data)
         assert document.id == "doc1"
@@ -123,7 +130,7 @@ class TestDocument:
             "name": "Test Document",
             "author": "John Doe",
             "tag": "test",
-            "page_count": "10"
+            "page_count": "10",
         }
         document = Document(**document_data)
         assert document.page_count == "10"
@@ -138,9 +145,9 @@ class TestRow:
                 "name": "Test Document",
                 "author": "John Doe",
                 "tag": "test",
-                "page_count": 10
+                "page_count": 10,
             },
-            "hidden": False
+            "hidden": False,
         }
         row = Row(**row_data)
         assert row.id == "row1"
@@ -155,9 +162,9 @@ class TestRow:
                 "name": "Test Document",
                 "author": "John Doe",
                 "tag": "test",
-                "page_count": 10
+                "page_count": 10,
             },
-            "hidden": "false"
+            "hidden": "false",
         }
         row = Row(**row_data)
         assert row.hidden == "false"
@@ -174,10 +181,10 @@ class TestTable:
                         "id": "1",
                         "query": "What is the person's name?",
                         "rules": ["rule1"],
-                        "type": "text"
+                        "type": "text",
                     },
                     "width": 100,
-                    "hidden": False
+                    "hidden": False,
                 }
             ],
             "rows": [
@@ -188,9 +195,9 @@ class TestTable:
                         "name": "Test Document",
                         "author": "John Doe",
                         "tag": "test",
-                        "page_count": 10
+                        "page_count": 10,
                     },
-                    "hidden": False
+                    "hidden": False,
                 }
             ],
             "cells": [
@@ -198,9 +205,9 @@ class TestTable:
                     "answer": {"text": "John Doe"},
                     "columnId": "col1",
                     "dirty": True,
-                    "rowId": "row1"
+                    "rowId": "row1",
                 }
-            ]
+            ],
         }
         table = Table(**table_data)
         assert len(table.columns) == 1
@@ -219,10 +226,10 @@ class TestExportTriplesRequest:
                         "id": "1",
                         "query": "What is the person's name?",
                         "rules": ["rule1"],
-                        "type": "text"
+                        "type": "text",
                     },
                     "width": 100,
-                    "hidden": False
+                    "hidden": False,
                 }
             ],
             "rows": [
@@ -233,9 +240,9 @@ class TestExportTriplesRequest:
                         "name": "Test Document",
                         "author": "John Doe",
                         "tag": "test",
-                        "page_count": 10
+                        "page_count": 10,
                     },
-                    "hidden": False
+                    "hidden": False,
                 }
             ],
             "cells": [
@@ -243,9 +250,9 @@ class TestExportTriplesRequest:
                     "answer": {"text": "John Doe"},
                     "columnId": "col1",
                     "dirty": True,
-                    "rowId": "row1"
+                    "rowId": "row1",
                 }
-            ]
+            ],
         }
         request = ExportTriplesRequest(**request_data)
         assert len(request.columns) == 1
@@ -259,18 +266,13 @@ class TestExportTriplesResponse:
             "triples": [
                 {
                     "triple_id": "t1",
-                    "head": {
-                        "label": "Treatment",
-                        "name": "natalizumab"
-                    },
-                    "tail": {
-                        "label": "Disease",
-                        "name": "multiple sclerosis"
-                    },
-                    "relation": {
-                        "name": "treats"
-                    },
-                    "chunk_ids": ["t1_cm248iq3a00023b6jkfnv001v_c1", "t1_cm248iq3a00023b6jkfnv001v_c2"]
+                    "head": {"label": "Treatment", "name": "natalizumab"},
+                    "tail": {"label": "Disease", "name": "multiple sclerosis"},
+                    "relation": {"name": "treats"},
+                    "chunk_ids": [
+                        "t1_cm248iq3a00023b6jkfnv001v_c1",
+                        "t1_cm248iq3a00023b6jkfnv001v_c2",
+                    ],
                 }
             ],
             "chunks": [
@@ -278,33 +280,30 @@ class TestExportTriplesResponse:
                     "chunk_id": "t1_cm248iq3a00023b6jkfnv001v_c1",
                     "content": "Sample content",
                     "page": "1",
-                    "triple_id": "t1"
+                    "triple_id": "t1",
                 }
-            ]
+            ],
         }
         response = ExportTriplesResponse(**response_data)
         assert len(response.triples) == 1
         assert len(response.chunks) == 1
         assert response.triples[0]["triple_id"] == "t1"
-        assert response.chunks[0]["chunk_id"] == "t1_cm248iq3a00023b6jkfnv001v_c1"
+        assert (
+            response.chunks[0]["chunk_id"] == "t1_cm248iq3a00023b6jkfnv001v_c1"
+        )
 
     def test_invalid_export_triples_response(self):
         invalid_data = {
             "triples": [
                 {
                     "triple_id": "t1",
-                    "head": {
-                        "label": "Treatment",
-                        "name": "natalizumab"
-                    },
-                    "tail": {
-                        "label": "Disease",
-                        "name": "multiple sclerosis"
-                    },
-                    "relation": {
-                        "name": "treats"
-                    },
-                    "chunk_ids": ["t1_cm248iq3a00023b6jkfnv001v_c1", "t1_cm248iq3a00023b6jkfnv001v_c2"]
+                    "head": {"label": "Treatment", "name": "natalizumab"},
+                    "tail": {"label": "Disease", "name": "multiple sclerosis"},
+                    "relation": {"name": "treats"},
+                    "chunk_ids": [
+                        "t1_cm248iq3a00023b6jkfnv001v_c1",
+                        "t1_cm248iq3a00023b6jkfnv001v_c2",
+                    ],
                 }
             ]
             # Missing 'chunks' field
