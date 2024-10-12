@@ -3,9 +3,6 @@
 from typing import List, Optional
 
 from langchain.schema import Document
-from langchain_unstructured import (
-    UnstructuredLoader as LangchainUnstructuredLoader,
-)
 
 from app.services.loaders.base import LoaderService
 
@@ -16,6 +13,10 @@ class UnstructuredDependencyError(ImportError):
 
 class UnstructuredLoader(LoaderService):
     """Unstructured loader service."""
+
+    from langchain_unstructured import (
+        UnstructuredLoader as LangchainUnstructuredLoader,
+    )
 
     def __init__(self, unstructured_api_key: Optional[str] = None):
         """Initialize the UnstructuredLoader."""
