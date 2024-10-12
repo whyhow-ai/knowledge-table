@@ -18,12 +18,16 @@ class LoaderFactory:
     def create_loader() -> Optional[LoaderService]:
         """Create the loader service."""
         logger.info(f"Creating loader of type: {settings.loader}")
-        if settings.loader == "unstructured":
-            logger.info("Using UnstructuredLoader")
-            return UnstructuredLoader()
-        elif settings.loader == "pypdf":
-            logger.info("Using PyPDFLoader")
-            return PDFLoader()
-        else:
-            logger.warning(f"No loader found for type: {settings.loader}")
+        try:
+            if settings.loader == "unstructured":
+                logger.info("Using UnstructuredLoader")
+                return UnstructuredLoader()
+            elif settings.loader == "pypdf":
+                logger.info("Using PyPDFLoader")
+                return PDFLoader()
+            else:
+                logger.warning(f"No loader found for type: {settings.loader}")
+                return None
+        except Exception as e:
+            logger.exception(f"Error creating loader: {str(e)}")
             return None
