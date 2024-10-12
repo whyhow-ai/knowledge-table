@@ -47,14 +47,16 @@ class TestMilvusService:
     ):
         texts = ["Text 1", "Text 2", "Text 3"]
         expected_embeddings = [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]]
-        mock_llm_service.get_embeddings.return_value = expected_embeddings
+
+        # Update the mock to return individual embeddings for each call
+        mock_llm_service.get_embeddings.side_effect = expected_embeddings
 
         result = await milvus_service.get_embeddings(texts)
 
         assert result == expected_embeddings
-        mock_llm_service.get_embeddings.assert_called_once_with(
-            "\n".join(texts)
-        )
+        assert mock_llm_service.get_embeddings.call_count == len(texts)
+        for text in texts:
+            mock_llm_service.get_embeddings.assert_any_call(text)
 
     @pytest.mark.asyncio
     async def test_ensure_collection_exists_collection_doesnt_exist(

@@ -1,5 +1,6 @@
 """The Milvus service for the vector database."""
 
+import asyncio
 import json
 import logging
 import re
@@ -46,18 +47,9 @@ class MilvusService(VectorDBService):
         if isinstance(text, str):
             return await self.llm_service.get_embeddings(text)
         else:
-            # Batch the embedding requests
-            batch_size = (
-                20  # Adjust this based on your LLM service's capabilities
-            )
-            embeddings = []
-            for i in range(0, len(text), batch_size):
-                batch = text[i : i + batch_size]
-                batch_embeddings = await self.llm_service.get_embeddings(
-                    "\n".join(batch)
-                )
-                embeddings.extend(batch_embeddings)
-            return embeddings
+            # If it's a list of strings, get embeddings for all strings in parallel
+            tasks = [self.llm_service.get_embeddings(t) for t in text]
+            return await asyncio.gather(*tasks)
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
@@ -173,7 +165,7 @@ class MilvusService(VectorDBService):
             # Create the data
             data = {
                 "id": metadata.uuid,
-                "vector": embedding,  # This should already be a list of floats
+                "vector": embedding,  # This should now be a list of floats
                 "text": metadata.text,
                 "page_number": metadata.page_number,
                 "chunk_number": metadata.chunk_number,
@@ -360,7 +352,7 @@ class MilvusService(VectorDBService):
         if max_length:
             logger.info(f"Max length set to: {max_length}")
 
-        # Run the keyword search
+        # Run the keyword search (if keywords exist)
         if keywords:
             like_conditions = " || ".join(
                 [f'text like "%{keyword}%"' for keyword in keywords]
@@ -425,9 +417,10 @@ class MilvusService(VectorDBService):
                 )
 
             # Now let's perform the search
+            # Ensure that embedded_query is wrapped in a list
             semantic_response = self.client.search(
                 collection_name=settings.index_name,
-                data=embedded_query,
+                data=[embedded_query],
                 filter=f'document_id == "{document_id}"',
                 limit=40,
                 output_fields=[
@@ -440,6 +433,7 @@ class MilvusService(VectorDBService):
             logger.info(
                 f"Number of results from semantic search: {len(semantic_response)}"
             )
+
             # Flatten the semantic response
             flattened_semantic_chunks = [
                 hit["entity"] for result in semantic_response for hit in result
@@ -451,47 +445,44 @@ class MilvusService(VectorDBService):
 
             # Combine the keyword and semantic chunks
             combined_chunks = (
-                sorted_keyword_chunks[:20]
-                if "sorted_keyword_chunks" in locals()
-                else []
+                sorted_keyword_chunks[:20] if sorted_keyword_chunks else []
             ) + flattened_semantic_chunks
 
-            # Sort the chunks by chunk number
-            combined_sorted_chunks = sorted(
-                combined_chunks, key=lambda chunk: chunk["chunk_number"]
-            )
+            # Sort the chunks by chunk number if available
+            if combined_chunks and "chunk_number" in combined_chunks[0]:
+                combined_sorted_chunks = sorted(
+                    combined_chunks, key=lambda chunk: chunk["chunk_number"]
+                )
+            else:
+                combined_sorted_chunks = combined_chunks
 
             seen_chunks = set()
             formatted_output = []
 
             # Format the output
             for chunk in combined_sorted_chunks:
-                if chunk["chunk_number"] not in seen_chunks:
+                chunk_id = chunk.get("chunk_number") or chunk.get("id")
+                if chunk_id not in seen_chunks:
                     formatted_output.append(
-                        {
-                            "content": chunk["text"],
-                            "page": chunk["page_number"],
-                        }
+                        Chunk(
+                            content=chunk["text"],
+                            page=chunk.get("page_number", 0),
+                        )
                     )
-                    seen_chunks.add(chunk["chunk_number"])
+                    seen_chunks.add(chunk_id)
 
             logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
 
             return VectorResponse(
                 message="Query processed successfully.",
-                chunks=[Chunk(**chunk) for chunk in formatted_output],
+                chunks=formatted_output,
             )
 
         except Exception as e:
             logger.error(f"Error during Milvus search: {e}")
-            if isinstance(embedded_query[0], list):
-                logger.error(
-                    f"Milvus search parameters: collection_name={settings.index_name}, data shape={len(embedded_query)}x{len(embedded_query[0])}"
-                )
-            else:
-                logger.error(
-                    f"Milvus search parameters: collection_name={settings.index_name}, data shape=1x{len(embedded_query)}"
-                )
+            logger.error(
+                f"Milvus search parameters: collection_name={settings.index_name}, data shape=1x{len(embedded_query)}"
+            )
             raise
 
     async def decomposed_search(
