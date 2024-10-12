@@ -7,7 +7,7 @@ SettingsConfigDict to load environment variables from a .env file.
 from typing import List, Optional
 
 from pydantic import ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -55,12 +55,16 @@ class Settings(BaseSettings):
             return info.data.get(info.field_name)
         return v
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",  # This will ignore any extra fields
-    )
+    # model_config = SettingsConfigDict(
+    #     env_file=".env",
+    #     env_file_encoding="utf-8",
+    #     case_sensitive=False,
+    #     extra="ignore",
+    # )
+
+    # def __init__(self, **kwargs) -> None:
+    #     env_file = kwargs.pop("_env_file", self.model_config["env_file"])
+    #     super().__init__(_env_file=env_file, **kwargs)
 
 
 settings = Settings()

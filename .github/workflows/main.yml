@@ -48,4 +48,4 @@ jobs:
 
       - name: Run unit tests with pytest
         run: |
-          cd backend && pytest --color=yes tests 
+          cd backend && pytest --color=yes tests

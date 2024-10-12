@@ -56,6 +56,8 @@ class IntResponseModel(BaseResponseModel):
         v = cls.validate_none(v)
         if v is None:
             return None
+        if isinstance(v, float):
+            raise ValueError("Must be an integer value, not a float")
         try:
             return int(v)
         except ValueError:
@@ -96,7 +98,13 @@ class IntArrayResponseModel(ArrayResponseModel):
         """Validate if the value is an integer array or None."""
         int_rule = info.data.get("int_rule")
         max_length = int_rule.length if int_rule else None
-        return cls.validate_array(v, max_length)
+        v = cls.validate_array(v, max_length)
+        if v is None:
+            return None
+        try:
+            return [int(item) for item in v]
+        except ValueError:
+            raise ValueError("All items must be valid integers")
 
 
 class StrArrayResponseModel(ArrayResponseModel):
@@ -119,9 +127,7 @@ class StrArrayResponseModel(ArrayResponseModel):
         if v is None:
             return None
         if str_rule and str_rule.type == "must_return" and str_rule.options:
-            v = [i for i in v if i in str_rule.options]
-            if not v or v == ["not found"]:
-                return []
+            return [i for i in v if i in str_rule.options]
         return v
 
 
@@ -146,7 +152,6 @@ class StrResponseModel(BaseResponseModel):
             and str_rule.options is not None
             and v not in str_rule.options
         ):
-            logger.error(f"Value is not in the allowed options: {v}")
             return None
         return v
 
