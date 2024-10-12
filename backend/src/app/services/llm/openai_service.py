@@ -51,3 +51,7 @@ class OpenAIService(LLMService):
 
     def _get_embeddings_sync(self, text: str) -> List[float]:
         return self.embeddings.embed_query(text)
+
+    async def decompose_query(self, query: str) -> dict[str, Any]:
+        """Decompose the query into smaller sub-queries."""
+        return {"sub_queries": [query]}

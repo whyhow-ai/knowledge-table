@@ -1,9 +1,9 @@
 """Tests for the PyPDF service"""
 
-import pytest
-from unittest.mock import patch, MagicMock
 from typing import List
+from unittest.mock import patch
 
+import pytest
 from langchain.schema import Document as LangchainDocument
 
 from app.services.loaders.pypdf_service import PDFLoader
@@ -11,7 +11,7 @@ from app.services.loaders.pypdf_service import PDFLoader
 
 @pytest.fixture
 def mock_pypdf_loader():
-    with patch('app.services.loaders.pypdf_service.PyPDFLoader') as mock:
+    with patch("app.services.loaders.pypdf_service.PyPDFLoader") as mock:
         yield mock
 
 
@@ -26,7 +26,7 @@ async def test_pdf_loader_load(mock_pypdf_loader):
     file_path = "test_document.pdf"
     mock_documents = [
         LangchainDocument(page_content="Test content 1", metadata={"page": 1}),
-        LangchainDocument(page_content="Test content 2", metadata={"page": 2})
+        LangchainDocument(page_content="Test content 2", metadata={"page": 2}),
     ]
     mock_pypdf_loader.return_value.load.return_value = mock_documents
 
@@ -79,7 +79,9 @@ async def test_pdf_loader_exception_handling(mock_pypdf_loader):
     """
     # Given
     file_path = "non_existent.pdf"
-    mock_pypdf_loader.return_value.load.side_effect = Exception("File not found")
+    mock_pypdf_loader.return_value.load.side_effect = Exception(
+        "File not found"
+    )
 
     pdf_loader = PDFLoader()
 

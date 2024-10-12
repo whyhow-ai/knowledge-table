@@ -33,6 +33,7 @@ class VectorResponse(BaseModel):
 
     message: str
     chunks: List[Chunk]
+    keywords: Optional[List[str]] = None
 
 
 class QueryResponse(BaseModel):

@@ -22,22 +22,23 @@ class VectorDBService(ABC):
     @abstractmethod
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> dict[str, Any]:
-        """Search the vectors in the vector database."""
+    ) -> VectorResponse:
+        """Perform a vector search."""
         pass
 
+    # Update other methods if they also return VectorResponse
     @abstractmethod
     async def keyword_search(
-        self, query: str, document_id: str, keywords: list[str]
-    ) -> dict[str, Any]:
-        """Search the keywords in the vector database."""
+        self, query: str, document_id: str, keywords: List[str]
+    ) -> VectorResponse:
+        """Perform a keyword search."""
         pass
 
     @abstractmethod
     async def hybrid_search(
-        self, query: str, document_id: str, rules: list[Rule]
+        self, query: str, document_id: str, rules: List[Rule]
     ) -> VectorResponse:
-        """Search the vectors in the vector database."""
+        """Perform a hybrid search."""
         pass
 
     @abstractmethod

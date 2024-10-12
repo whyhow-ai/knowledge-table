@@ -12,7 +12,7 @@ from pymilvus import DataType, MilvusClient
 
 from app.core.config import settings
 from app.schemas.query import Chunk, Rule, VectorResponse
-from app.services.llm_service import LLMService, decompose_query, get_keywords
+from app.services.llm_service import LLMService, get_keywords
 from app.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)
@@ -187,7 +187,7 @@ class MilvusService(VectorDBService):
 
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> dict[str, Any]:
+    ) -> VectorResponse:
         """Perform a vector search on the Milvus database."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
@@ -203,7 +203,7 @@ class MilvusService(VectorDBService):
 
             logger.info("Searching...")
 
-            # Search the colection
+            # Search the collection
             query_response = self.client.search(
                 collection_name=settings.index_name,
                 data=[embedded_query],
@@ -230,19 +230,19 @@ class MilvusService(VectorDBService):
             if chunk["chunk_number"] not in seen_chunks:
                 seen_chunks.add(chunk["chunk_number"])
                 formatted_output.append(
-                    {"content": chunk["text"], "page": chunk["page_number"]}
+                    Chunk(content=chunk["text"], page=chunk["page_number"])
                 )
 
         logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
 
-        return {
-            "message": "Query processed successfully.",
-            "chunks": formatted_output,
-        }
+        return VectorResponse(
+            message="Query processed successfully.",
+            chunks=formatted_output,
+        )
 
     async def keyword_search(
         self, query: str, document_id: str, keywords: list[str]
-    ) -> dict[str, Any]:
+    ) -> VectorResponse:
         """Perform a keyword search on the Milvus database."""
         logger.info("Performing keyword search.")
 
@@ -294,25 +294,25 @@ class MilvusService(VectorDBService):
 
                     chunks_added = 0
 
-                    # Add the chunks to the response
-                    for chunk in sorted_keyword_chunks[:5]:
-                        if chunk["chunk_number"] not in seen_chunks:
-                            chunk_response.append(
-                                {
-                                    "content": chunk["text"],
-                                    "page": chunk["page_number"],
-                                }
+                # Add the chunks to the response
+                for chunk in sorted_keyword_chunks[:5]:
+                    if chunk["chunk_number"] not in seen_chunks:
+                        chunk_response.append(
+                            Chunk(
+                                content=chunk["text"],
+                                page=chunk["page_number"],
                             )
-                            seen_chunks.add(chunk["chunk_number"])
-                            chunks_added += 1
-                        if chunks_added >= 5:
-                            break
+                        )
+                        seen_chunks.add(chunk["chunk_number"])
+                        chunks_added += 1
+                    if chunks_added >= 5:
+                        break
 
-        return {
-            "message": "Query processed successfully.",
-            "keywords": response,
-            "chunks": chunk_response,
-        }
+        return VectorResponse(
+            message="Query processed successfully.",
+            chunks=chunk_response,
+            keywords=response,
+        )
 
     async def hybrid_search(
         self, query: str, document_id: str, rules: list[Rule]
@@ -500,9 +500,9 @@ class MilvusService(VectorDBService):
         """Decomposition query."""
         logger.info("Decomposing query into smaller sub-queries.")
 
-        # Break the question into simpler sub-questions, and get the chunks for each
-        decomposition_response = await decompose_query(
-            llm_service=self.llm_service, query=query
+        # Break the question into simpler sub-questions
+        decomposition_response = await self.llm_service.decompose_query(
+            query=query
         )
 
         # Get the chunks for each sub-query
@@ -512,7 +512,9 @@ class MilvusService(VectorDBService):
 
         return {
             "sub_queries": decomposition_response["sub-queries"],
-            "chunks": sub_query_chunks["chunks"],
+            "chunks": [
+                chunk.model_dump() for chunk in sub_query_chunks.chunks
+            ],
         }
 
     async def delete_document(self, document_id: str) -> Dict[str, str]:

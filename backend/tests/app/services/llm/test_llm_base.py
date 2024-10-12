@@ -18,6 +18,9 @@ class ConcreteLLMService(LLMService):
     async def get_embeddings(self, text: str) -> list[float]:
         return [0.1, 0.2, 0.3]
 
+    async def decompose_query(self, query: str) -> list[str]:
+        return [query]  # Simple implementation for testing purposes
+
 
 @pytest.mark.asyncio
 async def test_cannot_instantiate_abstract_llm_service():

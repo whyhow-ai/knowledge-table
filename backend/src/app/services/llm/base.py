@@ -18,3 +18,8 @@ class LLMService(ABC):
     async def get_embeddings(self, text: str) -> list[float]:
         """Get the embeddings for the given text."""
         pass
+
+    @abstractmethod
+    async def decompose_query(self, query: str) -> dict[str, Any]:
+        """Decompose the query into smaller sub-queries."""
+        pass

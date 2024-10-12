@@ -2,8 +2,9 @@
 
 """Tests for the base loader service."""
 
-import pytest
 from typing import List
+
+import pytest
 from langchain.schema import Document as LangchainDocument
 
 from app.services.loaders.base import LoaderService
@@ -14,7 +15,11 @@ class ConcreteLoaderService(LoaderService):
 
     async def load(self, file_path: str) -> List[LangchainDocument]:
         """Mock implementation of load method."""
-        return [LangchainDocument(page_content="Test content", metadata={"source": file_path})]
+        return [
+            LangchainDocument(
+                page_content="Test content", metadata={"source": file_path}
+            )
+        ]
 
 
 @pytest.mark.asyncio
@@ -27,7 +32,10 @@ async def test_cannot_instantiate_abstract_loader_service():
     with pytest.raises(TypeError) as exc_info:
         LoaderService()
 
-    assert "Can't instantiate abstract class LoaderService with abstract method load" in str(exc_info.value)
+    assert (
+        "Can't instantiate abstract class LoaderService with abstract method load"
+        in str(exc_info.value)
+    )
 
 
 @pytest.mark.asyncio
@@ -40,7 +48,9 @@ async def test_concrete_loader_service_instantiation():
     try:
         ConcreteLoaderService()
     except Exception as e:
-        pytest.fail(f"ConcreteLoaderService instantiation raised an unexpected exception: {e}")
+        pytest.fail(
+            f"ConcreteLoaderService instantiation raised an unexpected exception: {e}"
+        )
 
 
 @pytest.mark.asyncio
@@ -76,4 +86,4 @@ async def test_loader_service_abstract_method():
     load_method = LoaderService.load
 
     # Then
-    assert getattr(load_method, '__isabstractmethod__', False)
+    assert getattr(load_method, "__isabstractmethod__", False)
