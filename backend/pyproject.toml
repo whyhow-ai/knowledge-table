@@ -8,7 +8,6 @@ authors = [
     {name = "Tom Smoker", email = "tom@whyhow.ai"},
     {name = "Chris Rec", email = "chris@whyhow.ai"}
 ]
-
 description = "A Python API for the Knowledge Table service"
 keywords = ["knowledge", "api"]
 classifiers = ["Programming Language :: Python :: 3"]
@@ -48,6 +47,7 @@ dependencies = [
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-text-splitters>=0.3.0",
+    "langchain-unstructured",
     "langsmith>=0.1.121",
     "marshmallow>=3.22.0",
     "milvus-lite>=2.4.10",
@@ -94,6 +94,8 @@ dependencies = [
     "typing_extensions>=4.12.2",
     "tzdata>=2024.1",
     "ujson>=5.10.0",
+    "unstructured",
+    "unstructured[all-docs]",
     "urllib3>=2.2.3",
     "uvicorn>=0.30.6",
     "whyhow",
@@ -102,31 +104,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-unstructured = [
-    "unstructured",
-    "unstructured[all-docs]",
-    "langchain-unstructured"
-]
-
 dev = [
-    "bandit[toml]",
-    "black",
-    "flake8",
-    "flake8-docstrings",
-    "isort",
-    "mypy",
-    "pydocstyle[toml]",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-httpx",
-    "pytest",
-    "pytest-html",
-]
-
-full = [
-    "unstructured",
-    "unstructured[all-docs]",
-    "langchain-unstructured",
     "bandit[toml]",
     "black",
     "flake8",
@@ -171,9 +149,7 @@ profile = "black"
 line_length = 79
 
 [tool.mypy]
-plugins = [
-  "pydantic.mypy"
-]
+plugins = ["pydantic.mypy"]
 python_version = "3.10"
 ignore_missing_imports = true
 no_implicit_optional = true
@@ -208,9 +184,6 @@ filterwarnings = [
     "ignore::DeprecationWarning:environs.*:",
     "ignore:The '__version_info__' attribute is deprecated:DeprecationWarning",
 ]
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 addopts = "--cov=src/app -v --cov-report=term-missing --durations=20"
 log_cli = false
-

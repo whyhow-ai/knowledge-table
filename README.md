@@ -104,19 +104,9 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
    pip install .
    ```
 
-   For installation with Unstructured support:
-   ```sh
-   pip install .[unstructured]
-   ```
-
    For installation with development tools:
    ```sh
    pip install .[dev]
-   ```
-
-   For full installation (including Unstructured and dev tools):
-   ```sh
-   pip install .[full]
    ```
 
 5. **Start the backend:**

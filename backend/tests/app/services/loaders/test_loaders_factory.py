@@ -23,17 +23,55 @@ def mock_logger():
 
 def test_create_loader_unstructured(mock_settings, mock_logger):
     """
-    Given: The loader type is set to "unstructured" in settings
+    Given: The loader type is set to "unstructured" in settings and unstructured_api_key is provided
     When: create_loader is called
     Then: An UnstructuredLoader instance should be returned
     """
     mock_settings.loader = "unstructured"
+    mock_settings.unstructured_api_key = "test_api_key"
 
     loader = LoaderFactory.create_loader()
 
     assert isinstance(loader, UnstructuredLoader)
     mock_logger.info.assert_any_call("Creating loader of type: unstructured")
     mock_logger.info.assert_any_call("Using UnstructuredLoader")
+
+
+def test_create_loader_unstructured_missing_api_key(
+    mock_settings, mock_logger
+):
+    """
+    Given: The loader type is set to "unstructured" in settings but unstructured_api_key is not provided
+    When: create_loader is called
+    Then: A ValueError should be raised
+    """
+    mock_settings.loader = "unstructured"
+    mock_settings.unstructured_api_key = None
+
+    with pytest.raises(
+        ValueError,
+        match="Unstructured API key is required when using the unstructured loader",
+    ):
+        LoaderFactory.create_loader()
+
+
+@patch("app.services.loaders.factory.UnstructuredLoader")
+def test_unstructured_loader_instantiation(
+    mock_unstructured_loader, mock_settings
+):
+    """
+    Given: The loader type is set to "unstructured" in settings and unstructured_api_key is provided
+    When: create_loader is called
+    Then: UnstructuredLoader should be instantiated with the correct API key
+    """
+    mock_settings.loader = "unstructured"
+    mock_settings.unstructured_api_key = "test_api_key"
+
+    LoaderFactory.create_loader()
+
+    mock_unstructured_loader.assert_called_once_with(
+        unstructured_api_key="test_api_key"
+    )
 
 
 def test_create_loader_pypdf(mock_settings, mock_logger):
@@ -69,22 +107,6 @@ def test_create_loader_unknown(mock_settings, mock_logger):
     mock_logger.warning.assert_called_once_with(
         "No loader found for type: unknown"
     )
-
-
-@patch("app.services.loaders.factory.UnstructuredLoader")
-def test_unstructured_loader_instantiation(
-    mock_unstructured_loader, mock_settings
-):
-    """
-    Given: The loader type is set to "unstructured" in settings
-    When: create_loader is called
-    Then: UnstructuredLoader should be instantiated
-    """
-    mock_settings.loader = "unstructured"
-
-    LoaderFactory.create_loader()
-
-    mock_unstructured_loader.assert_called_once()
 
 
 @patch("app.services.loaders.factory.PDFLoader")
