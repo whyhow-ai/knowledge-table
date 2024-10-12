@@ -26,5 +26,3 @@ class VectorDBFactory:
         # Add other vector database providers here
         logger.warning(f"Unsupported vector database provider: {provider}")
         return None
-    
-    
