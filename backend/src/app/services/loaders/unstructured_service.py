@@ -3,7 +3,9 @@
 from typing import List, Optional
 
 from langchain.schema import Document
-from langchain_community.document_loaders import UnstructuredFileLoader
+from langchain_unstructured import (
+    UnstructuredLoader as LangchainUnstructuredLoader,
+)
 
 from app.services.loaders.base import LoaderService
 
@@ -23,8 +25,7 @@ class UnstructuredLoader(LoaderService):
     def _check_unstructured_dependency() -> None:
         """Check if the unstructured dependency is installed."""
         try:
-            import langchain_community.document_loaders.unstructured  # noqa: F401
-            import unstructured  # noqa: F401
+            import langchain_unstructured  # noqa: F401
         except ImportError:
             raise UnstructuredDependencyError(
                 "The unstructured package is not installed. "
@@ -35,15 +36,15 @@ class UnstructuredLoader(LoaderService):
     async def load(self, file_path: str) -> List[Document]:
         """Load document from file path."""
         self._check_unstructured_dependency()
-        loader = UnstructuredFileLoader(
-            file_path, unstructured_api_key=self.unstructured_api_key
+        loader = LangchainUnstructuredLoader(
+            file_path, strategy="fast", mode="elements"
         )
         return loader.load()
 
     async def load_and_split(self, file_path: str) -> List[Document]:
         """Load and split document from file path."""
         self._check_unstructured_dependency()
-        loader = UnstructuredFileLoader(
-            file_path, unstructured_api_key=self.unstructured_api_key
+        loader = LangchainUnstructuredLoader(
+            file_path, strategy="fast", mode="elements"
         )
         return loader.load_and_split()

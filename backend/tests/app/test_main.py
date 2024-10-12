@@ -57,9 +57,7 @@ async def test_lifespan(
         mock_logger.info.assert_any_call(
             f"Vector DB Provider: {mock_settings.vector_db_provider}"
         )
-        mock_logger.info.assert_any_call(
-            f"API_V1_STR: {mock_settings.API_V1_STR}"
-        )
+        mock_logger.info.assert_any_call(f"Loader: {mock_settings.loader}")
         mock_vector_db_service.ensure_collection_exists.assert_called_once()
         mock_logger.info.assert_any_call("Vector database collection ensured.")
 

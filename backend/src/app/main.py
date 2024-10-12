@@ -24,9 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     llm_service = get_llm_service()
     logger.info(f"LLM Service: {llm_service}")
     logger.info(f"Vector DB Provider: {settings.vector_db_provider}")
-    logger.info(f"API_V1_STR: {settings.API_V1_STR}")
-    logger.info(f"Document router prefix: {api_router.prefix}/documents")
-
+    logger.info(f"Loader: {settings.loader}")
     # Create the vector database service
     vector_db_service = VectorDBFactory.create_vector_db_service(
         settings.vector_db_provider, llm_service

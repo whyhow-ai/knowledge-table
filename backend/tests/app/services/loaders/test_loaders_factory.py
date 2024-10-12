@@ -47,6 +47,7 @@ def test_create_loader_pypdf(mock_settings, mock_logger):
     loader = LoaderFactory.create_loader()
 
     assert isinstance(loader, PDFLoader)
+    assert mock_logger.info.call_count == 2
     mock_logger.info.assert_any_call("Creating loader of type: pypdf")
     mock_logger.info.assert_any_call("Using PyPDFLoader")
 

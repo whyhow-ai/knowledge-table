@@ -16,17 +16,19 @@ class LoaderFactory:
 
     @staticmethod
     def create_loader() -> Optional[LoaderService]:
-        """Create the loader service."""
-        logger.info(f"Creating loader of type: {settings.loader}")
+        """Create a loader service."""
+        loader_type = settings.loader
+        logger.info(f"Creating loader of type: {loader_type}")
+
         try:
-            if settings.loader == "unstructured":
+            if loader_type == "unstructured":
                 logger.info("Using UnstructuredLoader")
                 return UnstructuredLoader()
-            elif settings.loader == "pypdf":
+            elif loader_type == "pypdf":
                 logger.info("Using PyPDFLoader")
                 return PDFLoader()
             else:
-                logger.warning(f"No loader found for type: {settings.loader}")
+                logger.warning(f"No loader found for type: {loader_type}")
                 return None
         except Exception as e:
             logger.exception(f"Error creating loader: {str(e)}")
