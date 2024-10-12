@@ -8,10 +8,10 @@ from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
 from app.core.config import settings
-
 from app.services.llm.base import LLMService
 
 logger = logging.getLogger(__name__)
+
 
 class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
@@ -36,12 +36,16 @@ class OpenAIService(LLMService):
             response_format=response_model,
         )
 
-        logger.info(f"Generated response: {response.choices[0].message.parsed}")
+        logger.info(
+            f"Generated response: {response.choices[0].message.parsed}"
+        )
         return response.choices[0].message.parsed
 
-    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for the given texts."""
+    async def get_embeddings(self, text: str) -> List[float]:
+        """Generate embeddings for the given text."""
         # Use asyncio to run the embedding in a separate thread
         loop = asyncio.get_event_loop()
-        embeddings = await loop.run_in_executor(None, self.embeddings.embed_documents, texts)
+        embeddings = await loop.run_in_executor(
+            None, self.embeddings.embed_query, text
+        )
         return embeddings

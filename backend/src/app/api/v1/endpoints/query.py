@@ -21,10 +21,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["query"])
 logger.info("Query router initialized")
 
-@router.get("/test")
-async def test_query_router():
-    logger.info("Query test endpoint called")
-    return {"message": "Query router is working"}
 
 @router.post("", response_model=Answer)
 async def run_query(

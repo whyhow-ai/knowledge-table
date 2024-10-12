@@ -1,7 +1,9 @@
-import os
+"""Tests for the config module."""
+
 from pydantic import BaseModel, Field
-import pytest
+
 from app.core.config import Settings
+
 
 def test_settings_default_values(monkeypatch):
     """Test that Settings initializes with default values."""
@@ -29,8 +31,9 @@ def test_settings_default_values(monkeypatch):
     assert settings.loader == "pypdf"
     assert settings.chunk_size == 512
     assert settings.chunk_overlap == 64
-    assert hasattr(settings, 'openai_api_key')
-    assert hasattr(settings, 'unstructured_api_key')
+    assert hasattr(settings, "openai_api_key")
+    assert hasattr(settings, "unstructured_api_key")
+
 
 def test_settings_custom_values(monkeypatch):
     """Test that Settings can be initialized with custom values from environment variables."""
@@ -53,7 +56,7 @@ def test_settings_custom_values(monkeypatch):
         "LOADER": "custom_loader",
         "CHUNK_SIZE": "1024",
         "CHUNK_OVERLAP": "128",
-        "UNSTRUCTURED_API_KEY": "custom_unstructured_key"
+        "UNSTRUCTURED_API_KEY": "custom_unstructured_key",
     }
     for key, value in custom_values.items():
         monkeypatch.setenv(key, value)
@@ -64,7 +67,10 @@ def test_settings_custom_values(monkeypatch):
     # THEN: Custom values should be set correctly
     assert settings.PROJECT_NAME == "Custom API"
     assert settings.API_V1_STR == "/custom/api"
-    assert settings.BACKEND_CORS_ORIGINS == ["http://localhost", "https://example.com"]
+    assert settings.BACKEND_CORS_ORIGINS == [
+        "http://localhost",
+        "https://example.com",
+    ]
     assert settings.dimensions == 1024
     assert settings.embedding_provider == "custom_provider"
     assert settings.embedding_model == "custom-embedding-model"
@@ -81,8 +87,10 @@ def test_settings_custom_values(monkeypatch):
     assert settings.chunk_overlap == 128
     assert settings.unstructured_api_key == "custom_unstructured_key"
 
+
 def test_validate_api_keys():
     """Test the validate_api_keys method."""
+
     # GIVEN: A mock Settings class and ValidationInfo
     class TestSettings(BaseModel):
         openai_api_key: str | None = Field(default=None)
@@ -94,23 +102,47 @@ def test_validate_api_keys():
             self.field_name = field_name
 
     # GIVEN: Test data with API keys
-    test_data = {"openai_api_key": "test_key", "unstructured_api_key": "test_unstructured_key"}
+    test_data = {
+        "openai_api_key": "test_key",
+        "unstructured_api_key": "test_unstructured_key",
+    }
 
     # WHEN: v is None and field_name is in data
     # THEN: The method should return the value from the data
-    assert Settings.validate_api_keys(None, MockValidationInfo(test_data, "openai_api_key")) == "test_key"
-    assert Settings.validate_api_keys(None, MockValidationInfo(test_data, "unstructured_api_key")) == "test_unstructured_key"
+    assert (
+        Settings.validate_api_keys(
+            None, MockValidationInfo(test_data, "openai_api_key")
+        )
+        == "test_key"
+    )
+    assert (
+        Settings.validate_api_keys(
+            None, MockValidationInfo(test_data, "unstructured_api_key")
+        )
+        == "test_unstructured_key"
+    )
 
     # GIVEN: An existing key value
     # WHEN: v is not None
     # THEN: The method should return the existing value
-    assert Settings.validate_api_keys("existing_key", MockValidationInfo(test_data, "openai_api_key")) == "existing_key"
+    assert (
+        Settings.validate_api_keys(
+            "existing_key", MockValidationInfo(test_data, "openai_api_key")
+        )
+        == "existing_key"
+    )
 
     # GIVEN: Empty data
     empty_data = {}
     # WHEN: v is None and field_name is not in data
     # THEN: The method should return None
-    assert Settings.validate_api_keys(None, MockValidationInfo(empty_data, "non_existent_key")) is None
+    assert (
+        Settings.validate_api_keys(
+            None, MockValidationInfo(empty_data, "non_existent_key")
+        )
+        is None
+    )
+
 
 def test_api_key_validation_in_settings(monkeypatch):
     """Test that API keys are properly handled in Settings initialization."""
@@ -122,8 +154,8 @@ def test_api_key_validation_in_settings(monkeypatch):
     settings = Settings()
 
     # THEN: API key attributes should exist
-    assert hasattr(settings, 'openai_api_key')
-    assert hasattr(settings, 'unstructured_api_key')
+    assert hasattr(settings, "openai_api_key")
+    assert hasattr(settings, "unstructured_api_key")
 
     # GIVEN: Environment variables are set
     monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
@@ -144,5 +176,5 @@ def test_api_key_validation_in_settings(monkeypatch):
     settings = Settings()
 
     # THEN: API key attributes should exist
-    assert hasattr(settings, 'openai_api_key')
-    assert hasattr(settings, 'unstructured_api_key')
+    assert hasattr(settings, "openai_api_key")
+    assert hasattr(settings, "unstructured_api_key")

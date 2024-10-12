@@ -1,4 +1,4 @@
-"""Graph router."""
+"""Graph API endpoints."""
 
 import json
 import logging
@@ -16,9 +16,8 @@ from app.schemas.graph import (
 from app.services.graph_service import generate_triples
 from app.services.llm_service import generate_schema
 
-router = APIRouter(tags=["Graph"], prefix="/graph")
+router = APIRouter(tags=["Graph"])
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -26,13 +25,11 @@ logger = logging.getLogger(__name__)
 async def export_triples(request: Request) -> Response:
     """Export triples from a table."""
     try:
-
         # Get the request body
         body = await request.json()
 
         # Create a Table object from the request body
         try:
-
             # Validate the request
             export_request = ExportTriplesRequest(**body)
 
@@ -44,7 +41,9 @@ async def export_triples(request: Request) -> Response:
             )
 
         except ValidationError as e:
-            raise HTTPException(status_code=422, detail=str(e))
+            logger.error(f"Validation error: {str(e)}")
+            # Pass structured error details
+            raise HTTPException(status_code=422, detail=e.errors())
 
         # Create the LLM service
         llm_service = get_llm_service()
@@ -52,11 +51,11 @@ async def export_triples(request: Request) -> Response:
         # Generate the schema
         schema_result = await generate_schema(llm_service, table)
         schema = schema_result["schema"]
-        print(f"Generated schema: {json.dumps(schema, indent=2)}")
+        logger.info(f"Generated schema: {json.dumps(schema, indent=2)}")
 
         # Generate the triples and chunks
         export_data = await generate_triples(schema, table)
-        print(
+        logger.info(
             f"Generated {len(export_data['triples'])} triples and {len(export_data['chunks'])} chunks"
         )
 
@@ -82,14 +81,16 @@ async def export_triples(request: Request) -> Response:
             "Content-Type": "application/json",
         }
 
-        print("Sending response with triples and chunks")
+        logger.info("Sending response with triples and chunks")
         return Response(content=json_content, headers=headers)
 
     except json.JSONDecodeError as e:
-        print(f"ERROR: Invalid JSON: {str(e)}")
+        logger.error(f"Invalid JSON: {str(e)}")
         raise HTTPException(
             status_code=400, detail="Invalid JSON in request body"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"ERROR: Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

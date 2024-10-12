@@ -4,7 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
@@ -64,12 +64,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Received request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Returning response: {response.status_code}")
-    return response
 
 # Include the API router
 app.include_router(api_router, prefix=settings.API_V1_STR)

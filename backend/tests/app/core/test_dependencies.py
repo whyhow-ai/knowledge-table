@@ -1,12 +1,20 @@
 """Tests for the dependencies module"""
 
-import pytest
 from unittest.mock import Mock, patch
-from app.core.dependencies import get_settings, get_llm_service, get_vectordb_service, get_document_service
+
+import pytest
+
 from app.core.config import Settings
+from app.core.dependencies import (
+    get_document_service,
+    get_llm_service,
+    get_settings,
+    get_vectordb_service,
+)
+from app.services.document_service import DocumentService
 from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
-from app.services.document_service import DocumentService
+
 
 def test_get_settings():
     """Test that get_settings returns a Settings instance."""
@@ -18,7 +26,8 @@ def test_get_settings():
     # THEN: It should return a Settings instance
     assert isinstance(settings, Settings)
 
-@patch('app.core.dependencies.LLMFactory')
+
+@patch("app.core.dependencies.LLMFactory")
 def test_get_llm_service(mock_llm_factory):
     """Test that get_llm_service returns a LLMService instance."""
     # GIVEN: A mock LLM service is created
@@ -32,7 +41,8 @@ def test_get_llm_service(mock_llm_factory):
     assert llm_service == mock_llm_service
     mock_llm_factory.create_llm_service.assert_called_once()
 
-@patch('app.core.dependencies.LLMFactory')
+
+@patch("app.core.dependencies.LLMFactory")
 def test_get_llm_service_error(mock_llm_factory):
     """Test that get_llm_service raises ValueError when LLM service creation fails."""
     # GIVEN: The LLM factory returns None
@@ -42,15 +52,18 @@ def test_get_llm_service_error(mock_llm_factory):
     with pytest.raises(ValueError):
         get_llm_service()
 
-@patch('app.core.dependencies.VectorDBFactory')
-@patch('app.core.dependencies.get_llm_service')
+
+@patch("app.core.dependencies.VectorDBFactory")
+@patch("app.core.dependencies.get_llm_service")
 def test_get_vectordb_service(mock_get_llm_service, mock_vectordb_factory):
     """Test that get_vectordb_service returns a VectorDBService instance."""
     # GIVEN: Mock LLM and VectorDB services are created
     mock_llm_service = Mock(spec=LLMService)
     mock_get_llm_service.return_value = mock_llm_service
     mock_vectordb_service = Mock(spec=VectorDBService)
-    mock_vectordb_factory.create_vector_db_service.return_value = mock_vectordb_service
+    mock_vectordb_factory.create_vector_db_service.return_value = (
+        mock_vectordb_service
+    )
 
     # WHEN: get_vectordb_service is called
     vectordb_service = get_vectordb_service()
@@ -60,9 +73,12 @@ def test_get_vectordb_service(mock_get_llm_service, mock_vectordb_factory):
     mock_get_llm_service.assert_called_once()
     mock_vectordb_factory.create_vector_db_service.assert_called_once()
 
-@patch('app.core.dependencies.VectorDBFactory')
-@patch('app.core.dependencies.get_llm_service')
-def test_get_vectordb_service_error(mock_get_llm_service, mock_vectordb_factory):
+
+@patch("app.core.dependencies.VectorDBFactory")
+@patch("app.core.dependencies.get_llm_service")
+def test_get_vectordb_service_error(
+    mock_get_llm_service, mock_vectordb_factory
+):
     """Test that get_vectordb_service raises ValueError when VectorDB service creation fails."""
     # GIVEN: The VectorDB factory returns None
     mock_llm_service = Mock(spec=LLMService)
@@ -73,7 +89,8 @@ def test_get_vectordb_service_error(mock_get_llm_service, mock_vectordb_factory)
     with pytest.raises(ValueError):
         get_vectordb_service()
 
-@patch('app.core.dependencies.get_vectordb_service')
+
+@patch("app.core.dependencies.get_vectordb_service")
 def test_get_document_service(mock_get_vectordb_service):
     """Test that get_document_service returns a DocumentService instance."""
     # GIVEN: A mock VectorDB service is created
