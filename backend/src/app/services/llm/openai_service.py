@@ -34,7 +34,7 @@ class OpenAIService(LLMService):
         self, prompt: str, response_model: Any
     ) -> Any:
         """Generate a completion from the language model."""
-        response = self.client.beta.chat.completions.parse(
+        response = self.client.beta.chat.completions.parse( # type: ignore[union-attr]
             model=settings.llm_model,
             messages=[{"role": "user", "content": prompt}],
             response_format=response_model,
