@@ -15,7 +15,10 @@ class BaseResponseModel(BaseModel):
     @classmethod
     def validate_none(cls, v: Any) -> Optional[Any]:
         """Validate if the value is None or "none"."""
-        if v is None or (isinstance(v, str) and v.lower() == "none"):
+        if v is None or (
+            isinstance(v, str)
+            and v.lower() in ["none", "not found", "null", ""]
+        ):
             return None
         return v
 
