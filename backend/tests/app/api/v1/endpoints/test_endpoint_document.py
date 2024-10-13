@@ -39,7 +39,7 @@ def mock_vector_db_service():
         (
             None,
             500,
-            {"detail": "An error occurred while processing the document"},
+            {"detail": "500: An error occurred while processing the document"},
         ),
     ],
 )
@@ -172,7 +172,7 @@ async def test_upload_document_endpoint_none_document_id(
     # Then
     assert response.status_code == 500
     assert response.json() == {
-        "detail": "An error occurred while processing the document"
+        "detail": "500: An error occurred while processing the document"
     }
 
 

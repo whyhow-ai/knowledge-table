@@ -10,6 +10,7 @@ from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from app.core.config import settings
+from app.services.llm.base import LLMService
 from app.services.loaders.factory import LoaderFactory
 from app.services.vector_db.base import VectorDBService
 
@@ -22,9 +23,11 @@ class DocumentService:
     def __init__(
         self,
         vector_db_service: VectorDBService,
+        llm_service: LLMService,
     ):
         """Document service."""
         self.vector_db_service = vector_db_service
+        self.llm_service = llm_service
         self.loader_factory = LoaderFactory()
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=settings.chunk_size,
@@ -52,11 +55,23 @@ class DocumentService:
 
             # Process the document
             try:
+
                 chunks = await self._process_document(temp_file_path)
-                prepared_chunks = await self.vector_db_service.prepare_chunks(
-                    document_id, chunks
-                )
-                await self.vector_db_service.upsert_vectors(prepared_chunks)
+
+                if self.llm_service.is_available():
+                    prepared_chunks = (
+                        await self.vector_db_service.prepare_chunks(
+                            document_id, chunks
+                        )
+                    )
+                    await self.vector_db_service.upsert_vectors(
+                        prepared_chunks
+                    )
+                else:
+                    logger.warning(
+                        "LLM service is not available. Skipping vector embedding."
+                    )
+                    # Implement fallback behavior here
             finally:
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)

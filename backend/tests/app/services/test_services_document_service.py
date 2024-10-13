@@ -6,6 +6,7 @@ import pytest
 from langchain.schema import Document as LangchainDocument
 
 from app.services.document_service import DocumentService
+from app.services.llm.base import LLMService
 from app.services.loaders.factory import LoaderFactory
 from app.services.vector_db.base import VectorDBService
 
@@ -16,13 +17,18 @@ def mock_vector_db_service():
 
 
 @pytest.fixture
-def document_service(mock_vector_db_service):
-    return DocumentService(mock_vector_db_service)
+def mock_llm_service():
+    return AsyncMock(spec=LLMService)
+
+
+@pytest.fixture
+def document_service(mock_vector_db_service, mock_llm_service):
+    return DocumentService(mock_vector_db_service, mock_llm_service)
 
 
 @pytest.mark.asyncio
 async def test_upload_document_success(
-    document_service, mock_vector_db_service
+    document_service, mock_vector_db_service, mock_llm_service
 ):
     # Given
     filename = "test.txt"
@@ -59,7 +65,7 @@ async def test_upload_document_success(
 
 @pytest.mark.asyncio
 async def test_upload_document_failure(
-    document_service, mock_vector_db_service
+    document_service, mock_vector_db_service, mock_llm_service
 ):
     # Given
     filename = "test.txt"
@@ -78,7 +84,7 @@ async def test_upload_document_failure(
 
 
 @pytest.mark.asyncio
-async def test_process_document(document_service):
+async def test_process_document(document_service, mock_llm_service):
     # Given
     file_path = "test.txt"
     mock_docs = [LangchainDocument(page_content="Test content")]
@@ -102,7 +108,7 @@ async def test_process_document(document_service):
 
 
 @pytest.mark.asyncio
-async def test_load_document_success(document_service):
+async def test_load_document_success(document_service, mock_llm_service):
     # Given
     file_path = "test.txt"
     mock_loader = AsyncMock()
@@ -123,7 +129,7 @@ async def test_load_document_success(document_service):
 
 
 @pytest.mark.asyncio
-async def test_load_document_failure(document_service):
+async def test_load_document_failure(document_service, mock_llm_service):
     # Given
     file_path = "test.txt"
 
@@ -133,9 +139,11 @@ async def test_load_document_failure(document_service):
             await document_service._load_document(file_path)
 
 
-def test_generate_document_id():
+def test_generate_document_id(mock_vector_db_service, mock_llm_service):
     # Given
-    document_service = DocumentService(AsyncMock())
+    document_service = DocumentService(
+        mock_vector_db_service, mock_llm_service
+    )
 
     # When
     result = document_service._generate_document_id()

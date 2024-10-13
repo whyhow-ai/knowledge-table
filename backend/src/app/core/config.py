@@ -52,9 +52,14 @@ class Settings(BaseSettings):
         cls, v: Optional[str], info: ValidationInfo
     ) -> Optional[str]:
         """Validate the API keys."""
-        if v is None and info.field_name is not None:
-            return info.data.get(info.field_name)
-        return v
+        if v is None or v.strip() == "":
+            return None
+        return v.strip()
+
+    @property
+    def is_openai_available(self) -> bool:
+        """Check if OpenAI service is available."""
+        return self.openai_api_key is not None
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(

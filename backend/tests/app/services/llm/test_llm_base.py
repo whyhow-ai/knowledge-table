@@ -10,6 +10,9 @@ from app.services.llm.base import LLMService
 class ConcreteLLMService(LLMService):
     """Concrete implementation of LLMService for testing purposes."""
 
+    async def is_available(self) -> bool:
+        return True
+
     async def generate_completion(
         self, prompt: str, response_model: Any
     ) -> Any:

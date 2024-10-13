@@ -90,16 +90,25 @@ def test_get_vectordb_service_error(
         get_vectordb_service()
 
 
-@patch("app.core.dependencies.get_vectordb_service")
-def test_get_document_service(mock_get_vectordb_service):
-    """Test that get_document_service returns a DocumentService instance."""
-    # GIVEN: A mock VectorDB service is created
+@patch("app.core.dependencies.DocumentService")
+def test_get_document_service(mock_document_service):
+    # Create mock services
     mock_vectordb_service = Mock(spec=VectorDBService)
-    mock_get_vectordb_service.return_value = mock_vectordb_service
+    mock_llm_service = Mock(spec=LLMService)
 
-    # WHEN: get_document_service is called
-    document_service = get_document_service()
+    # Create a mock DocumentService instance
+    mock_document_service_instance = Mock(spec=DocumentService)
+    mock_document_service.return_value = mock_document_service_instance
 
-    # THEN: It should return a DocumentService instance and call get_vectordb_service once
-    assert isinstance(document_service, DocumentService)
-    mock_get_vectordb_service.assert_called_once()
+    # Call the function under test
+    document_service = get_document_service(
+        mock_vectordb_service, mock_llm_service
+    )
+
+    # Assert that DocumentService was instantiated with the correct services
+    mock_document_service.assert_called_once_with(
+        mock_vectordb_service, mock_llm_service
+    )
+
+    # Assert that the correct type of service is returned
+    assert document_service == mock_document_service_instance

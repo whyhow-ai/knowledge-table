@@ -67,12 +67,29 @@ async def upload_document_endpoint(
             raise ValueError("Failed to create vector database service")
 
         # Create the document service
-        document_service = DocumentService(vector_db_service)
+        document_service = DocumentService(vector_db_service, llm_service)
 
         # Upload the document
         document_id = await document_service.upload_document(
             filename, await file.read()
         )
+
+        if document_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An error occurred while processing the document",
+            )
+
+        # TODO: Fetch actual document details from a database
+        document = Document(
+            id=document_id,
+            name=filename,
+            author="author_name",  # TODO: Determine this dynamically
+            tag="document_tag",  # TODO: Determine this dynamically
+            page_count=10,  # TODO: Determine this dynamically
+        )
+        return DocumentResponse(**document.model_dump())
+
     except ValueError as ve:
         logger.error(f"ValueError in upload_document_endpoint: {str(ve)}")
         raise HTTPException(
@@ -84,25 +101,11 @@ async def upload_document_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
-    if document_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while processing the document",
-        )
-
-    # TODO: Fetch actual document details from a database
-    document = Document(
-        id=document_id,
-        name=filename,
-        author="author_name",  # TODO: Determine this dynamically
-        tag="document_tag",  # TODO: Determine this dynamically
-        page_count=10,  # TODO: Determine this dynamically
-    )
-    return DocumentResponse(**document.model_dump())
-
 
 @router.delete("/{document_id}", response_model=DeleteDocumentResponse)
-async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
+async def delete_document_endpoint(
+    document_id: str, llm_service: LLMService = Depends(get_llm_service)
+) -> DeleteDocumentResponse:
     """
     Delete a document.
 
@@ -110,6 +113,8 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
     ----------
     document_id : str
         The ID of the document to be deleted.
+    llm_service : LLMService
+        The LLM service.
 
     Returns
     -------
@@ -122,9 +127,6 @@ async def delete_document_endpoint(document_id: str) -> DeleteDocumentResponse:
         If an error occurs during the deletion process.
     """
     try:
-        # Create the LLM service
-        llm_service = get_llm_service()
-
         # Create the vector database service
         vector_db_service = VectorDBFactory.create_vector_db_service(
             settings.vector_db_provider, llm_service

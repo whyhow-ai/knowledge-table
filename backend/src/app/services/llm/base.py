@@ -8,6 +8,11 @@ class LLMService(ABC):
     """Abstract base class for language model services."""
 
     @abstractmethod
+    def is_available(self) -> bool:
+        """Check if the LLM service is available."""
+        pass
+
+    @abstractmethod
     async def generate_completion(
         self, prompt: str, response_model: Any
     ) -> Any:

@@ -2,6 +2,8 @@
 
 from functools import lru_cache
 
+from fastapi import Depends
+
 from app.core.config import Settings, settings
 from app.services.document_service import DocumentService
 from app.services.llm.factory import LLMFactory
@@ -39,7 +41,9 @@ def get_vectordb_service() -> VectorDBService:
     return vectordb_service
 
 
-def get_document_service() -> DocumentService:
+def get_document_service(
+    vector_db_service: VectorDBService = Depends(get_vectordb_service),
+    llm_service: LLMService = Depends(get_llm_service),
+) -> DocumentService:
     """Get the document service for the application."""
-    vector_db_service = get_vectordb_service()
-    return DocumentService(vector_db_service)
+    return DocumentService(vector_db_service, llm_service)
