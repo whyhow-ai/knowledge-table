@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10"]
-        
+
     steps:
       - uses: actions/checkout@v2
 
@@ -47,8 +47,5 @@ jobs:
           cd backend && mypy src
 
       - name: Run unit tests with pytest
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          UNSTRUCTURED_API_KEY: ${{ secrets.UNSTRUCTURED_API_KEY }}
         run: |
           cd backend && pytest --color=yes tests
