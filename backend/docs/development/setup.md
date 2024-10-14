@@ -118,6 +118,6 @@ isort .
 
 - Familiarize yourself with the project structure.
 - Read through the API documentation.
-- Check out the [Contributing Guide](../../contributing.md) for information on how to contribute to the project.
+- Check out the [Contributing](../CONTRIBUTING.md) for information on how to contribute to the project.
 
 If you encounter any issues during setup, please refer to our troubleshooting guide or open an issue on the GitHub repository.

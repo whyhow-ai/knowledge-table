@@ -1,5 +1,5 @@
 site_name: Knowledge Table Backend Documentation
-site_url: https://your-docs-url.com  # Replace with your actual URL
+site_url: https://whyhow-ai.github.io/knowledge-table/
 repo_url: https://github.com/whyhow-ai/knowledge-table
 edit_uri: blob/main/backend/docs/
 
@@ -30,6 +30,8 @@ nav:
       - Installation: getting-started/installation.md
       - Configuration: getting-started/configuration.md
   - Architecture: architecture.md
+  - Tutorials:
+      - Extracting Data from Documents: tutorials/extracting-data.md
   - API Reference:
       - Overview: api/overview.md
       - v1:
@@ -72,7 +74,7 @@ nav:
   - Deployment:
       - Docker: deployment/docker.md
       - Native: deployment/native.md
-  - Contributing: contributing.md
+  - Contributing: CONTRIBUTING.md
 
 plugins:
   - search
@@ -99,7 +101,11 @@ markdown_extensions:
   - pymdownx.magiclink
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tasklist
   - pymdownx.tilde
   - pymdownx.emoji:

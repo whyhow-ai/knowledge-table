@@ -9,7 +9,7 @@ Knowledge Table is built on a modular, service-oriented architecture that allows
 1. API Layer
 2. Service Layer
 3. Model Layer
-4. External Integrations (LLMs, Vector Databases)
+4. External Integrations (LLMs, Vector Databases, Document Loaders)
 
 ```mermaid
 graph TD
@@ -19,6 +19,9 @@ graph TD
     Services -->|Integrates| Ext[External Services]
     Ext -->|LLM| OpenAI[OpenAI]
     Ext -->|Vector DB| Milvus[Milvus]
+    Ext -->|Loaders| DocLoaders[Document Loaders]
+    DocLoaders -->|PDF| PyPDF[PyPDF]
+    DocLoaders -->|Unstructured| Unstructured[Unstructured]
     Models -->|Persists| DB[(Database)]
 ```
 
