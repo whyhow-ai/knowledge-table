@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Comprehensive backend documentation covering API reference, data models, schemas, and key components
+
+### Changed
+- Restructured project documentation for improved clarity and accessibility
+- Updated README with new sections on documentation, architecture, and streamlined getting started guide
+
+### Improved
+- Enhanced modularity of the backend architecture, clearly defining Document, Graph, LLM, and Query services
+- Improved code organization with clear separation of models and schemas
+
 ## [v0.1.3] - 2024-10-13
 
 ### Changed

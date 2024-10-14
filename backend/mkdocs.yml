@@ -39,11 +39,6 @@ nav:
               - Document: api/v1/endpoints/document.md
               - Graph: api/v1/endpoints/graph.md
               - Query: api/v1/endpoints/query.md
-  - Models:
-      - Document: models/document.md
-      - Graph: models/graph.md
-      - LLM: models/llm.md
-      - Query: models/query.md
   - Services:
       - Document Service: services/document_service.md
       - Graph Service: services/graph_service.md
@@ -68,6 +63,15 @@ nav:
       - LLM Services: extending/llm_services.md
       - Vector DB Services: extending/vector_databases.md
       - Document Loaders: extending/document_loaders.md
+  - Models:
+      - Document: models/document.md
+      - Graph: models/graph.md
+      - LLM: models/llm.md
+      - Query: models/query.md
+  - Schemas:
+      - Document: schemas/document.md
+      - Graph: schemas/graph.md
+      - Query: schemas/query.md
   - Development:
       - Setup: development/setup.md
       - Testing: development/testing.md
