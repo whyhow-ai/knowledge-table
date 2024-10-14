@@ -66,7 +66,7 @@ nav:
   - Extending the Project:
       - Overview: extending/overview.md
       - LLM Services: extending/llm_services.md
-      - API Endpoints: extending/api_endpoints.md
+      - Vector DB Services: extending/vector_databases.md
       - Document Loaders: extending/document_loaders.md
   - Development:
       - Setup: development/setup.md
