@@ -29,10 +29,27 @@ async def run_query(
     """
     Run a query and generate a response.
 
-    We have three methods for generating answers:
+    This endpoint supports three methods for generating answers:
     1. Simple Vector Search: Performs a vector search and uses the resulting chunks to generate an answer.
     2. Hybrid Search: Performs both a keyword search and a vector search, using chunks from both to generate an answer.
     3. Decomposed Search: Breaks down the query into sub-queries, performs a vector search on each sub-query, and then uses the answers and chunks from each to generate an answer to the original question.
+
+    Parameters
+    ----------
+    request : QueryRequest
+        The query request containing the RAG type, document ID, and prompt details.
+    llm_service : LLMService
+        The LLM service for processing the query.
+
+    Returns
+    -------
+    Answer
+        The generated answer, including the answer text, relevant chunks, and metadata.
+
+    Raises
+    ------
+    HTTPException
+        If there's an invalid query type or an error occurs during query processing.
     """
     logger.info(f"Query endpoint called with request: {request}")
     # Determine the type of query to run
