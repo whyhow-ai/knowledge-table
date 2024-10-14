@@ -23,7 +23,24 @@ logger = logging.getLogger(__name__)
 
 @router.post("/export-triples", response_model=ExportTriplesResponse)
 async def export_triples(request: Request) -> Response:
-    """Export triples from a table."""
+    """
+    Export triples from a table.
+
+    Parameters
+    ----------
+    request : Request
+        The FastAPI request object containing the table data in JSON format.
+
+    Returns
+    -------
+    Response
+        A FastAPI Response object containing the exported triples and chunks as a JSON file attachment.
+
+    Raises
+    ------
+    HTTPException
+        If there's an error in JSON parsing, validation, or during the export process.
+    """
     try:
         # Get the request body
         body = await request.json()

@@ -1,0 +1,118 @@
+site_name: Knowledge Table Backend Documentation
+site_url: https://whyhow-ai.github.io/knowledge-table/
+repo_url: https://github.com/whyhow-ai/knowledge-table
+edit_uri: blob/main/backend/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quickstart Guide: getting-started/quickstart.md  # (New, we'll create this file)
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+  - User Guide:
+      - API Overview: api/overview.md
+      - Tutorials:
+          - Extracting Data from Documents: tutorials/extracting-data.md
+  - Developer Guide:
+      - Architecture Overview: architecture.md
+      - Development Setup: development/setup.md
+      - Testing: development/testing.md
+      - Extending the Backend:
+          - Overview: extending/overview.md
+          - LLM Services: extending/llm_services.md
+          - Vector DB Services: extending/vector_databases.md
+          - Document Loaders: extending/document_loaders.md
+  - Services:
+      - Document Service: services/document_service.md
+      - Graph Service: services/graph_service.md
+      - LLM Service: services/llm_service.md
+      - Query Service: services/query_service.md
+      - LLM:
+          - Base: services/llm/base.md
+          - Factory: services/llm/factory.md
+          - OpenAI Service: services/llm/openai_service.md
+          - Prompts: services/llm/prompts.md
+      - Loaders:
+          - Base: services/loaders/base.md
+          - Factory: services/loaders/factory.md
+          - PyPDF Service: services/loaders/pypdf_service.md
+          - Unstructured Service: services/loaders/unstructured_service.md
+      - Vector DB:
+          - Base: services/vector_db/base.md
+          - Factory: services/vector_db/factory.md
+          - Milvus Service: services/vector_db/milvus_service.md
+  - Models:
+      - Document: models/document.md
+      - Graph: models/graph.md
+      - LLM: models/llm.md
+      - Query: models/query.md
+  - Schemas:
+      - Document: schemas/document.md
+      - Graph: schemas/graph.md
+      - Query: schemas/query.md
+  - API Reference:
+      - v1:
+          - Endpoints:
+              - Document: api/v1/endpoints/document.md
+              - Graph: api/v1/endpoints/graph.md
+              - Query: api/v1/endpoints/query.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Native: deployment/native.md
+  - Contributing: CONTRIBUTING.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            show_source: false
+  - git-revision-date-localized:
+      fallback_to_build_date: true
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - codehilite
+  - footnotes
+  - pymdownx.betterem:
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:materialx.emoji.to_svg
