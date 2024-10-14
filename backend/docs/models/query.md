@@ -52,9 +52,3 @@ answer = Answer(
 
 
 These models are used to represent and validate query-related data in the application.
-``````
-
-This markdown file provides documentation for the query-related models in your `query.py` file, explaining their structure, attributes, and providing a usage example.
-````
-
-````

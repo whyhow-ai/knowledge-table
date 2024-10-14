@@ -123,7 +123,3 @@ schema_response = SchemaResponseModel(relationships=[
 
 
 These models are used to validate and structure responses from the LLM API in the application.
-``````
-
-This markdown file provides documentation for the LLM response models in your `llm.py` file, explaining their structure, attributes, methods, and providing a usage example.
-````
