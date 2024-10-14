@@ -1,0 +1,33 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/docs/**'
+      - 'backend/mkdocs.yml'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install mkdocs mkdocs-material mkdocstrings[python] pymdown-extensions
+
+      - name: Build and Deploy
+        run: |
+          cd backend
+          mkdocs gh-deploy --force
