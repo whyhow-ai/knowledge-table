@@ -16,7 +16,7 @@ export const documentSchema = z
 export async function uploadFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
-  const result = await fetch("http://localhost:8000/document", {
+  const result = await fetch("http://localhost:8000/api/v1/document", {
     method: "POST",
     body: formData
   });
@@ -26,7 +26,7 @@ export async function uploadFile(file: File) {
 // Delete document
 
 export async function deleteDocument(id: string) {
-  await fetch(`http://localhost:8000/document/${id}`, { method: "DELETE" });
+  await fetch(`http://localhost:8000/api/v1/document/${id}`, { method: "DELETE" });
 }
 
 // Run query
@@ -56,17 +56,14 @@ export const answerSchema = z
   })
   .strict();
 
-export async function runQuery(
-  documentId: string,
-  prompt: Prompt,
-  previousAnswer?: number | string | boolean | number[] | string[]
-) {
-  const result = await fetch("http://localhost:8000/query", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
+  export async function runQuery(
+    documentId: string,
+    prompt: Prompt,
+    previousAnswer?: number | string | boolean | number[] | string[]
+  ) {
+    console.log('runQuery called with:', { documentId, prompt, previousAnswer });
+    
+    const requestBody = {
       document_id: documentId,
       previous_answer: previousAnswer,
       prompt: {
@@ -76,10 +73,41 @@ export async function runQuery(
         type: prompt.type,
         rules: prompt.rules
       }
-    })
-  });
-  return answerSchema.parse(await result.json());
-}
+    };
+    
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+  
+    try {
+      const result = await fetch("http://localhost:8000/api/v1/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+  
+      console.log('Response status:', result.status);
+      console.log('Response headers:', Object.fromEntries(result.headers.entries()));
+  
+      if (!result.ok) {
+        const errorText = await result.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP error! status: ${result.status}, body: ${errorText}`);
+      }
+  
+      const responseData = await result.json();
+      console.log('Response data:', responseData);
+  
+      return answerSchema.parse(responseData);
+    } catch (error) {
+      console.error('Error in runQuery:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      throw error;
+    }
+  }
 
 // Helper function to convert any value to a string
 function convertToString(value: any): string {
@@ -113,7 +141,7 @@ export async function exportTriples(tableData: any) {
   console.log('Stringified data:', stringifiedData);
   
   try {
-    const response = await fetch("http://localhost:8000/graph/export-triples", {
+    const response = await fetch("http://localhost:8000/api/v1/graph/export-triples", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

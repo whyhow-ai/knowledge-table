@@ -8,7 +8,6 @@ authors = [
     {name = "Tom Smoker", email = "tom@whyhow.ai"},
     {name = "Chris Rec", email = "chris@whyhow.ai"}
 ]
-
 description = "A Python API for the Knowledge Table service"
 keywords = ["knowledge", "api"]
 classifiers = ["Programming Language :: Python :: 3"]
@@ -26,7 +25,6 @@ dependencies = [
     "coloredlogs>=15.0.1",
     "dataclasses-json>=0.6.7",
     "distro>=1.9.0",
-    "docx2txt>=0.8",
     "environs>=9.5.0",
     "fastapi>=0.114.2",
     "filelock>=3.16.1",
@@ -38,10 +36,8 @@ dependencies = [
     "h11>=0.14.0",
     "httpcore>=1.0.5",
     "httpx>=0.27.2",
-    "huggingface-hub>=0.25.0",
     "humanfriendly>=10.0",
     "idna>=3.10",
-    "instructor>=1.5.2",
     "jiter>=0.5.0",
     "jsonpatch>=1.33",
     "jsonpointer>=3.0.0",
@@ -50,6 +46,7 @@ dependencies = [
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-text-splitters>=0.3.0",
+    "langchain-unstructured",
     "langsmith>=0.1.121",
     "marshmallow>=3.22.0",
     "milvus-lite>=2.4.10",
@@ -84,7 +81,6 @@ dependencies = [
     "scipy>=1.14.1",
     "six>=1.16.0",
     "sniffio>=1.3.1",
-    "SQLAlchemy>=2.0.35",
     "starlette>=0.38.5",
     "sympy>=1.13.3",
     "tenacity>=8.5.0",
@@ -96,8 +92,9 @@ dependencies = [
     "typing_extensions>=4.12.2",
     "tzdata>=2024.1",
     "ujson>=5.10.0",
+    "unstructured",
+    "unstructured[all-docs]",
     "urllib3>=2.2.3",
-    "uuid>=1.30",
     "uvicorn>=0.30.6",
     "whyhow",
     "yarl>=1.11.1",
@@ -105,11 +102,6 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-unstructured = [
-    "unstructured",
-    "unstructured[all-docs]",
-]
-
 dev = [
     "bandit[toml]",
     "black",
@@ -125,25 +117,8 @@ dev = [
     "pytest-html",
 ]
 
-full = [
-    "unstructured",
-    "unstructured[all-docs]",
-    "bandit[toml]",
-    "black",
-    "flake8",
-    "flake8-docstrings",
-    "isort",
-    "mypy",
-    "pydocstyle[toml]",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-httpx",
-    "pytest",
-    "pytest-html",
-]
-
 [project.scripts]
-knowledge-table-locate = "knowledge_table_api.main:locate"
+knowledge-table-locate = "app.main:locate"
 
 [tool.setuptools]
 zip-safe = false
@@ -155,7 +130,7 @@ where = ["src"]
 namespaces = false
 
 [tool.setuptools.dynamic]
-version = {attr = "knowledge_table_api.__version__"}
+version = {attr = "app.__version__"}
 
 [tool.pydocstyle]
 convention = "numpy"
@@ -172,9 +147,7 @@ profile = "black"
 line_length = 79
 
 [tool.mypy]
-plugins = [
-  "pydantic.mypy"
-]
+plugins = ["pydantic.mypy"]
 python_version = "3.10"
 ignore_missing_imports = true
 no_implicit_optional = true
@@ -193,6 +166,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 filterwarnings = [
     "error",
     "ignore:There is no current event loop",
@@ -201,10 +175,13 @@ filterwarnings = [
     "ignore:Support for class-based `config` is deprecated, use ConfigDict instead.:pydantic.warnings.PydanticDeprecatedSince20",
     "ignore:Exception ignored .* MemoryObjectReceiveStream.__del__:pytest.PytestUnraisableExceptionWarning",
     "ignore:Unclosed .*:ResourceWarning",
-    "ignore:Pydantic serializer warnings:UserWarning"
+    "ignore:Pydantic serializer warnings:UserWarning",
+    "ignore::DeprecationWarning:pkg_resources.*:",
+    "ignore::DeprecationWarning:pymilvus.*:",
+    "ignore::DeprecationWarning:marshmallow.*:",
+    "ignore::DeprecationWarning:environs.*:",
+    "ignore:The '__version_info__' attribute is deprecated:DeprecationWarning",
 ]
-testpaths = [
-    "tests",
-]
-addopts = "--cov=src/ -v --cov-report=term-missing --durations=20"
+testpaths = ["tests"]
+addopts = "--cov=src/app -v --cov-report=term-missing --durations=20"
 log_cli = false

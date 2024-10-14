@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.1.3] - 2024-10-13
+
+### Changed
+
+- Restructured project directory for improved organization and scalability
+- Moved router files to new `api/v1/endpoints` directory
+- Created new `core` directory for fundamental application components
+- Updated llm operations to new services in `services/llm`
+- Updated vector database operations to new services in `services/vector_db`
+
+### Improved
+
+- Separated configuration from dependency injection for better maintainability and clarity
+- Created new `utils` directory for fundamental application components
+- Seperated Pydantic models into `models` and `schemas` directories
+
+
+## [v0.1.2] - 2024-10-10
 
 ### Added
 
