@@ -194,9 +194,23 @@ def create_triple_for_row(
         return Triple(
             triple_id=triple_id,
             head=Node(
-                label=get_label(relationship.head), name=str(head_value), properties={"document": row.document.name} if row.document.name else {}
+                label=get_label(relationship.head),
+                name=str(head_value),
+                properties=(
+                    {"document": row.document.name}
+                    if row.document.name
+                    else {}
+                ),
             ),
-            tail=Node(label=relationship.tail, name=str(tail_value), properties={"document": row.document.name} if row.document.name else {}),
+            tail=Node(
+                label=relationship.tail,
+                name=str(tail_value),
+                properties=(
+                    {"document": row.document.name}
+                    if row.document.name
+                    else {}
+                ),
+            ),
             relation=Relation(name=relationship.relation),
             chunk_ids=[],
         )
