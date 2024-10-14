@@ -116,6 +116,17 @@ dev = [
     "pytest",
     "pytest-html",
 ]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-git-revision-date-localized-plugin",
+    "mkdocs-autorefs",
+    "mkdocs-get-deps",
+    "mkdocs-material-extensions",
+    "mkdocs-minify-plugin",
+    "mkdocstrings",
+    "mkdocstrings-python"
+]
 
 [project.scripts]
 knowledge-table-locate = "app.main:locate"
