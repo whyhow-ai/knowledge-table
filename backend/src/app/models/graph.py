@@ -23,9 +23,10 @@ class Document(BaseModel):
 
 class Node(BaseModel):
     """Represents a node in the knowledge graph with a label and name."""
-
+    
     label: str
     name: str
+    properties: Union[Dict[str, Any], None] = None
 
 
 class Relation(BaseModel):
