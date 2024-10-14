@@ -222,11 +222,7 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 ---
 ## Export to Triples
 
-To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples.
-
-The document name is inserted into the graph as a property of the nodes.
-
-The vector chunk id's are also included in the JSON file of the triples, and tied to the triples created.
+To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
 
 ---
 
