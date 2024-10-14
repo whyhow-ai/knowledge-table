@@ -220,6 +220,11 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 - **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
 
 ---
+## Export to Triples
+
+To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
+
+---
 
 ## Extending the Project
 

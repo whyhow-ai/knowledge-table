@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.1.4] - 2024-10-14
+
+### Changed
+
+- Added document to node properties when exporting triples
+
 ## [v0.1.3] - 2024-10-13
 
 ### Changed
@@ -20,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Separated configuration from dependency injection for better maintainability and clarity
 - Created new `utils` directory for fundamental application components
 - Seperated Pydantic models into `models` and `schemas` directories
-
 
 ## [v0.1.2] - 2024-10-10
 
@@ -74,13 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `unstructured_loader` function for processing documents with Unstructured API
 - Error handling for Unstructured API import and usage
 
-
 ### Changed
 
 - Updated `upload_document` function to use Unstructured API when available
 - Modified project structure to support optional Unstructured integration
 - Updated installation instructions in README to reflect new dependency options
-
 
 ### Fixed
 
