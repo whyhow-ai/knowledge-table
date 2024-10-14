@@ -27,18 +27,22 @@ theme:
 nav:
   - Home: index.md
   - Getting Started:
+      - Quickstart Guide: getting-started/quickstart.md  # (New, we'll create this file)
       - Installation: getting-started/installation.md
       - Configuration: getting-started/configuration.md
-  - Architecture: architecture.md
-  - Tutorials:
-      - Extracting Data from Documents: tutorials/extracting-data.md
-  - API Reference:
-      - Overview: api/overview.md
-      - v1:
-          - Endpoints:
-              - Document: api/v1/endpoints/document.md
-              - Graph: api/v1/endpoints/graph.md
-              - Query: api/v1/endpoints/query.md
+  - User Guide:
+      - API Overview: api/overview.md
+      - Tutorials:
+          - Extracting Data from Documents: tutorials/extracting-data.md
+  - Developer Guide:
+      - Architecture Overview: architecture.md
+      - Development Setup: development/setup.md
+      - Testing: development/testing.md
+      - Extending the Backend:
+          - Overview: extending/overview.md
+          - LLM Services: extending/llm_services.md
+          - Vector DB Services: extending/vector_databases.md
+          - Document Loaders: extending/document_loaders.md
   - Services:
       - Document Service: services/document_service.md
       - Graph Service: services/graph_service.md
@@ -58,11 +62,6 @@ nav:
           - Base: services/vector_db/base.md
           - Factory: services/vector_db/factory.md
           - Milvus Service: services/vector_db/milvus_service.md
-  - Extending the Project:
-      - Overview: extending/overview.md
-      - LLM Services: extending/llm_services.md
-      - Vector DB Services: extending/vector_databases.md
-      - Document Loaders: extending/document_loaders.md
   - Models:
       - Document: models/document.md
       - Graph: models/graph.md
@@ -72,9 +71,12 @@ nav:
       - Document: schemas/document.md
       - Graph: schemas/graph.md
       - Query: schemas/query.md
-  - Development:
-      - Setup: development/setup.md
-      - Testing: development/testing.md
+  - API Reference:
+      - v1:
+          - Endpoints:
+              - Document: api/v1/endpoints/document.md
+              - Graph: api/v1/endpoints/graph.md
+              - Query: api/v1/endpoints/query.md
   - Deployment:
       - Docker: deployment/docker.md
       - Native: deployment/native.md
