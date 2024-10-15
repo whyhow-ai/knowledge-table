@@ -14,7 +14,6 @@ from app.schemas.query import Chunk, Rule, VectorResponse
 from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
 
-# Load environment variables
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -179,7 +178,7 @@ class QdrantService(VectorDBService):
             combined_chunks, key=lambda chunk: chunk["chunk_number"]
         )
 
-        # Optionally, for eact chunk, retrieve neighboring chunks to ensure full context is retrieved
+        # Optionally, for each chunk, retrieve neighbouring chunks to ensure full context is retrieved
 
         # Eliminate duplicate chunks
         seen_chunks = set()
@@ -221,6 +220,7 @@ class QdrantService(VectorDBService):
         self, query: str, document_id: str, keywords: List[str]
     ) -> VectorResponse:
         """Perform a keyword search."""
+        # Not being used currently
         pass
 
     async def ensure_collection_exists(self) -> None:
