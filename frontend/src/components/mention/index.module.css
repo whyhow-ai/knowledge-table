@@ -1,0 +1,44 @@
+.wrapper :global {
+  .mentions {
+    font-size: var(--mantine-font-size-sm) !important;
+    --padding: calc(var(--mantine-spacing-xs) / 2) var(--mantine-spacing-sm);
+
+    .mentions__control {
+      min-height: 78px !important;
+    }
+
+    .mentions__highlighter {
+      padding: var(--padding) !important;
+    }
+
+    .mentions__input {
+      border: 1px solid
+        light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-4)) !important;
+      border-radius: var(--mantine-radius-default) !important;
+      outline: none !important;
+      padding: var(--padding) !important;
+
+      &:focus {
+        border-color: var(--mantine-primary-color-filled) !important;
+      }
+    }
+
+    .mentions__suggestions {
+      background-color: transparent !important;
+    }
+  }
+}
+
+.suggestion {
+  border-radius: var(--mantine-radius-default);
+  padding: calc(var(--mantine-spacing-xs) / 2) var(--mantine-spacing-sm);
+  transition: background-color 100ms ease;
+
+  &:hover,
+  &.active {
+    background-color: light-dark(
+      var(--mantine-color-gray-1),
+      var(--mantine-color-dark-6)
+    );
+  }
+}

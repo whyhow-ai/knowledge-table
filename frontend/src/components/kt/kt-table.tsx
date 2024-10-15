@@ -3,9 +3,9 @@ import {
   BoxProps,
   Group,
   Text,
-  Center,
   ScrollArea,
-  Loader
+  Loader,
+  ColorSwatch
 } from "@mantine/core";
 import { IconFileText, IconPlus } from "@tabler/icons-react";
 import { shallow } from "zustand/shallow";
@@ -19,6 +19,7 @@ import {
 import { KtFileUploadButton } from "./kt-file-upload-button";
 import { useStore } from "@config/store";
 import { DataGrid, DragResizer } from "@components";
+import { entityColor } from "@utils/functions";
 
 export function KtTable(props: BoxProps) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -42,7 +43,13 @@ export function KtTable(props: BoxProps) {
           width: column.width,
           content: (
             <>
-              <Text fw={500}>{column.prompt.entityType}</Text>
+              <Group wrap="nowrap">
+                <ColorSwatch
+                  size={12}
+                  color={entityColor(column.prompt.entityType).fill}
+                />
+                <Text fw={500}>{column.prompt.entityType}</Text>
+              </Group>
               <DragResizer
                 position="right"
                 value={column.width}
@@ -66,7 +73,7 @@ export function KtTable(props: BoxProps) {
           width: 260,
           content: (
             <Group wrap="nowrap">
-              <IconFileText size={16} opacity={0.7} />
+              <IconFileText size={18} opacity={0.7} />
               <Text fw={500}>{row.document.name}</Text>
             </Group>
           ),
@@ -84,11 +91,12 @@ export function KtTable(props: BoxProps) {
           }
         }))}
         extraColumn={{
-          width: 60,
+          width: 160,
           content: (
-            <Center h="100%">
-              <IconPlus size={16} opacity={0.7} />
-            </Center>
+            <Group h="100%">
+              <IconPlus size={18} opacity={0.7} />
+              <Text fw={500}>Add question</Text>
+            </Group>
           ),
           dropdown: {
             content: <KtAdderDropdown />
@@ -96,11 +104,7 @@ export function KtTable(props: BoxProps) {
         }}
         extraRow={{
           onClick: () => ref.current?.click(),
-          content: (
-            <Center h="100%">
-              <KtFileUploadButton ref={ref} display="none" />
-            </Center>
-          )
+          content: <KtFileUploadButton ref={ref} display="none" />
         }}
         defaultCell={() => ({
           content: <Loader size="xs" />

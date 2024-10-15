@@ -1,17 +1,22 @@
-import { BoxProps, Button, Group } from "@mantine/core";
+import { BoxProps, Button, Group, Text } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { IconEyeOff, IconTrash } from "@tabler/icons-react";
 import { KtFilters } from "./kt-filters";
 import { KtHiddenPill } from "./kt-hidden-pill";
 import { KtSelection } from "./kt-selection";
-import { DownloadCsvButton, ExportTriplesButton } from "./kt-download";
+import { KtDownload } from "./kt-download";
 import { useStore } from "@config/store";
 
 export function KtControls(props: BoxProps) {
-
-  const clearAllData = () => {
-    if (window.confirm("Are you sure you want to delete all data and start fresh?")) {
-      useStore.getState().clearAllData();
-    }
+  const handleClear = () => {
+    modals.openConfirmModal({
+      title: "Clear all data",
+      children: (
+        <Text>Are you sure you want to delete all data and start fresh?</Text>
+      ),
+      labels: { confirm: "Confirm", cancel: "Cancel" },
+      onConfirm: useStore.getState().clear
+    });
   };
 
   return (
@@ -22,16 +27,14 @@ export function KtControls(props: BoxProps) {
       >
         Hide all columns
       </Button>
-      <Button
-        leftSection={<IconTrash />}
-        onClick={clearAllData}>
-        Clear All Data
+      <Button leftSection={<IconTrash />} onClick={handleClear}>
+        Clear all data
       </Button>
       <KtFilters />
       <KtHiddenPill />
       <KtSelection />
-      <DownloadCsvButton />
-      <ExportTriplesButton />
+      <KtDownload.Csv />
+      <KtDownload.Triples />
     </Group>
   );
 }

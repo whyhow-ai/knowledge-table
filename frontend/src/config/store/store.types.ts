@@ -21,8 +21,6 @@ export interface Store {
   toggleAllColumns: (hidden: boolean) => void;
   deleteColumns: (ids: string[]) => void;
 
-  clearAllData: () => void;
-
   addRows: (files: File[]) => Promise<void>;
   rerunRow: (id: string) => void;
   deleteRows: (ids: string[]) => Promise<void>;
@@ -37,6 +35,8 @@ export interface Store {
   editFilter: (id: string, filter: Partial<AnswerTableFilter>) => void;
   deleteFilters: (ids?: string[]) => void;
   applyFilters: () => void;
+
+  clear: () => void;
 
   _syncAnswers: () => Promise<void>;
   _upsertCell: (cell: AnswerTableCell) => void;
