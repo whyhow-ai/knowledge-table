@@ -7,8 +7,26 @@ SettingsConfigDict to load environment variables from a .env file.
 import os
 from typing import List, Optional
 
-from pydantic import ValidationInfo, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Qdrant(BaseSettings):
+    """Qdrant connection configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="QDRANT_")
+
+    location: Optional[str] = None
+    url: Optional[str] = None
+    port: Optional[int] = 6333
+    grpc_port: int = 6334
+    prefer_grpc: bool = False
+    https: Optional[bool] = None
+    api_key: Optional[str] = None
+    prefix: Optional[str] = None
+    timeout: Optional[int] = None
+    host: Optional[str] = None
+    path: Optional[str] = None
 
 
 class Settings(BaseSettings):
@@ -32,8 +50,13 @@ class Settings(BaseSettings):
     # VECTOR DATABASE CONFIG
     vector_db_provider: str = "milvus-lite"
     index_name: str = "milvus"
+
+    # MILVUS CONFIG
     milvus_db_uri: str = "./milvus_demo.db"
     milvus_db_token: str = "root:Milvus"
+
+    # QDRANT CONFIG
+    qdrant: Qdrant = Field(default_factory=lambda: Qdrant())
 
     # QUERY CONFIG
     query_type: str = "hybrid"
@@ -68,6 +91,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        env_nested_delimiter="_",
     )
 
 
