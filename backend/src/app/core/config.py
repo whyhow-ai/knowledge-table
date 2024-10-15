@@ -4,8 +4,8 @@ This module defines the configuration settings using Pydantic's
 SettingsConfigDict to load environment variables from a .env file.
 """
 
-from functools import lru_cache
 import logging
+from functools import lru_cache
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -59,7 +59,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+
 @lru_cache()
 def get_settings() -> BaseSettings:
+    """Get the settings for the application."""
     logger.info("Loading config settings from the environment...")
     return Settings()

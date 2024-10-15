@@ -1,12 +1,12 @@
 """Main module for the Knowledge Table API service."""
 
 import logging
-from typing import Dict
-from fastapi import FastAPI, Depends
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import get_settings, Settings
 from app.api.v1.api import api_router
+from app.core.config import Settings, get_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,8 +32,9 @@ app.include_router(api_router, prefix=get_settings().api_v1_str)
 
 @app.get("/ping")
 async def pong(settings: Settings = Depends(get_settings)):
+    """Ping the API to check if it's running."""
     return {
         "ping": "pong!",
         "environment": settings.environment,
-        "testing": settings.testing
+        "testing": settings.testing,
     }

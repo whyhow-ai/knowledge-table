@@ -1,24 +1,16 @@
 """Dependencies for the application."""
 
-from functools import lru_cache
-
 from fastapi import Depends
 
-from app.core.config import get_settings, Settings
+from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
+from app.services.llm.base import LLMService
 from app.services.llm.factory import LLMFactory
-from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
 from app.services.vector_db.factory import VectorDBFactory
 
 
-@lru_cache()
-def get_settings() -> Settings:
-    """Get the settings for the application."""
-    return settings
-
-
-def get_llm_service() -> LLMService:
+def get_llm_service(settings: Settings = Depends(get_settings)) -> LLMService:
     """Get the LLM service for the application."""
     llm_service = LLMFactory.create_llm_service(settings.llm_provider)
     if llm_service is None:
@@ -28,9 +20,11 @@ def get_llm_service() -> LLMService:
     return llm_service
 
 
-def get_vectordb_service() -> VectorDBService:
+def get_vectordb_service(
+    settings: Settings = Depends(get_settings),
+    llm_service: LLMService = Depends(get_llm_service),
+) -> VectorDBService:
     """Get the vector database service for the application."""
-    llm_service = get_llm_service()
     vectordb_service = VectorDBFactory.create_vector_db_service(
         settings.vector_db_provider, llm_service
     )
@@ -42,8 +36,9 @@ def get_vectordb_service() -> VectorDBService:
 
 
 def get_document_service(
+    settings: Settings = Depends(get_settings),
     vector_db_service: VectorDBService = Depends(get_vectordb_service),
     llm_service: LLMService = Depends(get_llm_service),
 ) -> DocumentService:
     """Get the document service for the application."""
-    return DocumentService(vector_db_service, llm_service)
+    return DocumentService(vector_db_service, llm_service, settings)
