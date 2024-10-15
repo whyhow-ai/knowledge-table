@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     unstructured_api_key: str | None = None
 
     # Qdrant config
-    qdrant: Qdrant = Field(description="Qdrant connection configuration", default_factory=lambda: Qdrant())
+    qdrant: Qdrant = Qdrant()
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", env_nested_delimiter="_"

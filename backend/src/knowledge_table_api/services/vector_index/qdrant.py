@@ -20,30 +20,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class QdrantConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="QDRANT_")
-
-    location: Optional[str] = None
-    url: Optional[str] = None
-    port: Optional[int] = 6333
-    grpc_port: int = 6334
-    prefer_grpc: bool = False
-    https: Optional[bool] = None
-    api_key: Optional[str] = None
-    prefix: Optional[str] = None
-    timeout: Optional[int] = None
-    host: Optional[str] = None
-    path: Optional[str] = None
-
-
 class QdrantIndex(VectorIndex):
     def __init__(self):
         settings = Settings()
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
-        self.client = QdrantClient(
-            **QdrantConfig().model_dump(exclude_none=True)
-        )
+        qdrant_config = settings.qdrant.model_dump(exclude_none=True)
+        self.client = QdrantClient(**qdrant_config)
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,
@@ -68,7 +51,7 @@ class QdrantIndex(VectorIndex):
 
     async def vector_search(
         self, queries: List[str], document_id: str, llm_service: LLMService
-    ) -> dict[str, Any]:
+    ) -> VectorResponse:
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
         embeddings = llm_service.get_embeddings()
