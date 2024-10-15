@@ -20,25 +20,16 @@ class LoaderFactory:
         loader_type = settings.loader
         logger.info(f"Creating loader of type: {loader_type}")
 
-        try:
-            if loader_type == "unstructured":
-                if not settings.unstructured_api_key:
-                    raise ValueError(
-                        "Unstructured API key is required when using the unstructured loader"
-                    )
-                logger.info("Using UnstructuredLoader")
-                return UnstructuredLoader(
-                    unstructured_api_key=settings.unstructured_api_key
+        if loader_type == "unstructured":
+            if not settings.unstructured_api_key:
+                raise ValueError(
+                    "Unstructured API key is required when using the unstructured loader"
                 )
-            elif loader_type == "pypdf":
-                logger.info("Using PyPDFLoader")
-                return PDFLoader()
-            else:
-                logger.warning(f"No loader found for type: {loader_type}")
-                return None
-        except ValueError as ve:
-            logger.error(f"Error creating loader: {str(ve)}")
-            raise  # Re-raise the ValueError
-        except Exception as e:
-            logger.exception(f"Error creating loader: {str(e)}")
+            logger.info("Using UnstructuredLoader")
+            return UnstructuredLoader(settings=settings)
+        elif loader_type == "pypdf":
+            logger.info("Using PyPDFLoader")
+            return PDFLoader()
+        else:
+            logger.warning(f"No loader found for type: {loader_type}")
             return None

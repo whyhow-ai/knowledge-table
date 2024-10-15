@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
 
 @lru_cache()
-def get_settings() -> BaseSettings:
+def get_settings() -> Settings:
     """Get the settings for the application."""
     logger.info("Loading config settings from the environment...")
     return Settings()
