@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from app.core.config import get_settings, Settings
+from app.core.config import Settings
 from app.services.loaders.base import LoaderService
 from app.services.loaders.pypdf_service import PDFLoader
 from app.services.loaders.unstructured_service import UnstructuredLoader
@@ -15,7 +15,7 @@ class LoaderFactory:
     """The factory for the loader services."""
 
     @staticmethod
-    def create_loader() -> Optional[LoaderService]:
+    def create_loader(settings: Settings) -> Optional[LoaderService]:
         """Create a loader service."""
         loader_type = settings.loader
         logger.info(f"Creating loader of type: {loader_type}")
