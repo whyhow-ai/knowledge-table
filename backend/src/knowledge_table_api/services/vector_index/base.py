@@ -30,7 +30,7 @@ class VectorIndex(ABC):
     @abstractmethod
     async def vector_search(
         self, queries: List[str], document_id: str, llm_service: LLMService
-    ) -> dict[str, Any]:
+    ) -> VectorResponse:
         pass
 
     @abstractmethod
