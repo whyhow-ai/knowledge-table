@@ -1,0 +1,13 @@
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: src/Dockerfile
+    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    volumes:
+      - ./src:/usr/src/app/src
+    ports:
+      - 8004:8000
+    environment:
+      - ENVIRONMENT=dev
+      - TESTING=0
