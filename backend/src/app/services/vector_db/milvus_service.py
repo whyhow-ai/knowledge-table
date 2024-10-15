@@ -1,13 +1,10 @@
 """The Milvus service for the vector database."""
 
-import asyncio
 import json
 import logging
-import re
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
@@ -39,17 +36,6 @@ class MilvusService(VectorDBService):
             uri=settings.milvus_db_uri,
             token=settings.milvus_db_token,
         )
-
-    async def get_embeddings(
-        self, text: Union[str, List[str]]
-    ) -> Union[List[float], List[List[float]]]:
-        """Get embeddings for the given text using the LLM service."""
-        if isinstance(text, str):
-            return await self.llm_service.get_embeddings(text)
-        else:
-            # If it's a list of strings, get embeddings for all strings in parallel
-            tasks = [self.llm_service.get_embeddings(t) for t in text]
-            return await asyncio.gather(*tasks)
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
@@ -124,58 +110,6 @@ class MilvusService(VectorDBService):
             if vectors:
                 logger.error(f"Sample vector data: {vectors[0]}")
             raise
-
-    async def prepare_chunks(
-        self, document_id: str, chunks: List[Document]
-    ) -> List[Dict[str, Any]]:
-        """Prepare chunks for insertion into the Milvus database."""
-        logger.info(f"Preparing {len(chunks)} chunks")
-
-        # Clean the chunks
-        cleaned_chunks = []
-        for chunk in chunks:
-            cleaned_chunks.append(
-                re.sub("/(\r\n|\n|\r)/gm", "", chunk.page_content)
-            )
-
-        logger.info("Generating embeddings.")
-
-        # Embed all chunks at once
-        texts = [chunk.page_content for chunk in chunks]
-        embedded_chunks = await self.get_embeddings(texts)
-
-        # Prepare the data for insertion
-        datas = []
-
-        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks)):
-            # Get the page number
-            if "page" in chunk.metadata:
-                page = chunk.metadata["page"] + 1
-            else:
-                page = (i // 5) + 1  # Assuming 5 chunks per "page"
-
-            # Create the metadata
-            metadata = MilvusMetadata(
-                text=chunk.page_content,
-                page_number=page,
-                chunk_number=i,
-                document_id=document_id,
-            )
-
-            # Create the data
-            data = {
-                "id": metadata.uuid,
-                "vector": embedding,  # This should now be a list of floats
-                "text": metadata.text,
-                "page_number": metadata.page_number,
-                "chunk_number": metadata.chunk_number,
-                "document_id": metadata.document_id,
-            }
-
-            datas.append(data)
-
-        logger.info("Chunks processed successfully.")
-        return datas
 
     async def vector_search(
         self, queries: List[str], document_id: str
@@ -312,45 +246,8 @@ class MilvusService(VectorDBService):
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
-        keywords: list[str] = []
         sorted_keyword_chunks = []
-        max_length: Optional[int] = None
-
-        # Process the rules
-        if rules:
-            for rule in rules:
-                if rule.type in ["must_return", "may_return"]:
-                    if rule.options:
-                        if isinstance(rule.options, list):
-                            keywords.extend(rule.options)
-                        elif isinstance(rule.options, dict):
-                            for value in rule.options.values():
-                                if isinstance(value, list):
-                                    keywords.extend(value)
-                                elif isinstance(value, str):
-                                    keywords.append(value)
-                elif rule.type == "max_length":
-                    max_length = rule.length
-
-        # If no keywords are provided, extract them from the query
-        if not keywords:
-            logger.info(
-                "No keywords provided, extracting keywords from the query."
-            )
-            try:
-                extracted_keywords = await get_keywords(
-                    self.llm_service, query
-                )
-                if extracted_keywords and isinstance(extracted_keywords, list):
-                    keywords = extracted_keywords
-                else:
-                    logger.info("No keywords found in the query.")
-            except Exception as e:
-                logger.error(f"An error occurred while getting keywords: {e}")
-
-        logger.info(f"Using keywords: {keywords}")
-        if max_length:
-            logger.info(f"Max length set to: {max_length}")
+        keywords = await self.extract_keywords(query, rules, self.llm_service)
 
         # Run the keyword search (if keywords exist)
         if keywords:

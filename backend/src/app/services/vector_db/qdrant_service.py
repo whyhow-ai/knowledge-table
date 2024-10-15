@@ -1,18 +1,18 @@
 """Vector index implementation using Qdrant."""
 
 import logging
+import uuid
 from typing import Any, Dict, List
 
-import numpy as np
 from dotenv import load_dotenv
 from langchain.schema import Document
+from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient, models
 
-from knowledge_table_api.config import Settings
-from knowledge_table_api.models.query import Chunk, Rule, VectorResponse
-from knowledge_table_api.services.llm import decompose_query
-from knowledge_table_api.services.llm_service import LLMService
-from knowledge_table_api.services.vector_index.base import VectorIndex
+from app.core.config import settings
+from app.schemas.query import Chunk, Rule, VectorResponse
+from app.services.llm_service import LLMService
+from app.services.vector_db.base import VectorDBService
 
 # Load environment variables
 load_dotenv()
@@ -21,51 +21,52 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class QdrantIndex(VectorIndex):
-    """Vector index implementation using Qdrant."""
+class QdrantMetadata(BaseModel, extra="forbid"):
+    """Metadata for Qdrant documents."""
 
-    def __init__(self):
-        settings = Settings()
+    text: str
+    page_number: int
+    chunk_number: int
+    document_id: str
+    uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+class QdrantService(VectorDBService):
+    """Vector service implementation using Qdrant."""
+
+    def __init__(self, llm_service: LLMService):
+        self.llm_service = llm_service
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
         qdrant_config = settings.qdrant.model_dump(exclude_none=True)
         self.client = QdrantClient(**qdrant_config)
-        if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=self.dimensions, distance=models.Distance.COSINE
-                ),
-            )
 
     async def upsert_vectors(
-        self, document_id: str, chunks: List[Document], llm_service: LLMService
+        self, vectors: List[Dict[str, Any]]
     ) -> Dict[str, str]:
         """Add vectors to a Qdrant collection."""
-        entries = self.prepare_chunks(document_id, chunks, llm_service)
-        logger.info(f"Upserting {len(entries)} chunks")
+        logger.info(f"Upserting {len(vectors)} chunks")
+        await self.ensure_collection_exists()
         points = [
             models.PointStruct(
                 id=entry.pop("id"), vector=entry.pop("vector"), payload=entry
             )
-            for entry in entries
+            for entry in vectors
         ]
         self.client.upsert(self.collection_name, points=points, wait=True)
-        return {"message": f"Successfully upserted {len(entries)} chunks."}
+        return {"message": f"Successfully upserted {len(vectors)} chunks."}
 
     async def vector_search(
-        self, queries: List[str], document_id: str, llm_service: LLMService
+        self, queries: List[str], document_id: str
     ) -> VectorResponse:
         """Perform a vector search on the Qdrant collection."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
-
-        embeddings = llm_service.get_embeddings()
 
         final_chunks: List[Dict[str, Any]] = []
 
         for query in queries:
             logger.info("Generating embedding.")
-            embedded_query = np.array(embeddings.embed_query(query)).tolist()
+            embedded_query = await self.get_embeddings(query)
             logger.info("Searching...")
 
             query_response = self.client.query_points(
@@ -105,15 +106,12 @@ class QdrantIndex(VectorIndex):
         query: str,
         document_id: str,
         rules: list[Rule],
-        llm_service: LLMService,
     ) -> VectorResponse:
         """Perform a hybrid search on the Qdrant collection."""
         logger.info("Performing hybrid search.")
 
-        embeddings = llm_service.get_embeddings()
-
         sorted_keyword_chunks = []
-        keywords = await self.extract_keywords(query, rules, llm_service)
+        keywords = await self.extract_keywords(query, rules, self.llm_service)
 
         if keywords:
             like_conditions = [
@@ -151,7 +149,7 @@ class QdrantIndex(VectorIndex):
                 reverse=True,
             )
 
-        embedded_query = np.array(embeddings.embed_query(query)).tolist()
+        embedded_query = await self.get_embeddings(query)
         logger.info("Running semantic similarity search.")
 
         semantic_response = self.client.query_points(
@@ -207,20 +205,33 @@ class QdrantIndex(VectorIndex):
         query: str,
         document_id: str,
         rules: List[Rule],
-        llm_service: LLMService,
     ) -> Dict[str, Any]:
         """Perform a decomposed search on a Qdrant collection."""
         logger.info("Decomposing query into smaller sub-queries.")
-        decomposition_response = await decompose_query(query)
+        decomposition_response = await self.lldecompose_query(query)
         sub_query_chunks = await self.vector_search(
-            decomposition_response["sub-queries"], document_id, llm_service
+            decomposition_response["sub-queries"], document_id
         )
         return {
             "sub_queries": decomposition_response["sub-queries"],
             "chunks": sub_query_chunks["chunks"],
         }
 
-    # Delete a document from the Qdrant
+    async def keyword_search(
+        self, query: str, document_id: str, keywords: List[str]
+    ) -> VectorResponse:
+        """Perform a keyword search."""
+        pass
+
+    async def ensure_collection_exists(self) -> None:
+        if not self.client.collection_exists(self.collection_name):
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=models.VectorParams(
+                    size=self.dimensions, distance=models.Distance.COSINE
+                ),
+            )
+
     async def delete_document(self, document_id: str) -> Dict[str, str]:
         """Delete a document from a Qdrant collection."""
         self.client.delete(
