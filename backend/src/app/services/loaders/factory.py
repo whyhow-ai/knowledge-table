@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from app.core.config import settings
+from app.core.config import get_settings, Settings
 from app.services.loaders.base import LoaderService
 from app.services.loaders.pypdf_service import PDFLoader
 from app.services.loaders.unstructured_service import UnstructuredLoader

@@ -9,7 +9,7 @@ from typing import List, Optional
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from app.core.config import settings
+from app.core.config import get_settings, Settings
 from app.services.llm.base import LLMService
 from app.services.loaders.factory import LoaderFactory
 from app.services.vector_db.base import VectorDBService

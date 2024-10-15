@@ -4,7 +4,7 @@ from functools import lru_cache
 
 from fastapi import Depends
 
-from app.core.config import Settings, settings
+from app.core.config import get_settings, Settings
 from app.services.document_service import DocumentService
 from app.services.llm.factory import LLMFactory
 from app.services.llm_service import LLMService

@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from app.core.config import settings
+from app.core.config import get_settings, Settings
 from app.core.dependencies import get_llm_service
 from app.models.document import Document
 from app.schemas.document import DeleteDocumentResponse, DocumentResponse

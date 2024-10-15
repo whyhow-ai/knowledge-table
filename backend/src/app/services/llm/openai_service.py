@@ -7,7 +7,7 @@ from typing import Any, List, Optional
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 
-from app.core.config import settings
+from app.core.config import get_settings, Settings
 from app.services.llm.base import LLMService
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
-from app.core.config import settings
+from app.core.config import get_settings, Settings
 from app.schemas.query import Chunk, Rule, VectorResponse
 from app.services.llm_service import LLMService, get_keywords
 from app.services.vector_db.base import VectorDBService
