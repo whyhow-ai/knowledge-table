@@ -3,7 +3,6 @@
 import logging
 from typing import Any, Dict, List, Literal
 
-from knowledge_table_api.dependencies import get_vector_index
 from knowledge_table_api.models.query import Rule
 from knowledge_table_api.services.llm import generate_response
 from knowledge_table_api.services.llm_service import LLMService

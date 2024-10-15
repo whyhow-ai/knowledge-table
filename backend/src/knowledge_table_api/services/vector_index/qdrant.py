@@ -1,10 +1,11 @@
+"""Vector index implementation using Qdrant."""
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 from dotenv import load_dotenv
 from langchain.schema import Document
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from qdrant_client import QdrantClient, models
 
 from knowledge_table_api.config import Settings
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 class QdrantIndex(VectorIndex):
+    """Vector index implementation using Qdrant."""
+
     def __init__(self):
         settings = Settings()
         self.collection_name = settings.index_name
@@ -38,6 +41,7 @@ class QdrantIndex(VectorIndex):
     async def upsert_vectors(
         self, document_id: str, chunks: List[Document], llm_service: LLMService
     ) -> Dict[str, str]:
+        """Add vectors to a Qdrant collection."""
         entries = self.prepare_chunks(document_id, chunks, llm_service)
         logger.info(f"Upserting {len(entries)} chunks")
         points = [
@@ -52,6 +56,7 @@ class QdrantIndex(VectorIndex):
     async def vector_search(
         self, queries: List[str], document_id: str, llm_service: LLMService
     ) -> VectorResponse:
+        """Perform a vector search on the Qdrant collection."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
         embeddings = llm_service.get_embeddings()
@@ -102,6 +107,7 @@ class QdrantIndex(VectorIndex):
         rules: list[Rule],
         llm_service: LLMService,
     ) -> VectorResponse:
+        """Perform a hybrid search on the Qdrant collection."""
         logger.info("Performing hybrid search.")
 
         embeddings = llm_service.get_embeddings()
@@ -203,6 +209,7 @@ class QdrantIndex(VectorIndex):
         rules: List[Rule],
         llm_service: LLMService,
     ) -> Dict[str, Any]:
+        """Perform a decomposed search on a Qdrant collection."""
         logger.info("Decomposing query into smaller sub-queries.")
         decomposition_response = await decompose_query(query)
         sub_query_chunks = await self.vector_search(
@@ -215,6 +222,7 @@ class QdrantIndex(VectorIndex):
 
     # Delete a document from the Qdrant
     async def delete_document(self, document_id: str) -> Dict[str, str]:
+        """Delete a document from a Qdrant collection."""
         self.client.delete(
             collection_name=self.collection_name,
             points_selector=models.Filter(

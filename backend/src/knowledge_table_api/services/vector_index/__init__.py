@@ -1,3 +1,5 @@
+"""Factory for creating vector embedding services."""
+
 from typing import Optional
 
 from .base import VectorIndex
@@ -6,7 +8,7 @@ from .qdrant import QdrantIndex
 
 
 class VectorIndexFactory:
-    """Factory for creating language model services."""
+    """Factory for creating vector embedding services."""
 
     @staticmethod
     def create_vector_index(provider: str = "milvus") -> Optional[VectorIndex]:

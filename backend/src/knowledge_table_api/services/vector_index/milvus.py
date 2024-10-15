@@ -1,3 +1,5 @@
+"""Vector index implementation using Milvus."""
+
 import json
 import logging
 from typing import Any, Dict, List
@@ -17,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class MilvusIndex(VectorIndex):
+    """Vector index implementation using Milvus."""
+
     def __init__(self):
         settings = Settings()
         self.collection_name = settings.index_name
@@ -31,7 +35,6 @@ class MilvusIndex(VectorIndex):
         self, document_id: str, chunks: List[Document], llm_service: LLMService
     ) -> Dict[str, str]:
         """Upsert the vectors into the Milvus database."""
-
         vectors = self.prepare_chunks(document_id, chunks, llm_service)
         logger.info(f"Upserting {len(vectors)} chunks")
 
@@ -275,7 +278,6 @@ class MilvusIndex(VectorIndex):
         document_id: str,
     ) -> Dict[str, str]:
         """Delete a document from the Milvus."""
-
         self.client.delete(
             collection_name=self.collection_name,
             filter=f'document_id == "{document_id}"',

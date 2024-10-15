@@ -1,3 +1,5 @@
+"""Base for implementing a vector index service."""
+
 import re
 import uuid
 from abc import ABC, abstractmethod
@@ -13,6 +15,8 @@ from knowledge_table_api.services.llm_service import LLMService
 
 
 class Metadata(BaseModel, extra="forbid"):
+    """Metadata stored in vector storage."""
+
     text: str
     page_number: int
     chunk_number: int
@@ -21,16 +25,20 @@ class Metadata(BaseModel, extra="forbid"):
 
 
 class VectorIndex(ABC):
+    """Base class for implementing a vector index service."""
+
     @abstractmethod
     async def upsert_vectors(
         self, document_id: str, chunks: List[Document], llm_service: LLMService
     ) -> Dict[str, str]:
+        """Add vectors to a storage."""
         pass
 
     @abstractmethod
     async def vector_search(
         self, queries: List[str], document_id: str, llm_service: LLMService
     ) -> VectorResponse:
+        """Perform a vector search on the storage."""
         pass
 
     @abstractmethod
@@ -41,6 +49,7 @@ class VectorIndex(ABC):
         rules: list[Rule],
         llm_service: LLMService,
     ) -> VectorResponse:
+        """Perform a hybrid search on the storage."""
         pass
 
     @abstractmethod
@@ -51,6 +60,7 @@ class VectorIndex(ABC):
         rules: List[Rule],
         llm_service: LLMService,
     ) -> Dict[str, Any]:
+        """Perform a decomposed search on the storage."""
         pass
 
     @abstractmethod
@@ -58,13 +68,13 @@ class VectorIndex(ABC):
         self,
         document_id: str,
     ) -> Dict[str, str]:
+        """Delete a document from the storage."""
         pass
 
     def prepare_chunks(
         self, document_id: str, chunks: List[Document], llm_service: LLMService
     ) -> List[Dict[str, Any]]:
         """Prepare chunks for insertion into the vector index."""
-
         cleaned_chunks = []
         for chunk in chunks:
             cleaned_chunks.append(
@@ -113,7 +123,7 @@ class VectorIndex(ABC):
     async def extract_keywords(
         self, query: str, rules: list[Rule], llm_service: LLMService
     ) -> list[str]:
-
+        """Extract keywords from a user query."""
         keywords = []
         if rules:
             for rule in rules:

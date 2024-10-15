@@ -5,10 +5,13 @@ SettingsConfigDict to load environment variables from a .env file.
 """
 
 from typing import Optional
-from pydantic import Field
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Qdrant(BaseSettings):
+    """Qdrant connection configuration."""
+
     location: Optional[str] = None
     url: Optional[str] = None
     port: Optional[int] = 6333
@@ -20,6 +23,7 @@ class Qdrant(BaseSettings):
     timeout: Optional[int] = None
     host: Optional[str] = None
     path: Optional[str] = None
+
 
 class Settings(BaseSettings):
     """Settings class for the application."""
