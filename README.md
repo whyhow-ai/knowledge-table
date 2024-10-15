@@ -104,26 +104,16 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
    pip install .
    ```
 
-   For installation with Unstructured support:
-   ```sh
-   pip install .[unstructured]
-   ```
-
    For installation with development tools:
    ```sh
    pip install .[dev]
-   ```
-
-   For full installation (including Unstructured and dev tools):
-   ```sh
-   pip install .[full]
    ```
 
 5. **Start the backend:**
 
    ```sh
    cd src/
-   python -m uvicorn knowledge_table_api.main:app
+   python -m uvicorn app.main:app
    ```
 
    The backend will be available at `http://localhost:8000`.
@@ -228,6 +218,11 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 - **Financial Reports**: Extract financial data from annual reports or earnings statements.
 - **Research Extraction**: Extract information with key questions of a range of research reports
 - **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
+
+---
+## Export to Triples
+
+To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
 
 ---
 
