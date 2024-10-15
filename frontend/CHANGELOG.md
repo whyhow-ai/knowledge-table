@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- bun.lockb file for frontend consistency   
+- bun.lockb file for frontend consistency  
+- Updated api calls to use the new query endpoint  
 
 ## [v0.1.0]
 
