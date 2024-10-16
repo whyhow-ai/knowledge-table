@@ -11,7 +11,7 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
-from app.core.config import get_settings, Settings
+from app.core.config import Settings
 from app.schemas.query import Chunk, Rule, VectorResponse
 from app.services.llm_service import LLMService, get_keywords
 from app.services.vector_db.base import VectorDBService
@@ -33,11 +33,13 @@ class MilvusMetadata(BaseModel, extra="forbid"):
 class MilvusService(VectorDBService):
     """The Milvus service for the vector database."""
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, settings: Settings):
+        """Initialize the Milvus service."""
         self.llm_service = llm_service
+        self.settings = settings
         self.client = MilvusClient(
-            uri=settings.milvus_db_uri,
-            token=settings.milvus_db_token,
+            uri=self.settings.milvus_db_uri,
+            token=self.settings.milvus_db_token,
         )
 
     async def get_embeddings(
@@ -53,7 +55,9 @@ class MilvusService(VectorDBService):
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
-        if not self.client.has_collection(collection_name=settings.index_name):
+        if not self.client.has_collection(
+            collection_name=self.settings.index_name
+        ):
             # Create the schema
             schema = self.client.create_schema(
                 auto_id=False,
@@ -72,7 +76,7 @@ class MilvusService(VectorDBService):
             schema.add_field(
                 field_name="vector",
                 datatype=DataType.FLOAT_VECTOR,
-                dim=settings.dimensions,
+                dim=self.settings.dimensions,
             )
 
             # Add the index
@@ -85,7 +89,7 @@ class MilvusService(VectorDBService):
 
             # Create the collection
             self.client.create_collection(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 schema=schema,
                 index_params=index_params,
                 consistency_level=0,
@@ -106,7 +110,7 @@ class MilvusService(VectorDBService):
             for i in range(0, len(vectors), batch_size):
                 batch = vectors[i : i + batch_size]
                 upsert_response = self.client.insert(
-                    collection_name=settings.index_name, data=batch
+                    collection_name=self.settings.index_name, data=batch
                 )
                 total_inserted += upsert_response["insert_count"]
                 logger.info(
@@ -197,7 +201,7 @@ class MilvusService(VectorDBService):
 
             # Search the collection
             query_response = self.client.search(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 data=[embedded_query],
                 filter=f"document_id == '{document_id}'",
                 limit=40,
@@ -253,7 +257,7 @@ class MilvusService(VectorDBService):
 
                 # Query the collection
                 keyword_response = self.client.query(
-                    collection_name=settings.index_name,
+                    collection_name=self.settings.index_name,
                     filter=filter_string,
                     output_fields=[
                         "text",
@@ -365,7 +369,7 @@ class MilvusService(VectorDBService):
 
             # Query the collection
             keyword_response = self.client.query(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 filter=filter_string,
                 output_fields=[
                     "text",
@@ -399,7 +403,7 @@ class MilvusService(VectorDBService):
         try:
             # First, let's check if there are any vectors for this document_id
             count_response = self.client.query(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 filter=f'document_id == "{document_id}"',
                 output_fields=["count(*)"],
             )
@@ -419,7 +423,7 @@ class MilvusService(VectorDBService):
             # Now let's perform the search
             # Ensure that embedded_query is wrapped in a list
             semantic_response = self.client.search(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 data=[embedded_query],
                 filter=f'document_id == "{document_id}"',
                 limit=40,
@@ -481,7 +485,7 @@ class MilvusService(VectorDBService):
         except Exception as e:
             logger.error(f"Error during Milvus search: {e}")
             logger.error(
-                f"Milvus search parameters: collection_name={settings.index_name}, data shape=1x{len(embedded_query)}"
+                f"Milvus search parameters: collection_name={self.settings.index_name}, data shape=1x{len(embedded_query)}"
             )
             raise
 
@@ -509,15 +513,15 @@ class MilvusService(VectorDBService):
         }
 
     async def delete_document(self, document_id: str) -> Dict[str, str]:
-        """Delete a document from the Milvus."""
+        """Delete a document from the Milvus vector database."""
         self.client.delete(
-            collection_name=settings.index_name,
+            collection_name=self.settings.index_name,
             filter=f'document_id == "{document_id}"',
         )
 
         # Confirm the deletion
         confirm_delete = self.client.query(
-            collection_name=settings.index_name,
+            collection_name=self.settings.index_name,
             filter=f'document_id == "{document_id}"',
         )
 

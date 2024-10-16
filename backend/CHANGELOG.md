@@ -14,13 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created new `core` directory for fundamental application components
 - Updated llm operations to new services in `services/llm`
 - Updated vector database operations to new services in `services/vector_db`
+- Updated tests to new directory structure
 
 ### Improved
 
 - Separated configuration from dependency injection for better maintainability and clarity
 - Created new `utils` directory for fundamental application components
 - Seperated Pydantic models into `models` and `schemas` directories
-
+- Massively uncomplicated the test files
 
 ## [v0.1.2] - 2024-10-10
 

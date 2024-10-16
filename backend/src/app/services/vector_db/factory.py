@@ -22,8 +22,10 @@ class VectorDBFactory:
         logger.info(
             f"Creating vector database service with provider: {settings.vector_db_provider}"
         )
-        if settings.vector_db_provider.lower() == "milvus-lite":
-            return MilvusService(llm_service)
+        if settings.vector_db_provider == "milvus":
+            return MilvusService(llm_service, settings)
         # Add other vector database providers here
-        logger.warning(f"Unsupported vector database provider: {settings.vector_db_provider}")
+        logger.warning(
+            f"Unsupported vector database provider: {settings.vector_db_provider}"
+        )
         return None

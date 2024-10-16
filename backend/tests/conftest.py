@@ -53,12 +53,20 @@ def mock_llm_service():
     return AsyncMock(spec=LLMService)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_factories(mock_llm_service, mock_vector_db_service):
+    original_llm_create = LLMFactory.create_llm_service
+    original_vector_db_create = VectorDBFactory.create_vector_db_service
+
     LLMFactory.create_llm_service = MagicMock(return_value=mock_llm_service)
     VectorDBFactory.create_vector_db_service = MagicMock(
         return_value=mock_vector_db_service
     )
+
+    yield
+
+    LLMFactory.create_llm_service = original_llm_create
+    VectorDBFactory.create_vector_db_service = original_vector_db_create
 
 
 @pytest.fixture(scope="module")
