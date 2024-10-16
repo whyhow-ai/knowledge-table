@@ -26,6 +26,7 @@ class Node(BaseModel):
 
     label: str
     name: str
+    properties: Union[Dict[str, Any], None] = None
 
 
 class Relation(BaseModel):
