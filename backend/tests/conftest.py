@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from app import main
 from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
-from app.services.llm.base import LLMService
 from app.services.llm.factory import LLMFactory
 from app.services.vector_db.base import VectorDBService
 from app.services.vector_db.factory import VectorDBFactory
@@ -27,6 +26,11 @@ def get_settings_override():
         dimensions=1536,
         llm_model="test_llm_model",
     )
+
+
+@pytest.fixture(scope="module")
+def mock_openai_client():
+    return MagicMock()
 
 
 @pytest.fixture(scope="module")
@@ -53,8 +57,10 @@ def mock_vector_db_service():
 
 
 @pytest.fixture(scope="module")
-def mock_llm_service():
-    return AsyncMock(spec=LLMService)
+def mock_llm_service(test_settings, mock_openai_client):
+    from app.services.llm.openai_service import OpenAIService
+
+    return OpenAIService(test_settings, client=mock_openai_client)
 
 
 @pytest.fixture

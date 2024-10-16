@@ -6,7 +6,7 @@ SettingsConfigDict to load environment variables from a .env file.
 
 import logging
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o"
-    openai_api_key: str | None = None
+    openai_api_key: Optional[str] = None
 
     # VECTOR DATABASE CONFIG
     vector_db_provider: str = "milvus"
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     chunk_overlap: int = 64
 
     # UNSTRUCTURED CONFIG
-    unstructured_api_key: str | None = None
+    unstructured_api_key: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

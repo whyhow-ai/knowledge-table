@@ -1,12 +1,14 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.main import app
 from app.models.query_core import Chunk
 from app.schemas.query_api import QueryResult
+from app.services.llm.openai_service import OpenAIService
 
 
 @pytest.fixture
@@ -15,8 +17,20 @@ def client():
 
 
 @pytest.fixture
-def mock_llm_service():
-    return AsyncMock()
+def mock_settings():
+    return Settings(
+        openai_api_key="test_api_key",
+    )
+
+
+@pytest.fixture
+def mock_openai_client():
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_llm_service(mock_settings, mock_openai_client):
+    return OpenAIService(mock_settings, client=mock_openai_client)
 
 
 @pytest.fixture

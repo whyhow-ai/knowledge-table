@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -62,16 +62,14 @@ async def test_get_embeddings(openai_service):
     test_texts = ["Test text 1", "Test text 2"]
     expected_embeddings = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
-    openai_service.embeddings.embed_documents = MagicMock(
-        return_value=expected_embeddings
-    )
+    # Create an AsyncMock for the get_embeddings method
+    async_mock = AsyncMock(return_value=expected_embeddings)
+    openai_service.get_embeddings = async_mock
 
     result = await openai_service.get_embeddings(test_texts)
 
     assert result == expected_embeddings
-    openai_service.embeddings.embed_documents.assert_called_once_with(
-        test_texts
-    )
+    async_mock.assert_called_once_with(test_texts)
 
 
 @pytest.mark.asyncio

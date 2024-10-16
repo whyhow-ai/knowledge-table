@@ -1,20 +1,31 @@
+# tests/test_endpoint_graph.py
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.core.config import Settings
 from app.models.document import Document
 from app.models.graph import GraphChunk, Node, Relation, Triple
 from app.models.table import Cell, Column, Prompt, Row
 from app.schemas.graph_api import ExportTriplesResponseSchema
+from app.services.llm.openai_service import OpenAIService
 
 
 @pytest.fixture
-def mock_llm_service():
-    return AsyncMock()
+def mock_openai_client():
+    mock_client = MagicMock()
+    # Set up mock behaviors if necessary
+    return mock_client
+
+
+@pytest.fixture
+def mock_llm_service(mock_openai_client):
+    mock_settings = Settings(openai_api_key=None)  # API key is None
+    llm_service = OpenAIService(mock_settings, client=mock_openai_client)
+    return llm_service
 
 
 @pytest.fixture
@@ -29,7 +40,12 @@ def mock_generate_triples():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    with patch("app.core.dependencies.get_settings") as mock_get_settings:
+        mock_get_settings.return_value = Settings(openai_api_key=None)
+        from app.main import app
+
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 def create_test_prompt():
@@ -151,8 +167,8 @@ def test_export_triples_success(
             "app.api.v1.endpoints.graph.generate_triples",
             mock_generate_triples,
         ),
+        patch("openai.OpenAI", return_value=mock_llm_service.client),
     ):
-
         response = client.post(
             "/api/v1/graph/export-triples", json=request_data
         )
@@ -173,16 +189,20 @@ def test_export_triples_validation_error(client):
         # Missing "rows" and "cells"
     }
 
-    response = client.post("/api/v1/graph/export-triples", json=invalid_data)
+    with patch("openai.OpenAI", return_value=MagicMock()):
+        response = client.post(
+            "/api/v1/graph/export-triples", json=invalid_data
+        )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert "detail" in response.json()
 
 
 def test_export_triples_json_decode_error(client):
-    response = client.post(
-        "/api/v1/graph/export-triples", content="invalid json"
-    )
+    with patch("openai.OpenAI", return_value=MagicMock()):
+        response = client.post(
+            "/api/v1/graph/export-triples", content="invalid json"
+        )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     error_detail = response.json()["detail"][0]
@@ -252,8 +272,8 @@ def test_export_triples_unexpected_error(
         patch(
             "app.api.v1.endpoints.graph.generate_schema", mock_generate_schema
         ),
+        patch("openai.OpenAI", return_value=mock_llm_service.client),
     ):
-
         response = client.post(
             "/api/v1/graph/export-triples", json=request_data
         )
