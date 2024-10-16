@@ -16,8 +16,10 @@ class LLMFactory:
     @staticmethod
     def create_llm_service(settings: Settings) -> Optional[LLMService]:
         """Create a language model service."""
-        logger.info(f"Creating LLM service for provider: {settings.llm_provider}")
+        logger.info(
+            f"Creating LLM service for provider: {settings.llm_provider}"
+        )
         if settings.llm_provider == "openai":
-            return OpenAIService()
+            return OpenAIService(settings)
         # Add more providers here when needed
         return None

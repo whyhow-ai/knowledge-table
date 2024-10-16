@@ -115,6 +115,7 @@ dev = [
     "pytest-httpx",
     "pytest",
     "pytest-html",
+    "pytest-mock",
 ]
 
 [project.scripts]
