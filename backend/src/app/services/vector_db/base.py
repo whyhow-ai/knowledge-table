@@ -5,8 +5,8 @@ from typing import Any, Dict, List
 
 from langchain.schema import Document as LangchainDocument
 
-from app.models.query import Rule
-from app.schemas.query import VectorResponse
+from app.models.query_core import Rule
+from app.schemas.query_api import VectorResponseSchema
 
 
 class VectorDBService(ABC):
@@ -22,7 +22,7 @@ class VectorDBService(ABC):
     @abstractmethod
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a vector search."""
         pass
 
@@ -30,14 +30,14 @@ class VectorDBService(ABC):
     @abstractmethod
     async def keyword_search(
         self, query: str, document_id: str, keywords: List[str]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a keyword search."""
         pass
 
     @abstractmethod
     async def hybrid_search(
         self, query: str, document_id: str, rules: List[Rule]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a hybrid search."""
         pass
 

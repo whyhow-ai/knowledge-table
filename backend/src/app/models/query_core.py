@@ -29,3 +29,7 @@ class Answer(BaseModel):
     answer: Optional[Union[int, str, bool, List[int], List[str]]]
     chunks: List[Chunk]
     type: str
+
+
+QueryType = Literal["decomposition", "hybrid", "simple_vector"]
+FormatType = Literal["int", "str", "bool", "int_array", "str_array"]

@@ -1,7 +1,7 @@
 """Pydantic models for validating responses from the LLM API."""
 
 import logging
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
@@ -31,11 +31,13 @@ class BoolResponseModel(BaseResponseModel):
     )
 
     @field_validator("answer", mode="before")
-    def validate_bool(cls, v: Union[str, bool, None]) -> Optional[bool]:
+    def validate_bool(cls, v: Any) -> Optional[bool]:
         """Validate if the value is a boolean or None."""
         v = cls.validate_none(v)
         if v is None:
             return None
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
         if isinstance(v, str):
             if v.lower() == "true":
                 return True
@@ -54,11 +56,13 @@ class IntResponseModel(BaseResponseModel):
     )
 
     @field_validator("answer", mode="before")
-    def validate_int(cls, v: Union[str, int, None]) -> Optional[int]:
+    def validate_int(cls, v: Any) -> Optional[int]:
         """Validate if the value is an integer or None."""
         v = cls.validate_none(v)
         if v is None:
             return None
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
         if isinstance(v, float):
             raise ValueError("Must be an integer value, not a float")
         try:
@@ -104,6 +108,8 @@ class IntArrayResponseModel(ArrayResponseModel):
         v = cls.validate_array(v, max_length)
         if v is None:
             return None
+        if isinstance(v, (int, float)):
+            v = [v]
         try:
             return [int(item) for item in v]
         except ValueError:
@@ -129,6 +135,10 @@ class StrArrayResponseModel(ArrayResponseModel):
         v = cls.validate_array(v, max_length)
         if v is None:
             return None
+        if isinstance(v, str):
+            v = [v]
+        if not all(isinstance(item, str) for item in v):
+            raise ValueError("All items must be strings")
         if str_rule and str_rule.type == "must_return" and str_rule.options:
             return [i for i in v if i in str_rule.options]
         return v
@@ -141,13 +151,15 @@ class StrResponseModel(BaseResponseModel):
 
     @field_validator("answer", mode="before")
     @classmethod
-    def validate_str(
-        cls, v: Optional[str], info: ValidationInfo
-    ) -> Optional[str]:
+    def validate_str(cls, v: Any, info: ValidationInfo) -> Optional[str]:
         """Validate if the value is a string or None."""
         v = cls.validate_none(v)
         if v is None:
             return None
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
+        if not isinstance(v, str):
+            raise ValueError("Must be a string")
         str_rule = info.data.get("str_rule")
         if (
             str_rule

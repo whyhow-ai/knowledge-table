@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.core.dependencies import get_document_service
 from app.models.document import Document
-from app.schemas.document import DeleteDocumentResponse, DocumentResponse
+from app.schemas.document_api import (
+    DeleteDocumentResponseSchema,
+    DocumentResponseSchema,
+)
 from app.services.document_service import DocumentService
 
 logger = logging.getLogger(__name__)
@@ -15,12 +18,14 @@ router = APIRouter(tags=["Document"])
 
 
 @router.post(
-    "", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED
+    "",
+    response_model=DocumentResponseSchema,
+    status_code=status.HTTP_201_CREATED,
 )
 async def upload_document_endpoint(
     file: UploadFile = File(...),
     document_service: DocumentService = Depends(get_document_service),
-) -> DocumentResponse:
+) -> DocumentResponseSchema:
     """
     Upload a document and process it.
 
@@ -70,7 +75,7 @@ async def upload_document_endpoint(
             tag="document_tag",  # TODO: Determine this dynamically
             page_count=10,  # TODO: Determine this dynamically
         )
-        return DocumentResponse(**document.model_dump())
+        return DocumentResponseSchema(**document.model_dump())
 
     except ValueError as ve:
         logger.error(f"ValueError in upload_document_endpoint: {str(ve)}")
@@ -84,11 +89,11 @@ async def upload_document_endpoint(
         )
 
 
-@router.delete("/{document_id}", response_model=DeleteDocumentResponse)
+@router.delete("/{document_id}", response_model=DeleteDocumentResponseSchema)
 async def delete_document_endpoint(
     document_id: str,
     document_service: DocumentService = Depends(get_document_service),
-) -> DeleteDocumentResponse:
+) -> DeleteDocumentResponseSchema:
     """
     Delete a document.
 
@@ -112,13 +117,13 @@ async def delete_document_endpoint(
     try:
         result = await document_service.delete_document(document_id)
         if result:
-            return DeleteDocumentResponse(
+            return DeleteDocumentResponseSchema(
                 id=document_id,
                 status="success",
                 message="Document deleted successfully",
             )
         else:
-            return DeleteDocumentResponse(
+            return DeleteDocumentResponseSchema(
                 id=document_id,
                 status="error",
                 message="Failed to delete document",

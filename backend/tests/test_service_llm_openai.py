@@ -59,14 +59,19 @@ async def test_generate_completion_none_response(openai_service):
 
 @pytest.mark.asyncio
 async def test_get_embeddings(openai_service):
-    test_text = "Test text"
-    expected_embeddings = [0.1, 0.2, 0.3]
-    openai_service.embeddings.embed_query.return_value = expected_embeddings
+    test_texts = ["Test text 1", "Test text 2"]
+    expected_embeddings = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
-    result = await openai_service.get_embeddings(test_text)
+    openai_service.embeddings.embed_documents = MagicMock(
+        return_value=expected_embeddings
+    )
+
+    result = await openai_service.get_embeddings(test_texts)
 
     assert result == expected_embeddings
-    openai_service.embeddings.embed_query.assert_called_once_with(test_text)
+    openai_service.embeddings.embed_documents.assert_called_once_with(
+        test_texts
+    )
 
 
 @pytest.mark.asyncio

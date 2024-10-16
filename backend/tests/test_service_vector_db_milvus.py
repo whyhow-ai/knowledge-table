@@ -4,7 +4,7 @@ import pytest
 from langchain.schema import Document
 
 from app.core.config import Settings
-from app.schemas.query import Chunk, VectorResponse
+from app.schemas.query_api import Chunk, VectorResponseSchema
 from app.services.vector_db.milvus_service import MilvusService
 
 
@@ -36,18 +36,18 @@ def milvus_service(mock_llm_service, mock_milvus_client):
 
 @pytest.mark.asyncio
 async def test_get_embeddings_single(milvus_service, mock_llm_service):
-    mock_llm_service.get_embeddings.return_value = [0.1, 0.2, 0.3]
+    mock_llm_service.get_embeddings.return_value = [[0.1, 0.2, 0.3]]
     result = await milvus_service.get_embeddings("test text")
-    assert result == [0.1, 0.2, 0.3]
-    mock_llm_service.get_embeddings.assert_called_once_with("test text")
+    assert result == [[0.1, 0.2, 0.3]]
+    mock_llm_service.get_embeddings.assert_called_once_with(["test text"])
 
 
 @pytest.mark.asyncio
 async def test_get_embeddings_multiple(milvus_service, mock_llm_service):
-    mock_llm_service.get_embeddings.side_effect = [[0.1, 0.2], [0.3, 0.4]]
+    mock_llm_service.get_embeddings.return_value = [[0.1, 0.2], [0.3, 0.4]]
     result = await milvus_service.get_embeddings(["text1", "text2"])
     assert result == [[0.1, 0.2], [0.3, 0.4]]
-    assert mock_llm_service.get_embeddings.call_count == 2
+    mock_llm_service.get_embeddings.assert_called_once_with(["text1", "text2"])
 
 
 @pytest.mark.asyncio
@@ -117,7 +117,7 @@ async def test_hybrid_search(milvus_service, mock_milvus_client):
     document_id = "test_doc"
     rules = []
 
-    milvus_service.get_embeddings = AsyncMock(return_value=[0.1, 0.2])
+    milvus_service.get_embeddings = AsyncMock(return_value=[[0.1, 0.2]])
     mock_milvus_client.query.side_effect = [
         [{"count(*)": 10}],
         [
@@ -131,7 +131,7 @@ async def test_hybrid_search(milvus_service, mock_milvus_client):
 
     result = await milvus_service.hybrid_search(query, document_id, rules)
 
-    assert isinstance(result, VectorResponse)
+    assert isinstance(result, VectorResponseSchema)
     assert len(result.chunks) > 0
     assert all(isinstance(chunk, Chunk) for chunk in result.chunks)
 
@@ -146,7 +146,7 @@ async def test_decomposed_search(milvus_service, mock_llm_service):
         "sub-queries": ["sub1", "sub2"]
     }
     milvus_service.vector_search = AsyncMock(
-        return_value=VectorResponse(
+        return_value=VectorResponseSchema(
             message="", chunks=[Chunk(content="result", page=1)]
         )
     )

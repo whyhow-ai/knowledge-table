@@ -1,5 +1,5 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +9,6 @@ from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
 from app.services.llm.base import LLMService
 from app.services.llm.factory import LLMFactory
-from app.services.llm.openai_service import OpenAIService
 from app.services.vector_db.base import VectorDBService
 from app.services.vector_db.factory import VectorDBFactory
 
@@ -79,4 +78,3 @@ def document_service(test_settings, mock_vector_db_service, mock_llm_service):
     return DocumentService(
         mock_vector_db_service, mock_llm_service, test_settings
     )
-

@@ -54,9 +54,9 @@ class OpenAIService(LLMService):
             logger.error(f"Error validating response: {e}")
             return None
 
-    async def get_embeddings(self, text: str) -> List[float]:
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for text."""
-        return self.embeddings.embed_query(text)
+        return self.embeddings.embed_documents(texts)
 
     async def decompose_query(self, query: str) -> dict[str, Any]:
         """Decompose the query into smaller sub-queries."""

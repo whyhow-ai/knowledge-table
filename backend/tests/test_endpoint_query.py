@@ -1,10 +1,12 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.query import Chunk
+from app.models.query_core import Chunk
+from app.schemas.query_api import QueryResult
 
 
 @pytest.fixture
@@ -35,7 +37,6 @@ def mock_decomposition_query():
 def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
     request_data = {
         "document_id": "doc123",
-        "rag_type": "vector",
         "prompt": {
             "id": "prompt123",
             "query": "What is the capital of France?",
@@ -45,14 +46,10 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
         },
     }
 
-    mock_response = {
-        "answer": "The capital of France is Paris.",
-        "chunks": [
-            Chunk(
-                content="Paris is the capital of France.", page=1
-            ).model_dump()
-        ],
-    }
+    mock_response = QueryResult(
+        answer="The capital of France is Paris.",
+        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
+    )
     mock_simple_vector_query.return_value = mock_response
 
     with (
@@ -61,11 +58,13 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
             return_value=mock_llm_service,
         ),
         patch(
+            "app.api.v1.endpoints.query.get_vector_db_service",
+        ),
+        patch(
             "app.api.v1.endpoints.query.simple_vector_query",
             mock_simple_vector_query,
         ),
     ):
-
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
@@ -76,7 +75,6 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
 def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
     request_data = {
         "document_id": "doc123",
-        "rag_type": "hybrid",
         "prompt": {
             "id": "prompt123",
             "query": "Is Paris the capital of France?",
@@ -86,14 +84,10 @@ def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
         },
     }
 
-    mock_response = {
-        "answer": "Yes, Paris is the capital of France.",
-        "chunks": [
-            Chunk(
-                content="Paris is the capital of France.", page=1
-            ).model_dump()
-        ],
-    }
+    mock_response = QueryResult(
+        answer="Yes, Paris is the capital of France.",
+        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
+    )
     mock_hybrid_query.return_value = mock_response
 
     with (
@@ -101,9 +95,11 @@ def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
             "app.api.v1.endpoints.query.get_llm_service",
             return_value=mock_llm_service,
         ),
+        patch(
+            "app.api.v1.endpoints.query.get_vector_db_service",
+        ),
         patch("app.api.v1.endpoints.query.hybrid_query", mock_hybrid_query),
     ):
-
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
@@ -111,35 +107,17 @@ def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
     assert len(response.json()["chunks"]) == 1
 
 
-def test_run_query_decomposed(
-    client, mock_llm_service, mock_decomposition_query
-):
+def test_run_query_invalid_type(client, mock_llm_service):
     request_data = {
         "document_id": "doc123",
-        "rag_type": "decomposed",
         "prompt": {
             "id": "prompt123",
-            "query": "Compare the populations of Paris and London.",
-            "type": "str",
+            "query": "What is the capital of France?",
+            "type": "invalid_type",
             "entity_type": "text",
             "rules": [],
         },
     }
-
-    mock_response = {
-        "answer": "Paris has a population of about 2.2 million, while London has a population of about 9 million.",
-        "chunks": [
-            Chunk(
-                content="Paris, the capital of France, has a population of approximately 2.2 million people.",
-                page=1,
-            ).model_dump(),
-            Chunk(
-                content="London, the capital of the United Kingdom, has a population of about 9 million inhabitants.",
-                page=2,
-            ).model_dump(),
-        ],
-    }
-    mock_decomposition_query.return_value = mock_response
 
     with (
         patch(
@@ -147,49 +125,13 @@ def test_run_query_decomposed(
             return_value=mock_llm_service,
         ),
         patch(
-            "app.api.v1.endpoints.query.decomposition_query",
-            mock_decomposition_query,
+            "app.api.v1.endpoints.query.get_vector_db_service",
         ),
-    ):
-
-        response = client.post("/api/v1/query", json=request_data)
-
-    assert response.status_code == 200
-    assert (
-        "Paris has a population of about 2.2 million"
-        in response.json()["answer"]
-    )
-    assert (
-        "London has a population of about 9 million"
-        in response.json()["answer"]
-    )
-    assert len(response.json()["chunks"]) == 2
-
-
-def test_run_query_invalid_type(client, mock_llm_service):
-    request_data = {
-        "document_id": "doc123",
-        "rag_type": "invalid_type",
-        "prompt": {
-            "id": "prompt123",
-            "query": "What is the capital of France?",
-            "type": "str",
-            "entity_type": "text",
-            "rules": [],
-        },
-    }
-
-    with patch(
-        "app.api.v1.endpoints.query.get_llm_service",
-        return_value=mock_llm_service,
     ):
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 422
-    assert any(
-        "Input should be 'vector', 'hybrid' or 'decomposed'" in error["msg"]
-        for error in response.json()["detail"]
-    )
+    assert "Input should be" in response.json()["detail"][0]["msg"]
 
 
 def test_run_query_empty_chunks(
@@ -197,7 +139,6 @@ def test_run_query_empty_chunks(
 ):
     request_data = {
         "document_id": "doc123",
-        "rag_type": "vector",
         "prompt": {
             "id": "prompt123",
             "query": "What is the capital of Atlantis?",
@@ -207,7 +148,7 @@ def test_run_query_empty_chunks(
         },
     }
 
-    mock_response = {"answer": None, "chunks": []}
+    mock_response = QueryResult(answer="", chunks=[])
     mock_simple_vector_query.return_value = mock_response
 
     with (
@@ -216,15 +157,17 @@ def test_run_query_empty_chunks(
             return_value=mock_llm_service,
         ),
         patch(
+            "app.api.v1.endpoints.query.get_vector_db_service",
+        ),
+        patch(
             "app.api.v1.endpoints.query.simple_vector_query",
             mock_simple_vector_query,
         ),
     ):
-
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
-    assert response.json()["answer"] is None
+    assert response.json()["answer"] == ""
     assert len(response.json()["chunks"]) == 0
 
 
@@ -233,7 +176,6 @@ def test_run_query_internal_error(
 ):
     request_data = {
         "document_id": "doc123",
-        "rag_type": "vector",
         "prompt": {
             "id": "prompt123",
             "query": "What is the capital of France?",
@@ -251,12 +193,14 @@ def test_run_query_internal_error(
             return_value=mock_llm_service,
         ),
         patch(
+            "app.api.v1.endpoints.query.get_vector_db_service",
+        ),
+        patch(
             "app.api.v1.endpoints.query.simple_vector_query",
             mock_simple_vector_query,
         ),
     ):
-
         response = client.post("/api/v1/query", json=request_data)
 
-    assert response.status_code == 500
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert response.json()["detail"] == "Internal server error"

@@ -1,96 +1,72 @@
 """Graph API endpoints."""
 
-import json
 import logging
 
-from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import ValidationError
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import get_llm_service
-from app.models.graph import ExportData
-from app.schemas.graph import (
-    ExportTriplesRequest,
-    ExportTriplesResponse,
-    Table,
+from app.models.table import Table
+from app.schemas.graph_api import (
+    ExportTriplesRequestSchema,
+    ExportTriplesResponseSchema,
 )
 from app.services.graph_service import generate_triples
+from app.services.llm.base import LLMService
 from app.services.llm_service import generate_schema
 
 router = APIRouter(tags=["Graph"])
-
 logger = logging.getLogger(__name__)
 
 
-@router.post("/export-triples", response_model=ExportTriplesResponse)
-async def export_triples(request: Request) -> Response:
-    """Export triples from a table."""
+@router.post("/export-triples", response_model=ExportTriplesResponseSchema)
+async def export_triples(
+    request: ExportTriplesRequestSchema,
+    llm_service: LLMService = Depends(get_llm_service),
+) -> ExportTriplesResponseSchema:
+    """
+    Generate and export triples from a table.
+
+    This endpoint processes the input table data, generates a schema using the LLM service,
+    and then creates triples and chunks based on the generated schema.
+
+    Parameters
+    ----------
+    request : ExportTriplesRequestSchema
+        The request body containing the table data (columns, rows, and cells).
+    llm_service : LLMService
+        The language model service used for generating the schema, injected by FastAPI.
+
+    Returns
+    -------
+    ExportTriplesResponseSchema
+        A schema containing the generated triples and chunks.
+
+    Raises
+    ------
+    HTTPException
+        If an error occurs during the processing of the table data or generation of triples.
+        The exception will have a status code of 500 and the error message as its detail.
+
+    Notes
+    -----
+    The function logs the generated schema and the number of triples and chunks created.
+    """
     try:
-        # Get the request body
-        body = await request.json()
+        table = Table(
+            columns=request.columns, rows=request.rows, cells=request.cells
+        )
 
-        # Create a Table object from the request body
-        try:
-            # Validate the request
-            export_request = ExportTriplesRequest(**body)
-
-            # Create a Table object from the ExportTriplesRequest
-            table = Table(
-                columns=export_request.columns,
-                rows=export_request.rows,
-                cells=export_request.cells,
-            )
-
-        except ValidationError as e:
-            logger.error(f"Validation error: {str(e)}")
-            # Pass structured error details
-            raise HTTPException(status_code=422, detail=e.errors())
-
-        # Create the LLM service
-        llm_service = get_llm_service()
-
-        # Generate the schema
         schema_result = await generate_schema(llm_service, table)
         schema = schema_result["schema"]
-        logger.info(f"Generated schema: {json.dumps(schema, indent=2)}")
+        logger.info(f"Generated schema: {schema}")
 
-        # Generate the triples and chunks
         export_data = await generate_triples(schema, table)
         logger.info(
-            f"Generated {len(export_data['triples'])} triples and {len(export_data['chunks'])} chunks"
+            f"Generated {len(export_data.triples)} triples and {len(export_data.chunks)} chunks"
         )
 
-        # Convert export data to ExportData model
-        export_data_model = ExportData(**export_data)
+        return export_data
 
-        # Convert to ExportTriplesResponse
-        response_data = ExportTriplesResponse(
-            triples=[
-                triple.model_dump() for triple in export_data_model.triples
-            ],
-            chunks=export_data_model.chunks,
-        )
-
-        # Convert response data to JSON format
-        json_content = json.dumps(
-            response_data.model_dump(), indent=2, default=str
-        )
-
-        # Set the response headers
-        headers = {
-            "Content-Disposition": 'attachment; filename="triples_and_chunks.json"',
-            "Content-Type": "application/json",
-        }
-
-        logger.info("Sending response with triples and chunks")
-        return Response(content=json_content, headers=headers)
-
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON: {str(e)}")
-        raise HTTPException(
-            status_code=400, detail="Invalid JSON in request body"
-        )
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Error generating triples: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
