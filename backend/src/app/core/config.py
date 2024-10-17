@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
 
     # VECTOR DATABASE CONFIG
-    vector_db_provider: str = "milvus-lite"
+    vector_db_provider: str = "milvus"
     index_name: str = "milvus"
     milvus_db_uri: str = "./milvus_demo.db"
     milvus_db_token: str = "root:Milvus"

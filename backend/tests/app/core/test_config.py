@@ -18,7 +18,7 @@ def test_settings_default_values():
     assert settings.embedding_model == "text-embedding-3-small"
     assert settings.llm_provider == "openai"
     assert settings.llm_model == "gpt-4o"
-    assert settings.vector_db_provider == "milvus-lite"
+    assert settings.vector_db_provider == "milvus"
     assert settings.index_name == "milvus"
     assert settings.milvus_db_uri == "./milvus_demo.db"
     assert settings.milvus_db_token == "root:Milvus"
