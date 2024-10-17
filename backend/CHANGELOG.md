@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.1.5] - 2024-10-15
+
+### Improved
+
+- Refactored add question, add document
+- Refactored csv download and export triple components
+
+### Added
+
+- Added react mentions + coloring logic to highlight mentioned columns
+
 ## [v0.1.4] - 2024-10-14
 
 ### Changed

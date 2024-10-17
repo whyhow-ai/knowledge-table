@@ -10,14 +10,15 @@ import {
   Group,
   List,
   Loader,
-  MantineThemeOverride,
   mergeMantineTheme,
+  Modal,
   Popover,
   ScrollArea,
   Text,
   Tooltip
 } from "@mantine/core";
-import { useStore } from "./store";
+import { colors } from "./colors";
+import { useStore } from "../store";
 
 export function useTheme() {
   const colorScheme = useStore(store => store.colorScheme);
@@ -81,6 +82,11 @@ const getTheme = (colorScheme: "light" | "dark") =>
             type: "dots"
           }
         }),
+        Modal: Modal.extend({
+          defaultProps: {
+            centered: true
+          }
+        }),
         Popover: Popover.extend({
           defaultProps: {
             shadow: "sm"
@@ -106,54 +112,3 @@ const getTheme = (colorScheme: "light" | "dark") =>
       }
     })
   );
-
-const colors: MantineThemeOverride["colors"] = {
-  blue: [
-    "#ebf0ff",
-    "#d2ddfa",
-    "#a1b8f7",
-    "#6c90f6",
-    "#456ff5",
-    "#2f5af6",
-    "#254ff7",
-    "#1b41dc",
-    "#133ac5",
-    "#0031ad"
-  ],
-  red: [
-    "#ffe9f0",
-    "#fed3db",
-    "#f7a4b4",
-    "#f1728b",
-    "#ec4869",
-    "#ea2f53",
-    "#ea2147",
-    "#d01339",
-    "#bb0a31",
-    "#a40029"
-  ],
-  green: [
-    "#effee7",
-    "#e0f8d4",
-    "#c2efab",
-    "#a2e67e",
-    "#87de57",
-    "#75d940",
-    "#6bd731",
-    "#59be23",
-    "#4da91b",
-    "#3d920c"
-  ],
-  dark: [
-    "#c0c5d2",
-    "#acb3c4",
-    "#6d7997",
-    "#57617b",
-    "#373d4d",
-    "#313745",
-    "#262b36",
-    "#1e212a",
-    "#1a1d24",
-    "#111317"
-  ]
-};
