@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   api:
     build: 
@@ -6,8 +8,16 @@ services:
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
     volumes:
       - ./src:/usr/src/app/src
+      - ./pyproject.toml:/usr/src/app/pyproject.toml
     ports:
       - 8004:8000
     environment:
       - ENVIRONMENT=dev
       - TESTING=0
+    # Add healthcheck for better orchestration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
