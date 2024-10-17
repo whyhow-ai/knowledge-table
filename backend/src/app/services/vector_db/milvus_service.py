@@ -1,6 +1,5 @@
 """The Milvus service for the vector database."""
 
-import asyncio
 import json
 import logging
 import re
@@ -11,8 +10,9 @@ from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
-from app.core.config import settings
-from app.schemas.query import Chunk, Rule, VectorResponse
+from app.core.config import Settings
+from app.models.query_core import Chunk, Rule
+from app.schemas.query_api import VectorResponseSchema
 from app.services.llm_service import LLMService, get_keywords
 from app.services.vector_db.base import VectorDBService
 
@@ -33,69 +33,90 @@ class MilvusMetadata(BaseModel, extra="forbid"):
 class MilvusService(VectorDBService):
     """The Milvus service for the vector database."""
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, settings: Settings):
+        """Initialize the Milvus service."""
         self.llm_service = llm_service
+        self.settings = settings
         self.client = MilvusClient(
-            uri=settings.milvus_db_uri,
-            token=settings.milvus_db_token,
+            uri=self.settings.milvus_db_uri,
+            token=self.settings.milvus_db_token,
         )
 
     async def get_embeddings(
-        self, text: Union[str, List[str]]
-    ) -> Union[List[float], List[List[float]]]:
-        """Get embeddings for the given text using the LLM service."""
-        if isinstance(text, str):
-            return await self.llm_service.get_embeddings(text)
-        else:
-            # If it's a list of strings, get embeddings for all strings in parallel
-            tasks = [self.llm_service.get_embeddings(t) for t in text]
-            return await asyncio.gather(*tasks)
+        self, texts: Union[str, List[str]]
+    ) -> List[List[float]]:
+        """Get embeddings for the given text(s) using the LLM service."""
+        if isinstance(texts, str):
+            texts = [texts]
+        return await self.llm_service.get_embeddings(texts)
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
-        if not self.client.has_collection(collection_name=settings.index_name):
-            # Create the schema
-            schema = self.client.create_schema(
-                auto_id=False,
-                enable_dynamic_field=True,
+        try:
+            logger.info(
+                f"Checking if collection {self.settings.index_name} exists"
             )
+            if not self.client.has_collection(
+                collection_name=self.settings.index_name
+            ):
+                logger.info(
+                    f"Collection {self.settings.index_name} does not exist. Creating it now."
+                )
+                # Create the schema
+                schema = self.client.create_schema(
+                    auto_id=False,
+                    enable_dynamic_field=True,
+                )
 
-            # Add the id field
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                is_primary=True,
-                max_length=36,
-            )
+                # Add the id field
+                schema.add_field(
+                    field_name="id",
+                    datatype=DataType.VARCHAR,
+                    is_primary=True,
+                    max_length=36,
+                )
 
-            # Add the vector field
-            schema.add_field(
-                field_name="vector",
-                datatype=DataType.FLOAT_VECTOR,
-                dim=settings.dimensions,
-            )
+                # Add the vector field
+                schema.add_field(
+                    field_name="vector",
+                    datatype=DataType.FLOAT_VECTOR,
+                    dim=self.settings.dimensions,
+                )
 
-            # Add the index
-            index_params = self.client.prepare_index_params()
-            index_params.add_index(
-                index_type="AUTOINDEX",
-                field_name="vector",
-                metric_type="COSINE",
-            )
+                # Add the index
+                index_params = self.client.prepare_index_params()
+                index_params.add_index(
+                    index_type="AUTOINDEX",
+                    field_name="vector",
+                    metric_type="COSINE",
+                )
 
-            # Create the collection
-            self.client.create_collection(
-                collection_name=settings.index_name,
-                schema=schema,
-                index_params=index_params,
-                consistency_level=0,
-            )
+                # Create the collection
+                self.client.create_collection(
+                    collection_name=self.settings.index_name,
+                    schema=schema,
+                    index_params=index_params,
+                    consistency_level=0,
+                )
+                logger.info(
+                    f"Collection {self.settings.index_name} created successfully."
+                )
+            else:
+                logger.info(
+                    f"Collection {self.settings.index_name} already exists"
+                )
+        except Exception as e:
+            logger.error(f"Error ensuring collection exists: {e}")
+            raise
 
     async def upsert_vectors(
         self, vectors: List[Dict[str, Any]]
     ) -> Dict[str, str]:
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
+
+        # Ensure the collection exists
+        await self.ensure_collection_exists()
 
         batch_size = (
             1000  # Adjust this based on your Milvus instance's capabilities
@@ -106,7 +127,7 @@ class MilvusService(VectorDBService):
             for i in range(0, len(vectors), batch_size):
                 batch = vectors[i : i + batch_size]
                 upsert_response = self.client.insert(
-                    collection_name=settings.index_name, data=batch
+                    collection_name=self.settings.index_name, data=batch
                 )
                 total_inserted += upsert_response["insert_count"]
                 logger.info(
@@ -132,54 +153,33 @@ class MilvusService(VectorDBService):
         logger.info(f"Preparing {len(chunks)} chunks")
 
         # Clean the chunks
-        cleaned_chunks = []
-        for chunk in chunks:
-            cleaned_chunks.append(
-                re.sub("/(\r\n|\n|\r)/gm", "", chunk.page_content)
-            )
+        cleaned_texts = [
+            re.sub(r"\s+", " ", chunk.page_content.strip()) for chunk in chunks
+        ]
 
         logger.info("Generating embeddings.")
 
         # Embed all chunks at once
-        texts = [chunk.page_content for chunk in chunks]
-        embedded_chunks = await self.get_embeddings(texts)
+        embedded_chunks = await self.get_embeddings(cleaned_texts)
 
         # Prepare the data for insertion
-        datas = []
-
-        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks)):
-            # Get the page number
-            if "page" in chunk.metadata:
-                page = chunk.metadata["page"] + 1
-            else:
-                page = (i // 5) + 1  # Assuming 5 chunks per "page"
-
-            # Create the metadata
-            metadata = MilvusMetadata(
-                text=chunk.page_content,
-                page_number=page,
-                chunk_number=i,
-                document_id=document_id,
-            )
-
-            # Create the data
-            data = {
-                "id": metadata.uuid,
-                "vector": embedding,  # This should now be a list of floats
-                "text": metadata.text,
-                "page_number": metadata.page_number,
-                "chunk_number": metadata.chunk_number,
-                "document_id": metadata.document_id,
+        return [
+            {
+                "id": str(uuid.uuid4()),
+                "vector": embedding,
+                "text": text,
+                "page_number": chunk.metadata.get("page", i // 5 + 1),
+                "chunk_number": i,
+                "document_id": document_id,
             }
-
-            datas.append(data)
-
-        logger.info("Chunks processed successfully.")
-        return datas
+            for i, (chunk, text, embedding) in enumerate(
+                zip(chunks, cleaned_texts, embedded_chunks)
+            )
+        ]
 
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a vector search on the Milvus database."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
@@ -197,8 +197,8 @@ class MilvusService(VectorDBService):
 
             # Search the collection
             query_response = self.client.search(
-                collection_name=settings.index_name,
-                data=[embedded_query],
+                collection_name=self.settings.index_name,
+                data=embedded_query,
                 filter=f"document_id == '{document_id}'",
                 limit=40,
                 output_fields=[
@@ -227,14 +227,14 @@ class MilvusService(VectorDBService):
 
         logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
 
-        return VectorResponse(
+        return VectorResponseSchema(
             message="Query processed successfully.",
             chunks=formatted_output,
         )
 
     async def keyword_search(
         self, query: str, document_id: str, keywords: list[str]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a keyword search on the Milvus database."""
         logger.info("Performing keyword search.")
 
@@ -253,7 +253,7 @@ class MilvusService(VectorDBService):
 
                 # Query the collection
                 keyword_response = self.client.query(
-                    collection_name=settings.index_name,
+                    collection_name=self.settings.index_name,
                     filter=filter_string,
                     output_fields=[
                         "text",
@@ -300,7 +300,7 @@ class MilvusService(VectorDBService):
                     if chunks_added >= 5:
                         break
 
-        return VectorResponse(
+        return VectorResponseSchema(
             message="Query processed successfully.",
             chunks=chunk_response,
             keywords=response,
@@ -308,7 +308,7 @@ class MilvusService(VectorDBService):
 
     async def hybrid_search(
         self, query: str, document_id: str, rules: list[Rule]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
@@ -365,7 +365,7 @@ class MilvusService(VectorDBService):
 
             # Query the collection
             keyword_response = self.client.query(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 filter=filter_string,
                 output_fields=[
                     "text",
@@ -399,7 +399,7 @@ class MilvusService(VectorDBService):
         try:
             # First, let's check if there are any vectors for this document_id
             count_response = self.client.query(
-                collection_name=settings.index_name,
+                collection_name=self.settings.index_name,
                 filter=f'document_id == "{document_id}"',
                 output_fields=["count(*)"],
             )
@@ -412,15 +412,14 @@ class MilvusService(VectorDBService):
                 logger.warning(
                     f"No vectors found for document_id: {document_id}"
                 )
-                return VectorResponse(
+                return VectorResponseSchema(
                     message="No data found for the given document.", chunks=[]
                 )
 
             # Now let's perform the search
-            # Ensure that embedded_query is wrapped in a list
             semantic_response = self.client.search(
-                collection_name=settings.index_name,
-                data=[embedded_query],
+                collection_name=self.settings.index_name,
+                data=embedded_query,
                 filter=f'document_id == "{document_id}"',
                 limit=40,
                 output_fields=[
@@ -473,7 +472,7 @@ class MilvusService(VectorDBService):
 
             logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
 
-            return VectorResponse(
+            return VectorResponseSchema(
                 message="Query processed successfully.",
                 chunks=formatted_output,
             )
@@ -481,7 +480,7 @@ class MilvusService(VectorDBService):
         except Exception as e:
             logger.error(f"Error during Milvus search: {e}")
             logger.error(
-                f"Milvus search parameters: collection_name={settings.index_name}, data shape=1x{len(embedded_query)}"
+                f"Milvus search parameters: collection_name={self.settings.index_name}, data shape=1x{len(embedded_query)}"
             )
             raise
 
@@ -496,28 +495,35 @@ class MilvusService(VectorDBService):
             query=query
         )
 
-        # Get the chunks for each sub-query
-        sub_query_chunks = await self.vector_search(
-            decomposition_response["sub-queries"], document_id
-        )
+        # Get the chunks for each sub-query using hybrid_search
+        sub_query_results = []
+        for sub_query in decomposition_response["sub-queries"]:
+            sub_query_chunks = await self.hybrid_search(
+                sub_query, document_id, rules
+            )
+            sub_query_results.append(
+                {
+                    "query": sub_query,
+                    "chunks": [
+                        chunk.model_dump() for chunk in sub_query_chunks.chunks
+                    ],
+                }
+            )
 
         return {
-            "sub_queries": decomposition_response["sub-queries"],
-            "chunks": [
-                chunk.model_dump() for chunk in sub_query_chunks.chunks
-            ],
+            "sub_queries": sub_query_results,
         }
 
     async def delete_document(self, document_id: str) -> Dict[str, str]:
-        """Delete a document from the Milvus."""
+        """Delete a document from the Milvus vector database."""
         self.client.delete(
-            collection_name=settings.index_name,
+            collection_name=self.settings.index_name,
             filter=f'document_id == "{document_id}"',
         )
 
         # Confirm the deletion
         confirm_delete = self.client.query(
-            collection_name=settings.index_name,
+            collection_name=self.settings.index_name,
             filter=f'document_id == "{document_id}"',
         )
 

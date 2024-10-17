@@ -5,22 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.1.5] - 2024-10-15
+## [v0.1.4] - 2024-10-16
 
 ### Improved
 
 - Refactored add question, add document
 - Refactored csv download and export triple components
+- Refactored factories for depedency injection
 
 ### Added
 
 - Added react mentions + coloring logic to highlight mentioned columns
 
-## [v0.1.4] - 2024-10-14
-
 ### Changed
 
 - Added document to node properties when exporting triples
+- Streamlined testing to remove complication and restriciton
 
 ## [v0.1.3] - 2024-10-13
 
@@ -31,12 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created new `core` directory for fundamental application components
 - Updated llm operations to new services in `services/llm`
 - Updated vector database operations to new services in `services/vector_db`
+- Updated tests to new directory structure
 
 ### Improved
 
 - Separated configuration from dependency injection for better maintainability and clarity
 - Created new `utils` directory for fundamental application components
 - Seperated Pydantic models into `models` and `schemas` directories
+- Massively uncomplicated the test files
 
 ## [v0.1.2] - 2024-10-10
 

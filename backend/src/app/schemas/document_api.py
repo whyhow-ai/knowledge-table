@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from app.models.document import Document
 
 
-class DocumentCreate(BaseModel):
+class DocumentCreateSchema(BaseModel):
     """Schema for creating a new document."""
 
     name: str
@@ -18,13 +18,13 @@ class DocumentCreate(BaseModel):
     ]  # This ensures page_count is a non-negative integer
 
 
-class DocumentResponse(Document):
+class DocumentResponseSchema(Document):
     """Schema for document response, inheriting from the Document model."""
 
     pass
 
 
-class DeleteDocumentResponse(BaseModel):
+class DeleteDocumentResponseSchema(BaseModel):
     """Schema for delete document response."""
 
     id: str

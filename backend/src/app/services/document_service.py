@@ -4,12 +4,12 @@ import logging
 import os
 import tempfile
 import uuid
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from langchain.schema import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from app.core.config import settings
+from app.core.config import Settings
 from app.services.llm.base import LLMService
 from app.services.loaders.factory import LoaderFactory
 from app.services.vector_db.base import VectorDBService
@@ -24,14 +24,16 @@ class DocumentService:
         self,
         vector_db_service: VectorDBService,
         llm_service: LLMService,
+        settings: Settings,
     ):
         """Document service."""
         self.vector_db_service = vector_db_service
         self.llm_service = llm_service
+        self.settings = settings
         self.loader_factory = LoaderFactory()
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap,
+            chunk_size=self.settings.chunk_size,
+            chunk_overlap=self.settings.chunk_overlap,
         )
 
     async def upload_document(
@@ -58,20 +60,10 @@ class DocumentService:
 
                 chunks = await self._process_document(temp_file_path)
 
-                if self.llm_service.is_available():
-                    prepared_chunks = (
-                        await self.vector_db_service.prepare_chunks(
-                            document_id, chunks
-                        )
-                    )
-                    await self.vector_db_service.upsert_vectors(
-                        prepared_chunks
-                    )
-                else:
-                    logger.warning(
-                        "LLM service is not available. Skipping vector embedding."
-                    )
-                    # Implement fallback behavior here
+                prepared_chunks = await self.vector_db_service.prepare_chunks(
+                    document_id, chunks
+                )
+                await self.vector_db_service.upsert_vectors(prepared_chunks)
             finally:
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
@@ -97,11 +89,11 @@ class DocumentService:
     async def _load_document(self, file_path: str) -> List[LangchainDocument]:
 
         # Create a loader
-        loader = self.loader_factory.create_loader()
+        loader = self.loader_factory.create_loader(self.settings)
 
         if loader is None:
             raise ValueError(
-                f"No loader available for configured loader type: {settings.loader}"
+                f"No loader available for configured loader type: {self.settings.loader}"
             )
 
         # Load the document
@@ -114,3 +106,12 @@ class DocumentService:
     @staticmethod
     def _generate_document_id() -> str:
         return uuid.uuid4().hex
+
+    async def delete_document(self, document_id: str) -> Dict[str, str]:
+        """Delete a document."""
+        try:
+            result = await self.vector_db_service.delete_document(document_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error deleting document: {e}")
+            raise

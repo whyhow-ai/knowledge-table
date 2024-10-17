@@ -1,17 +1,20 @@
-"""Routing schemas for the graph API."""
+"""Table models for API requests and responses."""
 
 from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel
 
+from app.models.document import Document
+from app.models.query_core import Rule
+
 
 class Prompt(BaseModel):
-    """Represents a prompt used to extract specific information, including rules and query."""
+    """Represents a prompt."""
 
     entityType: str
     id: str
     query: str
-    rules: List[Any]
+    rules: List[Rule]
     type: str
 
 
@@ -29,18 +32,7 @@ class Column(BaseModel):
 
     id: str
     prompt: Prompt
-    width: Union[int, str]
     hidden: Union[bool, str]
-
-
-class Document(BaseModel):
-    """Represents a document."""
-
-    id: str
-    name: str
-    author: str
-    tag: str
-    page_count: Union[int, str]
 
 
 class Row(BaseModel):
@@ -57,18 +49,3 @@ class Table(BaseModel):
     columns: List[Column]
     rows: List[Row]
     cells: List[Cell]
-
-
-class ExportTriplesRequest(BaseModel):
-    """Schema for export triples request."""
-
-    columns: List[Column]
-    rows: List[Row]
-    cells: List[Cell]
-
-
-class ExportTriplesResponse(BaseModel):
-    """Schema for export triples response."""
-
-    triples: List[Dict[str, Any]]
-    chunks: List[Dict[str, Any]]

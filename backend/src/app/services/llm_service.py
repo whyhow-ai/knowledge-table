@@ -2,9 +2,9 @@
 
 import json
 import logging
-from typing import Any, List, Literal, Type, Union
+from typing import Any, List, Tuple, Type, Union
 
-from app.models.llm import (
+from app.models.llm_responses import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
@@ -14,8 +14,8 @@ from app.models.llm import (
     StrResponseModel,
     SubQueriesResponseModel,
 )
-from app.models.query import Rule
-from app.schemas.graph import Table
+from app.models.query_core import FormatType, Rule
+from app.models.table import Table
 from app.services.llm.base import LLMService
 from app.services.llm.prompts import (
     BASE_PROMPT,
@@ -32,12 +32,78 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _get_model_and_instructions(
+    format: str, rules: list[Rule], query: str
+) -> Tuple[
+    Type[
+        Union[
+            BoolResponseModel,
+            IntArrayResponseModel,
+            IntResponseModel,
+            StrArrayResponseModel,
+            StrResponseModel,
+        ]
+    ],
+    str,
+]:
+    """
+    Get the appropriate output model and instructions based on the format.
+
+    Parameters
+    ----------
+    format : str
+        The desired format of the response.
+    rules : list[Rule]
+        A list of rules to apply when generating the response.
+    query : str
+        The user's query to be answered.
+
+    Returns
+    -------
+    Tuple[Type[Union[BoolResponseModel, IntArrayResponseModel, IntResponseModel, StrArrayResponseModel, StrResponseModel]], str]
+        A tuple containing the appropriate output model and format-specific instructions.
+    """
+    str_rule = next(
+        (rule for rule in rules if rule.type in ["must_return", "may_return"]),
+        None,
+    )
+    int_rule = next(
+        (rule for rule in rules if rule.type == "max_length"), None
+    )
+
+    if format == "bool":
+        return BoolResponseModel, BOOL_INSTRUCTIONS
+    elif format in ["str_array", "str"]:
+        str_rule_line = _get_str_rule_line(str_rule, query)
+        int_rule_line = _get_int_rule_line(int_rule)
+        instructions = STR_ARRAY_INSTRUCTIONS.substitute(
+            str_rule_line=str_rule_line, int_rule_line=int_rule_line
+        )
+        return (
+            StrArrayResponseModel
+            if format == "str_array"
+            else StrResponseModel
+        ), instructions
+    elif format in ["int", "int_array"]:
+        int_rule_line = _get_int_rule_line(int_rule)
+        instructions = INT_ARRAY_INSTRUCTIONS.substitute(
+            int_rule_line=int_rule_line
+        )
+        return (
+            IntArrayResponseModel
+            if format == "int_array"
+            else IntResponseModel
+        ), instructions
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+
+
 async def generate_response(
     llm_service: LLMService,
     query: str,
     chunks: str,
     rules: list[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
 ) -> dict[str, Any]:
     """
     Generate a response from the language model based on the given query and format.
@@ -62,54 +128,10 @@ async def generate_response(
     """
     logger.info(f"Generating response for query: {query} in format: {format}")
 
-    # Set the output model based on the format
-    output_model: Type[
-        Union[
-            BoolResponseModel,
-            IntArrayResponseModel,
-            IntResponseModel,
-            StrArrayResponseModel,
-            StrResponseModel,
-        ]
-    ]
-
-    # Get the first rule that is either a must_return or may_return
-    str_rule = next(
-        (rule for rule in rules if rule.type in ["must_return", "may_return"]),
-        None,
-    )
-    int_rule = next(
-        (rule for rule in rules if rule.type == "max_length"), None
+    output_model, format_specific_instructions = _get_model_and_instructions(
+        format, rules, query
     )
 
-    # Set the format specific instructions
-    format_specific_instructions = ""
-    if format == "bool":
-        format_specific_instructions = BOOL_INSTRUCTIONS
-        output_model = BoolResponseModel
-    elif format in ["str_array", "str"]:
-        str_rule_line = _get_str_rule_line(str_rule, query)
-        int_rule_line = _get_int_rule_line(int_rule)
-        format_specific_instructions = STR_ARRAY_INSTRUCTIONS.substitute(
-            str_rule_line=str_rule_line, int_rule_line=int_rule_line
-        )
-        output_model = (
-            StrArrayResponseModel
-            if format == "str_array"
-            else StrResponseModel
-        )
-    elif format in ["int", "int_array"]:
-        int_rule_line = _get_int_rule_line(int_rule)
-        format_specific_instructions = INT_ARRAY_INSTRUCTIONS.substitute(
-            int_rule_line=int_rule_line
-        )
-        output_model = (
-            IntArrayResponseModel
-            if format == "int_array"
-            else IntResponseModel
-        )
-
-    # Create the base prompt
     prompt = BASE_PROMPT.substitute(
         query=query,
         chunks=chunks,
@@ -118,10 +140,17 @@ async def generate_response(
 
     try:
         response = await llm_service.generate_completion(prompt, output_model)
+        logger.info(f"Raw response from LLM: {response}")
+
+        if response is None or response.answer is None:
+            logger.warning("LLM returned None response")
+            return {"answer": None}
+
+        logger.info(f"Processed response: {response.answer}")
         return {"answer": response.answer}
     except Exception as e:
-        logger.error(f"Error generating response: {str(e)}")
-        return {"answer": "An error occurred while generating the response."}
+        logger.error(f"Error generating response: {str(e)}", exc_info=True)
+        return {"answer": None}
 
 
 async def get_keywords(

@@ -1,103 +1,55 @@
 """Query service."""
 
 import logging
-from typing import Any, Dict, List, Literal
+from typing import Any, Awaitable, Callable, List
 
-from app.core.dependencies import get_llm_service, get_settings
-from app.models.query import Rule
+from app.models.query_core import Chunk, FormatType, QueryType, Rule
+from app.schemas.query_api import QueryResult, SearchResponse
 from app.services.llm_service import LLMService, generate_response
-from app.services.vector_db.factory import VectorDBFactory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+SearchMethod = Callable[[str, str, List[Rule]], Awaitable[SearchResponse]]
 
-async def get_vector_db_service() -> Any:
-    """
-    Get the vector database service.
 
-    Returns
-    -------
-    Any
-        An instance of the vector database service.
+def get_search_method(
+    query_type: QueryType, vector_db_service: Any
+) -> SearchMethod:
+    """Get the search method based on the query type."""
+    if query_type == "decomposition":
+        return vector_db_service.decomposed_search
+    elif query_type == "hybrid":
+        return vector_db_service.hybrid_search
+    else:  # simple_vector
+        return lambda q, d, r: vector_db_service.vector_search([q], d)
 
-    Raises
-    ------
-    ValueError
-        If the vector database service creation fails.
-    """
-    # Get the LLM service
-    llm_service = get_llm_service()
 
-    # Get the settings
-    settings = get_settings()
-
-    # Create the vector database service
-    vector_db_service = VectorDBFactory.create_vector_db_service(
-        settings.vector_db_provider, llm_service
+def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
+    """Extract chunks from the search response."""
+    return (
+        search_response["chunks"]
+        if isinstance(search_response, dict)
+        else search_response.chunks
     )
-    if vector_db_service is None:
-        raise ValueError("Failed to create vector database service")
-    return vector_db_service
 
 
 async def process_query(
-    query_type: Literal["decomposition", "hybrid", "simple_vector"],
+    query_type: QueryType,
     query: str,
     document_id: str,
     rules: List[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
     llm_service: LLMService,
-) -> Dict[str, Any]:
-    """
-    Process the query based on the specified type.
+    vector_db_service: Any,
+) -> QueryResult:
+    """Process the query based on the specified type."""
+    search_method = get_search_method(query_type, vector_db_service)
 
-    Parameters
-    ----------
-    query_type : Literal["decomposition", "hybrid", "simple_vector"]
-        The type of query to perform.
-    query : str
-        The query string.
-    document_id : str
-        The ID of the document to search.
-    rules : List[Rule]
-        A list of rules to apply to the query.
-    format : Literal["int", "str", "bool", "int_array", "str_array"]
-        The desired format of the answer.
-    llm_service : LLMService
-        The language model service to use for generating responses.
+    search_response = await search_method(query, document_id, rules)
+    chunks = extract_chunks(search_response)
+    concatenated_chunks = " ".join(chunk.content for chunk in chunks)
 
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the answer and relevant chunks.
-    """
-    # Get the vector database service
-    vector_db_service = await get_vector_db_service()
-
-    # Define the search methods
-    search_methods = {
-        "decomposition": vector_db_service.decomposed_search,
-        "hybrid": vector_db_service.hybrid_search,
-        "simple_vector": lambda q, d, r: vector_db_service.vector_search(
-            [q], d
-        ),
-    }
-
-    # Execute the search
-    search_response = await search_methods[query_type](
-        query, document_id, rules
-    )
-
-    # Get the chunks
-    chunks = (
-        search_response["chunks"]
-        if query_type == "decomposition"
-        else search_response.chunks
-    )
-    concatenated_chunks = " ".join([chunk.content for chunk in chunks])
-
-    # Generate the answer
     answer = await generate_response(
         llm_service, query, concatenated_chunks, rules, format
     )
@@ -110,42 +62,27 @@ async def process_query(
         else chunks
     )
 
-    return {"answer": answer_value, "chunks": result_chunks[:10]}
+    return QueryResult(answer=answer_value, chunks=result_chunks[:10])
 
 
-# Wrapper functions for specific query types
+# Convenience functions for specific query types
 async def decomposition_query(
     query: str,
     document_id: str,
     rules: List[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
     llm_service: LLMService,
-) -> Dict[str, Any]:
-    """
-    Perform a decomposition query.
-
-    This is a wrapper function that calls process_query with the "decomposition" query type.
-
-    Parameters
-    ----------
-    query : str
-        The query string.
-    document_id : str
-        The ID of the document to search.
-    rules : List[Rule]
-        A list of rules to apply to the query.
-    format : Literal["int", "str", "bool", "int_array", "str_array"]
-        The desired format of the answer.
-    llm_service : LLMService
-        The language model service to use for generating responses.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the answer and relevant chunks.
-    """
+    vector_db_service: Any,
+) -> QueryResult:
+    """Process the query based on the decomposition type."""
     return await process_query(
-        "decomposition", query, document_id, rules, format, llm_service
+        "decomposition",
+        query,
+        document_id,
+        rules,
+        format,
+        llm_service,
+        vector_db_service,
     )
 
 
@@ -153,34 +90,19 @@ async def hybrid_query(
     query: str,
     document_id: str,
     rules: List[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
     llm_service: LLMService,
-) -> Dict[str, Any]:
-    """
-    Perform a hybrid query.
-
-    This is a wrapper function that calls process_query with the "hybrid" query type.
-
-    Parameters
-    ----------
-    query : str
-        The query string.
-    document_id : str
-        The ID of the document to search.
-    rules : List[Rule]
-        A list of rules to apply to the query.
-    format : Literal["int", "str", "bool", "int_array", "str_array"]
-        The desired format of the answer.
-    llm_service : LLMService
-        The language model service to use for generating responses.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the answer and relevant chunks.
-    """
+    vector_db_service: Any,
+) -> QueryResult:
+    """Process the query based on the hybrid type."""
     return await process_query(
-        "hybrid", query, document_id, rules, format, llm_service
+        "hybrid",
+        query,
+        document_id,
+        rules,
+        format,
+        llm_service,
+        vector_db_service,
     )
 
 
@@ -188,32 +110,17 @@ async def simple_vector_query(
     query: str,
     document_id: str,
     rules: List[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
     llm_service: LLMService,
-) -> Dict[str, Any]:
-    """
-    Perform a simple vector query.
-
-    This is a wrapper function that calls process_query with the "simple_vector" query type.
-
-    Parameters
-    ----------
-    query : str
-        The query string.
-    document_id : str
-        The ID of the document to search.
-    rules : List[Rule]
-        A list of rules to apply to the query.
-    format : Literal["int", "str", "bool", "int_array", "str_array"]
-        The desired format of the answer.
-    llm_service : LLMService
-        The language model service to use for generating responses.
-
-    Returns
-    -------
-    Dict[str, Any]
-        A dictionary containing the answer and relevant chunks.
-    """
+    vector_db_service: Any,
+) -> QueryResult:
+    """Process the query based on the simple vector type."""
     return await process_query(
-        "simple_vector", query, document_id, rules, format, llm_service
+        "simple_vector",
+        query,
+        document_id,
+        rules,
+        format,
+        llm_service,
+        vector_db_service,
     )
