@@ -53,9 +53,15 @@ class MilvusService(VectorDBService):
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
         try:
-            logger.info(f"Checking if collection {self.settings.index_name} exists")
-            if not self.client.has_collection(collection_name=self.settings.index_name):
-                logger.info(f"Collection {self.settings.index_name} does not exist. Creating it now.")
+            logger.info(
+                f"Checking if collection {self.settings.index_name} exists"
+            )
+            if not self.client.has_collection(
+                collection_name=self.settings.index_name
+            ):
+                logger.info(
+                    f"Collection {self.settings.index_name} does not exist. Creating it now."
+                )
                 # Create the schema
                 schema = self.client.create_schema(
                     auto_id=False,
@@ -92,14 +98,20 @@ class MilvusService(VectorDBService):
                     index_params=index_params,
                     consistency_level=0,
                 )
-                logger.info(f"Collection {self.settings.index_name} created successfully.")
+                logger.info(
+                    f"Collection {self.settings.index_name} created successfully."
+                )
             else:
-                logger.info(f"Collection {self.settings.index_name} already exists")
+                logger.info(
+                    f"Collection {self.settings.index_name} already exists"
+                )
         except Exception as e:
             logger.error(f"Error ensuring collection exists: {e}")
             raise
 
-    async def upsert_vectors(self, vectors: List[Dict[str, Any]]) -> Dict[str, str]:
+    async def upsert_vectors(
+        self, vectors: List[Dict[str, Any]]
+    ) -> Dict[str, str]:
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
 
