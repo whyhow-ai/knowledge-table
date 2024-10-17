@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ]  # TODO: Restrict this in production
 
     # LLM CONFIG
-    dimensions: int = 768
+    dimensions: int = 1536
     embedding_provider: str = "openai"
     embedding_model: str = "text-embedding-3-small"
     llm_provider: str = "openai"

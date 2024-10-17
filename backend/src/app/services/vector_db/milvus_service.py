@@ -52,51 +52,59 @@ class MilvusService(VectorDBService):
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
-        if not self.client.has_collection(
-            collection_name=self.settings.index_name
-        ):
-            # Create the schema
-            schema = self.client.create_schema(
-                auto_id=False,
-                enable_dynamic_field=True,
-            )
+        try:
+            logger.info(f"Checking if collection {self.settings.index_name} exists")
+            if not self.client.has_collection(collection_name=self.settings.index_name):
+                logger.info(f"Collection {self.settings.index_name} does not exist. Creating it now.")
+                # Create the schema
+                schema = self.client.create_schema(
+                    auto_id=False,
+                    enable_dynamic_field=True,
+                )
 
-            # Add the id field
-            schema.add_field(
-                field_name="id",
-                datatype=DataType.VARCHAR,
-                is_primary=True,
-                max_length=36,
-            )
+                # Add the id field
+                schema.add_field(
+                    field_name="id",
+                    datatype=DataType.VARCHAR,
+                    is_primary=True,
+                    max_length=36,
+                )
 
-            # Add the vector field
-            schema.add_field(
-                field_name="vector",
-                datatype=DataType.FLOAT_VECTOR,
-                dim=self.settings.dimensions,
-            )
+                # Add the vector field
+                schema.add_field(
+                    field_name="vector",
+                    datatype=DataType.FLOAT_VECTOR,
+                    dim=self.settings.dimensions,
+                )
 
-            # Add the index
-            index_params = self.client.prepare_index_params()
-            index_params.add_index(
-                index_type="AUTOINDEX",
-                field_name="vector",
-                metric_type="COSINE",
-            )
+                # Add the index
+                index_params = self.client.prepare_index_params()
+                index_params.add_index(
+                    index_type="AUTOINDEX",
+                    field_name="vector",
+                    metric_type="COSINE",
+                )
 
-            # Create the collection
-            self.client.create_collection(
-                collection_name=self.settings.index_name,
-                schema=schema,
-                index_params=index_params,
-                consistency_level=0,
-            )
+                # Create the collection
+                self.client.create_collection(
+                    collection_name=self.settings.index_name,
+                    schema=schema,
+                    index_params=index_params,
+                    consistency_level=0,
+                )
+                logger.info(f"Collection {self.settings.index_name} created successfully.")
+            else:
+                logger.info(f"Collection {self.settings.index_name} already exists")
+        except Exception as e:
+            logger.error(f"Error ensuring collection exists: {e}")
+            raise
 
-    async def upsert_vectors(
-        self, vectors: List[Dict[str, Any]]
-    ) -> Dict[str, str]:
+    async def upsert_vectors(self, vectors: List[Dict[str, Any]]) -> Dict[str, str]:
         """Upsert the vectors into the Milvus database."""
         logger.info(f"Upserting {len(vectors)} chunks")
+
+        # Ensure the collection exists
+        await self.ensure_collection_exists()
 
         batch_size = (
             1000  # Adjust this based on your Milvus instance's capabilities
@@ -475,16 +483,23 @@ class MilvusService(VectorDBService):
             query=query
         )
 
-        # Get the chunks for each sub-query
-        sub_query_chunks = await self.vector_search(
-            decomposition_response["sub-queries"], document_id
-        )
+        # Get the chunks for each sub-query using hybrid_search
+        sub_query_results = []
+        for sub_query in decomposition_response["sub-queries"]:
+            sub_query_chunks = await self.hybrid_search(
+                sub_query, document_id, rules
+            )
+            sub_query_results.append(
+                {
+                    "query": sub_query,
+                    "chunks": [
+                        chunk.model_dump() for chunk in sub_query_chunks.chunks
+                    ],
+                }
+            )
 
         return {
-            "sub_queries": decomposition_response["sub-queries"],
-            "chunks": [
-                chunk.model_dump() for chunk in sub_query_chunks.chunks
-            ],
+            "sub_queries": sub_query_results,
         }
 
     async def delete_document(self, document_id: str) -> Dict[str, str]:

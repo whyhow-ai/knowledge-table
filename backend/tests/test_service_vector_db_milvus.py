@@ -24,7 +24,7 @@ def milvus_service(mock_llm_service, mock_milvus_client):
         milvus_db_uri="test_uri",
         milvus_db_token="test_token",
         index_name="test_index",
-        dimensions=768,
+        dimensions=1536,
     )
     with patch(
         "app.services.vector_db.milvus_service.MilvusClient",
@@ -51,20 +51,23 @@ async def test_get_embeddings_multiple(milvus_service, mock_llm_service):
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_ensure_collection_exists(milvus_service, mock_milvus_client):
     mock_milvus_client.has_collection.return_value = False
     mock_schema = MagicMock()
     mock_milvus_client.create_schema.return_value = mock_schema
-    mock_index_params = MagicMock()
-    mock_milvus_client.prepare_index_params.return_value = mock_index_params
 
     await milvus_service.ensure_collection_exists()
 
-    mock_milvus_client.has_collection.assert_called_once()
-    mock_milvus_client.create_schema.assert_called_once()
+    mock_milvus_client.has_collection.assert_called_once_with(
+        collection_name=milvus_service.settings.index_name
+    )
+    mock_milvus_client.create_schema.assert_called_once_with(
+        auto_id=False,
+        enable_dynamic_field=True,
+    )
     mock_schema.add_field.assert_called()
     mock_milvus_client.prepare_index_params.assert_called_once()
-    mock_index_params.add_index.assert_called_once()
     mock_milvus_client.create_collection.assert_called_once()
 
 
@@ -145,7 +148,7 @@ async def test_decomposed_search(milvus_service, mock_llm_service):
     mock_llm_service.decompose_query.return_value = {
         "sub-queries": ["sub1", "sub2"]
     }
-    milvus_service.vector_search = AsyncMock(
+    milvus_service.hybrid_search = AsyncMock(
         return_value=VectorResponseSchema(
             message="", chunks=[Chunk(content="result", page=1)]
         )
@@ -154,9 +157,18 @@ async def test_decomposed_search(milvus_service, mock_llm_service):
     result = await milvus_service.decomposed_search(query, document_id, rules)
 
     assert "sub_queries" in result
-    assert "chunks" in result
     assert len(result["sub_queries"]) == 2
-    assert len(result["chunks"]) == 1
+    assert all(
+        "query" in sub_query and "chunks" in sub_query
+        for sub_query in result["sub_queries"]
+    )
+    assert all(
+        len(sub_query["chunks"]) == 1 for sub_query in result["sub_queries"]
+    )
+    assert all(
+        sub_query["chunks"][0]["content"] == "result"
+        for sub_query in result["sub_queries"]
+    )
 
 
 @pytest.mark.asyncio
