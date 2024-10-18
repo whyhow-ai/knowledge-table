@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated Milvus reference in the factory to be more robust to other Milvus datastores
-
+- 
 ## [v0.1.4] - 2024-10-16
 
 ### Improved
