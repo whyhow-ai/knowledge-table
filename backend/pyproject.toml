@@ -46,7 +46,6 @@ dependencies = [
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-text-splitters>=0.3.0",
-    "langchain-unstructured",
     "langsmith>=0.1.121",
     "marshmallow>=3.22.0",
     "milvus-lite>=2.4.10",
@@ -93,8 +92,6 @@ dependencies = [
     "typing_extensions>=4.12.2",
     "tzdata>=2024.1",
     "ujson>=5.10.0",
-    "unstructured",
-    "unstructured[all-docs]",
     "urllib3>=2.2.3",
     "uvicorn>=0.30.6",
     "whyhow",
@@ -103,6 +100,11 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+unstructured = [
+    "langchain-unstructured",
+    "unstructured",
+    "unstructured[all-docs]"
+]
 dev = [
     "bandit[toml]",
     "black",
@@ -116,6 +118,7 @@ dev = [
     "pytest-httpx",
     "pytest",
     "pytest-html",
+    "pytest-mock",
 ]
 
 [project.scripts]

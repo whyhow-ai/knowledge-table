@@ -13,6 +13,7 @@ import {
   uniq
 } from "lodash-es";
 import cuid from "@bugsnag/cuid";
+import { toSingleType } from "./store.utils";
 import {
   AnswerTableCell,
   AnswerTableColumn,
@@ -20,7 +21,6 @@ import {
   Store
 } from "./store.types";
 import { deleteDocument, runQuery, uploadFile } from "../api";
-import { toSingleType } from "./store.utils";
 import { where } from "@utils/functions";
 
 export const useStore = createWithEqualityFn(
@@ -48,17 +48,6 @@ export const useStore = createWithEqualityFn(
         };
         set({ columns: [...get().columns, column] });
         get()._syncAnswers();
-      },
-
-      clearAllData: () => {
-        set({
-          columns: [],
-          rows: [],
-          cells: [],
-          filters: [],
-          selection: [],
-          uploadingFiles: false
-        });
       },
 
       editColumn: (id, prompt) => {
@@ -262,6 +251,17 @@ export const useStore = createWithEqualityFn(
         });
       },
 
+      clear: () => {
+        set({
+          columns: [],
+          rows: [],
+          cells: [],
+          filters: [],
+          selection: [],
+          uploadingFiles: false
+        });
+      },
+
       _syncAnswers: async () => {
         const { rows, columns } = get();
         const cellMap = get()._getCellMap();
@@ -279,10 +279,12 @@ export const useStore = createWithEqualityFn(
         for (const missing of missingAnswers) {
           const prompt = cloneDeep(missing.column.prompt);
 
-          // Replace all {entityType} with the row's answer to that entity's prompt
-          for (const [match, key] of prompt.query.matchAll(/\{([^{}]+)\}/g)) {
+          // Replace all column references with the row's answer to that column
+          for (const [match, key] of prompt.query.matchAll(
+            /@\[[^\]]+\]\(([^)]+)\)/g
+          )) {
             const column = get().columns.find(
-              ({ prompt }) => prompt.entityType === key
+              ({ prompt }) => prompt.id === key
             );
             if (!column) continue;
             const cell = cellMap.get(`${missing.row.id}-${column.id}`);

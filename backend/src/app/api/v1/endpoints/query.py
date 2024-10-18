@@ -5,15 +5,19 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.dependencies import get_llm_service
-from app.models.query import Answer
-from app.schemas.query import QueryRequest
-from app.services.llm_service import LLMService
+from app.core.dependencies import get_llm_service, get_vector_db_service
+from app.schemas.query_api import (
+    QueryRequestSchema,
+    QueryResponseSchema,
+    QueryResult,
+)
+from app.services.llm.base import LLMService
 from app.services.query_service import (
     decomposition_query,
     hybrid_query,
     simple_vector_query,
 )
+from app.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,72 +26,77 @@ router = APIRouter(tags=["query"])
 logger.info("Query router initialized")
 
 
-@router.post("", response_model=Answer)
+@router.post("", response_model=QueryResponseSchema)
 async def run_query(
-    request: QueryRequest, llm_service: LLMService = Depends(get_llm_service)
-) -> Answer:
+    request: QueryRequestSchema,
+    llm_service: LLMService = Depends(get_llm_service),
+    vector_db_service: VectorDBService = Depends(get_vector_db_service),
+) -> QueryResponseSchema:
     """
     Run a query and generate a response.
 
-    We have three methods for generating answers:
-    1. Simple Vector Search: Performs a vector search and uses the resulting chunks to generate an answer.
-    2. Hybrid Search: Performs both a keyword search and a vector search, using chunks from both to generate an answer.
-    3. Decomposed Search: Breaks down the query into sub-queries, performs a vector search on each sub-query, and then uses the answers and chunks from each to generate an answer to the original question.
+    This endpoint processes incoming query requests, determines the appropriate
+    query type, and executes the corresponding query function. It supports
+    vector, hybrid, and decomposition query types.
+
+    Parameters
+    ----------
+    request : QueryRequestSchema
+        The incoming query request.
+    llm_service : LLMService
+        The language model service.
+    vector_db_service : VectorDBService
+        The vector database service.
+
+    Returns
+    -------
+    QueryResponseSchema
+        The generated response to the query.
+
+    Raises
+    ------
+    HTTPException
+        If there's an error processing the query.
     """
-    logger.info(f"Query endpoint called with request: {request}")
-    # Determine the type of query to run
-    query_type = request.rag_type  # vector, hybrid, decomposed
+    try:
+        logger.info(f"Received query request: {request.model_dump()}")
 
-    # If there's rules, or if the answer is boolean, do hybrid
-    if request.prompt.rules or request.prompt.type == "bool":
-        query_type = "hybrid"
-
-    # Define a mapping of query types to their corresponding functions
-    query_functions = {
-        "decomposed": decomposition_query,
-        "hybrid": hybrid_query,
-        "vector": simple_vector_query,
-    }
-
-    # Get the rules
-    rules = request.prompt.rules or []
-
-    if query_type not in query_functions:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid query type: {query_type}"
+        # Determine query type
+        query_type = (
+            "hybrid"
+            if request.prompt.rules or request.prompt.type == "bool"
+            else "vector"
         )
 
-    # Get the appropriate function based on query_type and call it
-    try:
+        query_functions = {
+            "decomposed": decomposition_query,
+            "hybrid": hybrid_query,
+            "vector": simple_vector_query,
+        }
+
         query_response = await query_functions[query_type](
             request.prompt.query,
             request.document_id,
-            rules,
+            request.prompt.rules,
             request.prompt.type,
             llm_service,
+            vector_db_service,
         )
-    except Exception as e:
-        logger.error(f"Error in query function: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
 
-    # If no chunks are returned, return an empty answer
-    if len(query_response["chunks"]) == 0:
-        return Answer(
-            id=uuid.uuid4().hex,
+        if not isinstance(query_response, QueryResult):
+            query_response = QueryResult(**query_response)
+
+        response_data = QueryResponseSchema(
+            id=str(uuid.uuid4()),
             document_id=request.document_id,
             prompt_id=request.prompt.id,
-            answer=None,
-            chunks=[],
             type=request.prompt.type,
+            answer=query_response.answer,
+            chunks=query_response.chunks,
         )
 
-    # Return the answer
-    answer = Answer(
-        id=uuid.uuid4().hex,
-        document_id=request.document_id,
-        prompt_id=request.prompt.id,
-        answer=query_response["answer"],
-        chunks=query_response["chunks"],
-        type=request.prompt.type,
-    )
-    return answer
+        return response_data
+
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

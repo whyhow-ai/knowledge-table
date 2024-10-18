@@ -1,6 +1,7 @@
 """The base class for the vector database services."""
 
 import asyncio
+import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
@@ -10,11 +11,12 @@ import numpy as np
 from langchain.schema import Document
 from pydantic import BaseModel, Field
 
-from app.models.query import Rule
-from app.schemas.query import VectorResponse
+from app.models.query_core import Rule
+from app.schemas.query_api import VectorResponseSchema
 from app.services.llm.base import LLMService
 from app.services.llm_service import get_keywords
 
+logger = logging.getLogger(__name__)
 
 class Metadata(BaseModel, extra="forbid"):
     """Metadata stored in vector storage."""
@@ -41,7 +43,7 @@ class VectorDBService(ABC):
     @abstractmethod
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a vector search."""
         pass
 
@@ -49,14 +51,14 @@ class VectorDBService(ABC):
     @abstractmethod
     async def keyword_search(
         self, query: str, document_id: str, keywords: List[str]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a keyword search."""
         pass
 
     @abstractmethod
     async def hybrid_search(
         self, query: str, document_id: str, rules: List[Rule]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a hybrid search."""
         pass
 
@@ -78,62 +80,44 @@ class VectorDBService(ABC):
         pass
 
     async def get_embeddings(
-        self, text: Union[str, List[str]]
-    ) -> Union[List[float], List[List[float]]]:
-        """Get embeddings for the given text using the LLM service."""
-        if isinstance(text, str):
-            return await self.llm_service.get_embeddings(text)
-        else:
-            tasks = [self.llm_service.get_embeddings(t) for t in text]
-            return await asyncio.gather(*tasks)
+        self, texts: Union[str, List[str]]
+    ) -> List[List[float]]:
+        """Get embeddings for the given text(s) using the LLM service."""
+        if isinstance(texts, str):
+            texts = [texts]
+        return await self.llm_service.get_embeddings(texts)
+        
 
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]
     ) -> List[Dict[str, Any]]:
-        """Prepare chunks for insertion into the vector index."""
+        """Prepare chunks for insertion into the Milvus database."""
+        logger.info(f"Preparing {len(chunks)} chunks")
 
         # Clean the chunks
-        cleaned_chunks = []
-        for chunk in chunks:
-            cleaned_chunks.append(
-                re.sub("/(\r\n|\n|\r)/gm", "", chunk.page_content)
-            )
+        cleaned_texts = [
+            re.sub(r"\s+", " ", chunk.page_content.strip()) for chunk in chunks
+        ]
+
+        logger.info("Generating embeddings.")
 
         # Embed all chunks at once
-        texts = [chunk.page_content for chunk in chunks]
-        embedded_chunks = await self.get_embeddings(texts)
+        embedded_chunks = await self.get_embeddings(cleaned_texts)
 
         # Prepare the data for insertion
-        datas = []
-
-        for i, (chunk, embedding) in enumerate(zip(chunks, embedded_chunks)):
-            # Get the page number
-            if "page" in chunk.metadata:
-                page = chunk.metadata["page"] + 1
-            else:
-                page = (i // 5) + 1  # Assuming 5 chunks per "page"
-
-            # Create the metadata
-            metadata = Metadata(
-                text=chunk.page_content,
-                page_number=page,
-                chunk_number=i,
-                document_id=document_id,
-            )
-
-            # Create the data
-            data = {
-                "id": metadata.uuid,
-                "vector": embedding,  # This should now be a list of floats
-                "text": metadata.text,
-                "page_number": metadata.page_number,
-                "chunk_number": metadata.chunk_number,
-                "document_id": metadata.document_id,
+        return [
+            {
+                "id": str(uuid.uuid4()),
+                "vector": embedding,
+                "text": text,
+                "page_number": chunk.metadata.get("page", i // 5 + 1),
+                "chunk_number": i,
+                "document_id": document_id,
             }
-
-            datas.append(data)
-
-        return datas
+            for i, (chunk, text, embedding) in enumerate(
+                zip(chunks, cleaned_texts, embedded_chunks)
+            )
+        ]
 
     async def extract_keywords(
         self, query: str, rules: list[Rule], llm_service: LLMService
