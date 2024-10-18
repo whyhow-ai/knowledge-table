@@ -5,7 +5,6 @@ import {
   Button,
   Divider,
   Group,
-  Textarea,
   TextInput,
   Text,
   Menu,
@@ -24,6 +23,7 @@ import {
   IconTrash
 } from "@tabler/icons-react";
 import { cloneDeep, isEmpty, isString } from "lodash-es";
+import { KtPromptQuestion } from "./kt-prompt-question";
 import {
   defaultRules,
   ruleInfo,
@@ -235,16 +235,13 @@ export function KtPromptSettings({
           </Menu.Item>
         ))}
       />
-      <Textarea
+      <KtPromptQuestion
         mt="xs"
-        autosize
         required
-        minRows={3}
         label="Question"
-        placeholder="Question"
-        disabled={readonly}
+        placeholder="Enter question (use '@' to reference other columns)"
         value={value.query}
-        onChange={e => handleChange({ query: e.target.value })}
+        onChange={query => handleChange({ query })}
       />
       {onAdd && (
         <Button

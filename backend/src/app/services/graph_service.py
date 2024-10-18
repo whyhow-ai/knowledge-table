@@ -5,12 +5,11 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional
 
-from whyhow import Node, Relation, Triple
-
 from app.core.dependencies import get_llm_service
-from app.models.graph import ExportData
-from app.models.llm import SchemaRelationship, SchemaResponseModel
-from app.schemas.graph import Row, Table
+from app.models.graph import GraphChunk, Node, Relation, Triple
+from app.models.llm_responses import SchemaRelationship, SchemaResponseModel
+from app.models.table import Row, Table
+from app.schemas.graph_api import ExportTriplesResponseSchema
 from app.services.llm_service import generate_schema
 
 logging.basicConfig(level=logging.INFO)
@@ -70,7 +69,7 @@ async def parse_table(data: Table) -> Dict[str, Any]:
 
 async def generate_triples(
     schema: SchemaResponseModel, table_data: Table
-) -> Dict[str, Any]:
+) -> ExportTriplesResponseSchema:
     """
     Generate triples and chunks from the given schema and table data.
 
@@ -111,8 +110,8 @@ async def generate_triples(
         f"Table data has {len(table_data.rows)} rows, {len(table_data.columns)} columns, and {len(table_data.cells)} cells"
     )
 
-    triples = []
-    chunks = []
+    triples: List[Triple] = []
+    chunks: List[GraphChunk] = []
 
     # Generate triples and chunks for each relationship
     for relationship in schema.relationships:
@@ -120,21 +119,36 @@ async def generate_triples(
         triples_for_relationship = generate_triples_for_relationship(
             relationship, table_data
         )
-        triples.extend(triples_for_relationship)
+
+        for triple in triples_for_relationship:
+            head_node = Node(
+                label=relationship.head,
+                name=str(triple.head.name),
+                properties={"value": triple.head.name},
+            )
+            tail_node = Node(
+                label=relationship.tail,
+                name=str(triple.tail.name),
+                properties={"value": triple.tail.name},
+            )
+            relation = Relation(name=relationship.relation)
+            triples.append(
+                Triple(
+                    triple_id=str(uuid.uuid4()),
+                    head=head_node,
+                    tail=tail_node,
+                    relation=relation,
+                    chunk_ids=[],
+                )
+            )
+
         chunks.extend(
             generate_chunks_for_triples(triples_for_relationship, table_data)
         )
 
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
 
-    return {
-        "triples": [
-            triple.model_dump()
-            for triple in triples
-            if triple.head.name and triple.tail.name
-        ],
-        "chunks": chunks,
-    }
+    return ExportTriplesResponseSchema(triples=triples, chunks=chunks)
 
 
 def generate_triples_for_relationship(
@@ -285,7 +299,7 @@ def get_label(entity_type: str) -> str:
 
 def generate_chunks_for_triples(
     triples: List[Triple], table_data: Table
-) -> List[Dict[str, Any]]:
+) -> List[GraphChunk]:
     """
     Generate chunks for a list of triples.
 
@@ -298,7 +312,7 @@ def generate_chunks_for_triples(
 
     Returns
     -------
-    List[Dict[str, Any]]
+    List[GraphChunk]
         A list of chunk dictionaries generated for all triples.
     """
     chunks = []
@@ -309,7 +323,7 @@ def generate_chunks_for_triples(
 
 def generate_chunks_for_triple(
     triple: Triple, table_data: Table
-) -> List[Dict[str, Any]]:
+) -> List[GraphChunk]:
     """
     Generate chunks for a single triple.
 
@@ -322,7 +336,7 @@ def generate_chunks_for_triple(
 
     Returns
     -------
-    List[Dict[str, Any]]
+    List[GraphChunk]
         A list of chunk dictionaries generated for the given triple.
         Each chunk dictionary contains 'chunk_id', 'content', 'page', and 'triple_id'.
     """
@@ -352,12 +366,12 @@ def generate_chunks_for_triple(
                 for i, chunk in enumerate(cell.answer["chunks"]):
                     chunk_id = f"{triple.triple_id}_{column.id}_c{i+1}"
                     chunks.append(
-                        {
-                            "chunk_id": chunk_id,
-                            "content": chunk.get("content", ""),
-                            "page": chunk.get("page", ""),
-                            "triple_id": triple.triple_id,
-                        }
+                        GraphChunk(
+                            chunk_id=chunk_id,
+                            content=chunk.get("content", ""),
+                            page=chunk.get("page", ""),
+                            triple_id=triple.triple_id,
+                        )
                     )
                     if triple.chunk_ids is None:
                         triple.chunk_ids = []
@@ -365,7 +379,9 @@ def generate_chunks_for_triple(
     return chunks
 
 
-async def process_table_and_generate_triples(table_data: Table) -> ExportData:
+async def process_table_and_generate_triples(
+    table_data: Table,
+) -> ExportTriplesResponseSchema:
     """
     Process the table data, generate a schema, and create triples.
 
@@ -388,7 +404,7 @@ async def process_table_and_generate_triples(table_data: Table) -> ExportData:
     llm_service = get_llm_service()
     if llm_service is None:
         logger.error("Failed to create LLM service")
-        return ExportData(triples=[], chunks=[])
+        return ExportTriplesResponseSchema(triples=[], chunks=[])
 
     try:
         # Generate the schema
@@ -396,7 +412,7 @@ async def process_table_and_generate_triples(table_data: Table) -> ExportData:
 
         if not schema_result or "schema" not in schema_result:
             logger.error("Failed to generate schema: Invalid schema result")
-            return ExportData(triples=[], chunks=[])
+            return ExportTriplesResponseSchema(triples=[], chunks=[])
 
         # Convert the schema to a SchemaResponseModel
         schema_dict = schema_result["schema"]
@@ -412,19 +428,19 @@ async def process_table_and_generate_triples(table_data: Table) -> ExportData:
 
         if not schema.relationships:
             logger.warning("Generated schema has no relationships")
-            return ExportData(triples=[], chunks=[])
+            return ExportTriplesResponseSchema(triples=[], chunks=[])
 
         # Generate triples
         triples_data = await generate_triples(schema, table_data)
 
         if not triples_data:
             logger.warning("No triples generated from the schema")
-            return ExportData(triples=[], chunks=[])
+            return ExportTriplesResponseSchema(triples=[], chunks=[])
 
-        return ExportData(**triples_data)
+        return triples_data
 
     except Exception as e:
         logger.exception(
             f"Unexpected error in process_table_and_generate_triples: {e}"
         )
-        return ExportData(triples=[], chunks=[])
+        return ExportTriplesResponseSchema(triples=[], chunks=[])

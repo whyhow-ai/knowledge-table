@@ -9,10 +9,9 @@ services:
       - backend
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000" 
-    env_file:
-      - ./backend/.env
+    extends:
+      file: ./backend/docker-compose.yml
+      service: api
+    environment:
+      - ENVIRONMENT=dev
+      - TESTING=0

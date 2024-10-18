@@ -1,13 +1,13 @@
 """Service for interacting with OpenAI models."""
 
-import asyncio
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
 from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
+from pydantic import BaseModel
 
-from app.core.config import settings
+from app.core.config import Settings
 from app.services.llm.base import LLMService
 
 logger = logging.getLogger(__name__)
@@ -16,64 +16,76 @@ logger = logging.getLogger(__name__)
 class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
 
-    def __init__(self) -> None:
-        self.client: Optional[OpenAI] = None
-        self.embeddings: Optional[OpenAIEmbeddings] = None
-        if settings.is_openai_available:
+    def __init__(
+        self, settings: Settings, client: Optional[OpenAI] = None
+    ) -> None:
+        self.settings = settings
+        if client:
+            self.client = client
+        elif settings.openai_api_key:
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.embeddings = OpenAIEmbeddings(
-                model=settings.embedding_model,
-                dimensions=settings.dimensions,
+                model=self.settings.embedding_model
+            )
+        else:
+            self.client = None  # type: ignore
+            logger.warning(
+                "OpenAI API key is not set. LLM features will be disabled."
             )
 
-    def is_available(self) -> bool:
-        """Check if the LLM service is available."""
-        return self.client is not None and self.embeddings is not None
-
     async def generate_completion(
-        self, prompt: str, response_model: Any
-    ) -> Any:
+        self, prompt: str, response_model: Type[BaseModel]
+    ) -> Optional[BaseModel]:
         """Generate a completion from the language model."""
-        response = self.client.beta.chat.completions.parse(  # type: ignore[union-attr]
-            model=settings.llm_model,
+        if self.client is None:
+            logger.warning(
+                "OpenAI client is not initialized. Skipping generation."
+            )
+            return None
+
+        response = self.client.beta.chat.completions.parse(
+            model=self.settings.llm_model,
             messages=[{"role": "user", "content": prompt}],
             response_format=response_model,
         )
 
-        logger.info(
-            f"Generated response: {response.choices[0].message.parsed}"
-        )
-        return response.choices[0].message.parsed
+        parsed_response = response.choices[0].message.parsed
+        logger.info(f"Generated response: {parsed_response}")
 
-    async def get_embeddings(self, text: str) -> List[float]:
+        if parsed_response is None:
+            logger.warning("Received None response from OpenAI")
+            return None
+
+        try:
+            validated_response = response_model(**parsed_response.model_dump())
+            if all(
+                value is None
+                for value in validated_response.model_dump().values()
+            ):
+                logger.info("All fields in the response are None")
+                return None
+            return validated_response
+        except ValueError as e:
+            logger.error(f"Error validating response: {e}")
+            return None
+
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for text."""
-        if not self.is_available():
+        if self.client is None:
             logger.warning(
-                "OpenAI service is not available. Returning dummy embeddings."
+                "OpenAI client is not initialized. Skipping embeddings."
             )
-            return [0.0] * settings.dimensions
+            return []
 
-        loop = asyncio.get_event_loop()
-        embeddings = await loop.run_in_executor(
-            None, self._get_embeddings_sync, text
-        )
-        return embeddings
-
-    def _get_embeddings_sync(self, text: str) -> List[float]:
-        if self.embeddings is None:
-            logger.warning(
-                "OpenAI embeddings are not available. Returning dummy embeddings."
-            )
-            return [0.0] * settings.dimensions
-        return self.embeddings.embed_query(text)
+        return self.embeddings.embed_documents(texts)
 
     async def decompose_query(self, query: str) -> dict[str, Any]:
         """Decompose the query into smaller sub-queries."""
-        if not self.is_available():
+        if self.client is None:
             logger.warning(
-                "OpenAI service is not available. Returning original query."
+                "OpenAI client is not initialized. Skipping decomposition."
             )
             return {"sub_queries": [query]}
 
-        # Implement the actual decomposition logic here when OpenAI is available
+        # TODO: Implement the actual decomposition logic here
         return {"sub_queries": [query]}
