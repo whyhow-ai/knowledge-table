@@ -3,7 +3,7 @@
 import json
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
@@ -11,7 +11,7 @@ from pymilvus import DataType, MilvusClient
 from app.core.config import Settings
 from app.models.query_core import Chunk, Rule
 from app.schemas.query_api import VectorResponseSchema
-from app.services.llm_service import LLMService, get_keywords
+from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)

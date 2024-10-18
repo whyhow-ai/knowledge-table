@@ -23,11 +23,11 @@ class VectorDBFactory:
         logger.info(
             f"Creating vector database service with provider: {settings.vector_db_provider}"
         )
-        provider = provider.lower()
+        provider = settings.vector_db_provider.lower()
         if provider == "milvus":
-            return MilvusService(llm_service)
+            return MilvusService(llm_service, settings)
         elif provider == "qdrant":
-            return QdrantService(llm_service)
+            return QdrantService(llm_service, settings)
         # Add other vector database providers here
         logger.warning(
             f"Unsupported vector database provider: {settings.vector_db_provider}"

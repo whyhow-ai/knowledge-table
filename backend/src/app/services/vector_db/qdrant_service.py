@@ -1,16 +1,18 @@
 """Vector index implementation using Qdrant."""
 
+# mypy: disable-error-code="index"
+
 import logging
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from dotenv import load_dotenv
-from langchain.schema import Document
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient, models
 
-from app.core.config import settings
-from app.schemas.query import Chunk, Rule, VectorResponse
+from app.core.config import Settings
+from app.models.query_core import Chunk, Rule
+from app.schemas.query_api import VectorResponseSchema
 from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
 
@@ -33,7 +35,8 @@ class QdrantMetadata(BaseModel, extra="forbid"):
 class QdrantService(VectorDBService):
     """Vector service implementation using Qdrant."""
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, settings: Settings):
+        self.settings = settings
         self.llm_service = llm_service
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
@@ -57,7 +60,7 @@ class QdrantService(VectorDBService):
 
     async def vector_search(
         self, queries: List[str], document_id: str
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a vector search on the Qdrant collection."""
         logger.info(f"Retrieving vectors for {len(queries)} queries.")
 
@@ -83,7 +86,9 @@ class QdrantService(VectorDBService):
                 ),
             ).points
 
-            final_chunks.extend([point.payload for point in query_response])
+            final_chunks.extend(
+                [point.payload for point in query_response if point.payload]
+            )
 
         seen_chunks, formatted_output = set(), []
 
@@ -95,7 +100,7 @@ class QdrantService(VectorDBService):
                 )
 
         logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
-        return VectorResponse(
+        return VectorResponseSchema(
             message="Query processed successfully.",
             chunks=[Chunk(**chunk) for chunk in formatted_output],
         )
@@ -105,7 +110,7 @@ class QdrantService(VectorDBService):
         query: str,
         document_id: str,
         rules: list[Rule],
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a hybrid search on the Qdrant collection."""
         logger.info("Performing hybrid search.")
 
@@ -113,7 +118,7 @@ class QdrantService(VectorDBService):
         keywords = await self.extract_keywords(query, rules, self.llm_service)
 
         if keywords:
-            like_conditions = [
+            like_conditions: Sequence[models.FieldCondition] = [
                 models.FieldCondition(
                     key="text", match=models.MatchText(text=keyword)
                 )
@@ -124,7 +129,7 @@ class QdrantService(VectorDBService):
                     key="document_id",
                     match=models.MatchValue(value=document_id),
                 ),
-                should=like_conditions,
+                should=like_conditions,  # type: ignore
             )
 
             logger.info("Running query with keyword filters.")
@@ -133,7 +138,9 @@ class QdrantService(VectorDBService):
                 query_filter=_filter,
                 with_payload=True,
             ).points
-            keyword_response = [point.payload for point in keyword_response]
+            keyword_response = [
+                point.payload for point in keyword_response if point.payload  # type: ignore
+            ]
 
             def count_keywords(text: str, keywords: List[str]) -> int:
                 return sum(
@@ -166,7 +173,9 @@ class QdrantService(VectorDBService):
             with_payload=True,
         ).points
 
-        semantic_response = [point.payload for point in semantic_response]
+        semantic_response = [
+            point.payload for point in semantic_response if point.payload  # type: ignore
+        ]
 
         print(f"Found {len(semantic_response)} semantic chunks.")
 
@@ -193,7 +202,7 @@ class QdrantService(VectorDBService):
 
         logger.info(f"Retrieved {len(formatted_output)} unique chunks.")
 
-        return VectorResponse(
+        return VectorResponseSchema(
             message="Query processed successfully.",
             chunks=[Chunk(**chunk) for chunk in formatted_output],
         )
@@ -207,23 +216,24 @@ class QdrantService(VectorDBService):
     ) -> Dict[str, Any]:
         """Perform a decomposed search on a Qdrant collection."""
         logger.info("Decomposing query into smaller sub-queries.")
-        decomposition_response = await self.lldecompose_query(query)
+        decomposition_response = await self.llm_service.decompose_query(query)
         sub_query_chunks = await self.vector_search(
             decomposition_response["sub-queries"], document_id
         )
         return {
             "sub_queries": decomposition_response["sub-queries"],
-            "chunks": sub_query_chunks["chunks"],
+            "chunks": sub_query_chunks.chunks,
         }
 
     async def keyword_search(
         self, query: str, document_id: str, keywords: List[str]
-    ) -> VectorResponse:
+    ) -> VectorResponseSchema:
         """Perform a keyword search."""
         # Not being used currently
-        pass
+        raise NotImplementedError("Keyword search is not implemented yet.")
 
     async def ensure_collection_exists(self) -> None:
+        """Ensure the Qdrant collection exists."""
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,

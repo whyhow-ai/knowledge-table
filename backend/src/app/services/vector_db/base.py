@@ -1,13 +1,11 @@
 """The base class for the vector database services."""
 
-import asyncio
 import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Union
 
-import numpy as np
 from langchain.schema import Document
 from pydantic import BaseModel, Field
 
@@ -17,6 +15,7 @@ from app.services.llm.base import LLMService
 from app.services.llm_service import get_keywords
 
 logger = logging.getLogger(__name__)
+
 
 class Metadata(BaseModel, extra="forbid"):
     """Metadata stored in vector storage."""
@@ -86,7 +85,6 @@ class VectorDBService(ABC):
         if isinstance(texts, str):
             texts = [texts]
         return await self.llm_service.get_embeddings(texts)
-        
 
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]
