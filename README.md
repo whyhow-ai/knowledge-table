@@ -264,6 +264,10 @@ Note: Usage of the Unstructured API may incur costs based on your plan with Unst
 
 ## Roadmap
 
+- [ ] Expansion of Rules System
+  - [ ] Upload Extraction Rules via CSV
+  - [ ] Entity Resolution Rules
+  - [ ] Rules Dashboard
 - [ ] Support for more LLMs
   - [ ] Azure OpenAI
   - [ ] Llama3
