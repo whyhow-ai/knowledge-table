@@ -188,8 +188,8 @@ To set up the project for development:
 - **Custom formatting** - Control the output format of your extracted data.
 - **Filtering** - Filter documents based on metadata or extracted data.
 - **Exporting as CSV or Triples** - Download extracted data as CSV or graph triples.
-- **Chained extraction** - Reference previous columns in your extraction questions using brackets "What are the treatments for `{disease}`?".
-
+- **Chained extraction** - Reference previous columns in your extraction questions using @ i.e. "What are the treatments for `@disease`?".
+ 
 ---
 
 ## Concepts
