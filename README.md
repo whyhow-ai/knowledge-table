@@ -189,6 +189,7 @@ To set up the project for development:
 - **Filtering** - Filter documents based on metadata or extracted data.
 - **Exporting as CSV or Triples** - Download extracted data as CSV or graph triples.
 - **Chained extraction** - Reference previous columns in your extraction questions using @ i.e. "What are the treatments for `@disease`?".
+- **Split Cell Into Rows** - Turn outputs within a single cell from List of Numbers or List of Values and split it into individual rows to do more complex Chained Extraction
  
 ---
 
