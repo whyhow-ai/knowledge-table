@@ -2,18 +2,16 @@
 
 import json
 import logging
-import re
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
-from langchain.schema import Document
 from pydantic import BaseModel, Field
 from pymilvus import DataType, MilvusClient
 
 from app.core.config import Settings
 from app.models.query_core import Chunk, Rule
 from app.schemas.query_api import VectorResponseSchema
-from app.services.llm_service import LLMService, get_keywords
+from app.services.llm_service import LLMService
 from app.services.vector_db.base import VectorDBService
 
 logging.basicConfig(level=logging.INFO)
@@ -41,14 +39,6 @@ class MilvusService(VectorDBService):
             uri=self.settings.milvus_db_uri,
             token=self.settings.milvus_db_token,
         )
-
-    async def get_embeddings(
-        self, texts: Union[str, List[str]]
-    ) -> List[List[float]]:
-        """Get embeddings for the given text(s) using the LLM service."""
-        if isinstance(texts, str):
-            texts = [texts]
-        return await self.llm_service.get_embeddings(texts)
 
     async def ensure_collection_exists(self) -> None:
         """Ensure the collection exists in the Milvus database."""
@@ -145,37 +135,6 @@ class MilvusService(VectorDBService):
             if vectors:
                 logger.error(f"Sample vector data: {vectors[0]}")
             raise
-
-    async def prepare_chunks(
-        self, document_id: str, chunks: List[Document]
-    ) -> List[Dict[str, Any]]:
-        """Prepare chunks for insertion into the Milvus database."""
-        logger.info(f"Preparing {len(chunks)} chunks")
-
-        # Clean the chunks
-        cleaned_texts = [
-            re.sub(r"\s+", " ", chunk.page_content.strip()) for chunk in chunks
-        ]
-
-        logger.info("Generating embeddings.")
-
-        # Embed all chunks at once
-        embedded_chunks = await self.get_embeddings(cleaned_texts)
-
-        # Prepare the data for insertion
-        return [
-            {
-                "id": str(uuid.uuid4()),
-                "vector": embedding,
-                "text": text,
-                "page_number": chunk.metadata.get("page", i // 5 + 1),
-                "chunk_number": i,
-                "document_id": document_id,
-            }
-            for i, (chunk, text, embedding) in enumerate(
-                zip(chunks, cleaned_texts, embedded_chunks)
-            )
-        ]
 
     async def vector_search(
         self, queries: List[str], document_id: str
@@ -312,45 +271,8 @@ class MilvusService(VectorDBService):
         """Perform a hybrid search on the Milvus database."""
         logger.info("Performing hybrid search.")
 
-        keywords: list[str] = []
         sorted_keyword_chunks = []
-        max_length: Optional[int] = None
-
-        # Process the rules
-        if rules:
-            for rule in rules:
-                if rule.type in ["must_return", "may_return"]:
-                    if rule.options:
-                        if isinstance(rule.options, list):
-                            keywords.extend(rule.options)
-                        elif isinstance(rule.options, dict):
-                            for value in rule.options.values():
-                                if isinstance(value, list):
-                                    keywords.extend(value)
-                                elif isinstance(value, str):
-                                    keywords.append(value)
-                elif rule.type == "max_length":
-                    max_length = rule.length
-
-        # If no keywords are provided, extract them from the query
-        if not keywords:
-            logger.info(
-                "No keywords provided, extracting keywords from the query."
-            )
-            try:
-                extracted_keywords = await get_keywords(
-                    self.llm_service, query
-                )
-                if extracted_keywords and isinstance(extracted_keywords, list):
-                    keywords = extracted_keywords
-                else:
-                    logger.info("No keywords found in the query.")
-            except Exception as e:
-                logger.error(f"An error occurred while getting keywords: {e}")
-
-        logger.info(f"Using keywords: {keywords}")
-        if max_length:
-            logger.info(f"Max length set to: {max_length}")
+        keywords = await self.extract_keywords(query, rules, self.llm_service)
 
         # Run the keyword search (if keywords exist)
         if keywords:

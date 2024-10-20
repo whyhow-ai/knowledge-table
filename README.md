@@ -155,6 +155,8 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 
 > **Note:** This version of this project uses OpenAI as our initial provider, but the system is designed to be flexible and can be extended to support other AI providers. If you prefer a different provider, please create an issue, submit a PR, or check back soon for updates.
 
+3. Configure the vector store in the `.env`. [Milvus](https://milvus.io) and [Qdrant](http://qdrant.tech) are the available as options.
+
 ---
 
 ## Development
@@ -274,6 +276,8 @@ Note: Usage of the Unstructured API may incur costs based on your plan with Unst
   - [ ] GPT-4
   - [ ] Anthropic
 - [ ] Support for more vector databases
+  - [x] Milvus
+  - [x] Qdrant
   - [ ] Weaviate
   - [ ] Chroma
   - [ ] Pinecone
