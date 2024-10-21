@@ -1,4 +1,3 @@
-# tests/test_endpoint_graph.py
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,21 +10,16 @@ from app.models.document import Document
 from app.models.graph import GraphChunk, Node, Relation, Triple
 from app.models.table import Cell, Column, Prompt, Row
 from app.schemas.graph_api import ExportTriplesResponseSchema
-from app.services.llm.openai_service import OpenAIService
 
 
 @pytest.fixture
 def mock_openai_client():
-    mock_client = MagicMock()
-    # Set up mock behaviors if necessary
-    return mock_client
+    return MagicMock()
 
 
 @pytest.fixture
-def mock_llm_service(mock_openai_client):
-    mock_settings = Settings(openai_api_key=None)  # API key is None
-    llm_service = OpenAIService(mock_settings, client=mock_openai_client)
-    return llm_service
+def mock_openai_embeddings():
+    return MagicMock()
 
 
 @pytest.fixture

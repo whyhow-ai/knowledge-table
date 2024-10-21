@@ -8,6 +8,7 @@ from app import main
 from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
 from app.services.llm.factory import LLMFactory
+from app.services.llm.openai_service import OpenAIService
 from app.services.vector_db.base import VectorDBService
 from app.services.vector_db.factory import VectorDBFactory
 
@@ -28,58 +29,65 @@ def get_settings_override():
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
+def test_settings():
+    return get_settings_override()
+
+
+@pytest.fixture(scope="session")
 def mock_openai_client():
     return MagicMock()
 
 
-@pytest.fixture(scope="module")
-def test_app():
-    main.app.dependency_overrides[get_settings] = get_settings_override
+@pytest.fixture(scope="session")
+def mock_openai_embeddings():
+    return MagicMock()
+
+
+@pytest.fixture(scope="session")
+def test_app(test_settings):
+    main.app.dependency_overrides[get_settings] = lambda: test_settings
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
 
 
-@pytest.fixture(scope="module")
-def client():
-    return TestClient(main.app)
+@pytest.fixture(scope="session")
+def client(test_app):
+    return test_app
 
 
-@pytest.fixture(scope="module")
-def test_settings():
-    return get_settings_override()
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mock_vector_db_service():
     return AsyncMock(spec=VectorDBService)
 
 
-@pytest.fixture(scope="module")
-def mock_llm_service(test_settings, mock_openai_client):
-    from app.services.llm.openai_service import OpenAIService
-
-    return OpenAIService(test_settings, client=mock_openai_client)
+@pytest.fixture(scope="session")
+def mock_llm_service():
+    service = MagicMock(spec=OpenAIService)
+    service.client = MagicMock()
+    service.generate_completion.return_value = "Mocked completion"
+    service.get_embeddings.return_value = [0.1, 0.2, 0.3]
+    return service
 
 
 @pytest.fixture
 def mock_factories(mock_llm_service, mock_vector_db_service):
-    original_llm_create = LLMFactory.create_llm_service
-    original_vector_db_create = VectorDBFactory.create_vector_db_service
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            LLMFactory,
+            "create_llm_service",
+            lambda *args, **kwargs: mock_llm_service,
+        )
+        m.setattr(
+            VectorDBFactory,
+            "create_vector_db_service",
+            lambda *args, **kwargs: mock_vector_db_service,
+        )
+        yield
 
-    LLMFactory.create_llm_service = MagicMock(return_value=mock_llm_service)
-    VectorDBFactory.create_vector_db_service = MagicMock(
-        return_value=mock_vector_db_service
-    )
 
-    yield
-
-    LLMFactory.create_llm_service = original_llm_create
-    VectorDBFactory.create_vector_db_service = original_vector_db_create
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def document_service(test_settings, mock_vector_db_service, mock_llm_service):
     return DocumentService(
         mock_vector_db_service, mock_llm_service, test_settings

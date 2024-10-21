@@ -8,7 +8,6 @@ from app.core.config import Settings
 from app.main import app
 from app.models.query_core import Chunk
 from app.schemas.query_api import QueryResult
-from app.services.llm.openai_service import OpenAIService
 
 
 @pytest.fixture
@@ -20,6 +19,7 @@ def client():
 def mock_settings():
     return Settings(
         openai_api_key="test_api_key",
+        testing=True,  # Add this line
     )
 
 
@@ -29,8 +29,8 @@ def mock_openai_client():
 
 
 @pytest.fixture
-def mock_llm_service(mock_settings, mock_openai_client):
-    return OpenAIService(mock_settings, client=mock_openai_client)
+def mock_openai_embeddings():
+    return MagicMock()
 
 
 @pytest.fixture
