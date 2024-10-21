@@ -10,7 +10,7 @@ services:
       - ./src:/usr/src/app/src
       - ./pyproject.toml:/usr/src/app/pyproject.toml
     ports:
-      - 8004:8000
+      - 8000:8000
     environment:
       - ENVIRONMENT=dev
       - TESTING=0

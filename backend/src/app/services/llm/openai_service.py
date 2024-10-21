@@ -16,19 +16,16 @@ logger = logging.getLogger(__name__)
 class OpenAIService(LLMService):
     """Service for interacting with OpenAI models."""
 
-    def __init__(
-        self, settings: Settings, client: Optional[OpenAI] = None
-    ) -> None:
+    def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        if client:
-            self.client = client
-        elif settings.openai_api_key:
+        if settings.openai_api_key:
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.embeddings = OpenAIEmbeddings(
                 model=self.settings.embedding_model
             )
         else:
             self.client = None  # type: ignore
+            self.embeddings = None  # type: ignore
             logger.warning(
                 "OpenAI API key is not set. LLM features will be disabled."
             )
