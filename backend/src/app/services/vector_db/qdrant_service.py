@@ -92,15 +92,17 @@ class QdrantService(VectorDBService):
         for query in queries:
             logger.info(f"Processing query: {query}")
             embedded_queries = await self.get_embeddings(query)
-            
+
             # We expect a single embedding for a single query
             embedded_query = embedded_queries[0]
-            
+
             # Ensure embedded_query is a flat list of floats
             if isinstance(embedded_query, np.ndarray):
                 embedded_query = embedded_query.flatten().tolist()
-            
-            logger.debug(f"Embedded query type: {type(embedded_query)}, length: {len(embedded_query)}")
+
+            logger.debug(
+                f"Embedded query type: {type(embedded_query)}, length: {len(embedded_query)}"
+            )
 
             try:
                 query_response = self.client.search(
@@ -116,16 +118,26 @@ class QdrantService(VectorDBService):
                         ]
                     ),
                 )
-                logger.info(f"Search completed. Number of results: {len(query_response)}")
-                
-                final_chunks.extend([point.payload for point in query_response if point.payload])
+                logger.info(
+                    f"Search completed. Number of results: {len(query_response)}"
+                )
+
+                final_chunks.extend(
+                    [
+                        point.payload
+                        for point in query_response
+                        if point.payload
+                    ]
+                )
             except Exception as e:
                 logger.error(f"Error during search: {str(e)}", exc_info=True)
                 raise
 
         return self._format_response(final_chunks)
 
-    def _format_response(self, chunks: List[Dict[str, Any]]) -> VectorResponseSchema:
+    def _format_response(
+        self, chunks: List[Dict[str, Any]]
+    ) -> VectorResponseSchema:
         """Format the response from the Qdrant collection."""
         seen_chunks = set()
         formatted_output = []
