@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 - Updating testing to Mock OpenAI client and embeddings
+- Improved error handling in Qdrant service
+- Handling the difference between embedding chunks (list of lists) and embedding queries (list) in Qdrant service
 
 ## [v0.1.4] - 2024-10-16
 
