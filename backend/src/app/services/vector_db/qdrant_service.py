@@ -6,6 +6,7 @@ import logging
 import uuid
 from typing import Any, Dict, List, Sequence
 
+import numpy as np
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient, models
@@ -43,10 +44,27 @@ class QdrantService(VectorDBService):
         qdrant_config = settings.qdrant.model_dump(exclude_none=True)
         self.client = QdrantClient(**qdrant_config)
 
+    async def ensure_collection_exists(self) -> None:
+        """Ensure the Qdrant collection exists."""
+        if not self.client.collection_exists(self.collection_name):
+            logger.info(f"Creating collection {self.collection_name}")
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=models.VectorParams(
+                    size=self.dimensions, distance=models.Distance.COSINE
+                ),
+            )
+            logger.info(f"Collection {self.collection_name} created")
+        else:
+            logger.info(f"Collection {self.collection_name} already exists")
+            # Optionally, retrieve and log the collection info
+            collection_info = self.client.get_collection(self.collection_name)
+            logger.info(f"Collection info: {collection_info}")
+
     async def upsert_vectors(
         self, vectors: List[Dict[str, Any]]
     ) -> Dict[str, str]:
-        """Add vectors to a Qdrant collection."""
+        """Upsert vectors into the Qdrant collection."""
         logger.info(f"Upserting {len(vectors)} chunks")
         await self.ensure_collection_exists()
         points = [
@@ -55,7 +73,12 @@ class QdrantService(VectorDBService):
             )
             for entry in vectors
         ]
-        self.client.upsert(self.collection_name, points=points, wait=True)
+        try:
+            self.client.upsert(self.collection_name, points=points, wait=True)
+            logger.info("Upsert successful")
+        except Exception as e:
+            logger.error(f"Error during upsert: {str(e)}")
+            raise
         return {"message": f"Successfully upserted {len(vectors)} chunks."}
 
     async def vector_search(
@@ -67,32 +90,47 @@ class QdrantService(VectorDBService):
         final_chunks: List[Dict[str, Any]] = []
 
         for query in queries:
-            logger.info("Generating embedding.")
-            embedded_query = await self.get_embeddings(query)
-            logger.info("Searching...")
+            logger.info(f"Processing query: {query}")
+            embedded_queries = await self.get_embeddings(query)
+            
+            # We expect a single embedding for a single query
+            embedded_query = embedded_queries[0]
+            
+            # Ensure embedded_query is a flat list of floats
+            if isinstance(embedded_query, np.ndarray):
+                embedded_query = embedded_query.flatten().tolist()
+            
+            logger.debug(f"Embedded query type: {type(embedded_query)}, length: {len(embedded_query)}")
 
-            query_response = self.client.query_points(
-                self.collection_name,
-                query=embedded_query,
-                limit=40,
-                with_payload=True,
-                query_filter=models.Filter(
-                    must=[
-                        models.FieldCondition(
-                            key="document_id",
-                            match=models.MatchValue(value=document_id),
-                        )
-                    ]
-                ),
-            ).points
+            try:
+                query_response = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=embedded_query,
+                    limit=40,
+                    query_filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="document_id",
+                                match=models.MatchValue(value=document_id),
+                            )
+                        ]
+                    ),
+                )
+                logger.info(f"Search completed. Number of results: {len(query_response)}")
+                
+                final_chunks.extend([point.payload for point in query_response if point.payload])
+            except Exception as e:
+                logger.error(f"Error during search: {str(e)}", exc_info=True)
+                raise
 
-            final_chunks.extend(
-                [point.payload for point in query_response if point.payload]
-            )
+        return self._format_response(final_chunks)
 
-        seen_chunks, formatted_output = set(), []
+    def _format_response(self, chunks: List[Dict[str, Any]]) -> VectorResponseSchema:
+        """Format the response from the Qdrant collection."""
+        seen_chunks = set()
+        formatted_output = []
 
-        for chunk in final_chunks:
+        for chunk in chunks:
             if chunk["chunk_number"] not in seen_chunks:
                 seen_chunks.add(chunk["chunk_number"])
                 formatted_output.append(
@@ -231,16 +269,6 @@ class QdrantService(VectorDBService):
         """Perform a keyword search."""
         # Not being used currently
         raise NotImplementedError("Keyword search is not implemented yet.")
-
-    async def ensure_collection_exists(self) -> None:
-        """Ensure the Qdrant collection exists."""
-        if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=self.dimensions, distance=models.Distance.COSINE
-                ),
-            )
 
     async def delete_document(self, document_id: str) -> Dict[str, str]:
         """Delete a document from a Qdrant collection."""
