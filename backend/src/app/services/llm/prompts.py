@@ -24,17 +24,29 @@ $format_specific_instructions
 - Provide your answer based strictly on the given context.
 - Be concise and accurate.
 - Do not include any introductory or concluding remarks.
-- If the answer is not present in the context, respond exactly with `"None"` (without quotes).
+- If the answer is not present in the context, respond exactly with "None".
 
 **Answer**:
+"""
+)
+
+INFERRED_BASE_PROMPT = Template(
+    """
+Answer the following question following the formatting instructions at the bottom. Do not include, quotes, formatting, or any explanation or extra information. Just answer the question.
+
+**Question**: $query
+**Answer**:
+
+$format_specific_instructions
+
 """
 )
 
 BOOL_INSTRUCTIONS = """
 **Special Instructions for Boolean Questions**:
 
-- If the question is asking for a verification or requires a boolean answer, respond with `"True"` or `"False"` (as a string).
-- If you cannot determine the answer from the context, respond exactly with `"None"`.
+- If the question is asking for a verification or requires a boolean answer, respond with True or False.
+- If you cannot answer the question, respond exactly with 'None'.
 - Do not provide any explanations or additional information.
 """
 
@@ -45,9 +57,9 @@ $int_rule_line
 
 **Special Instructions for String Responses**:
 
-- If the answer is a single string, provide the string enclosed in double quotes.
+- If the answer is a single string, provide a single string.
 - If multiple strings are required, provide them as a JSON array of strings.
-- If you cannot find an answer, respond exactly with `"None"`.
+- If you cannot find an answer, respond exactly with 'None'.
 - Do not include any additional text or explanation.
 """
 )
@@ -60,7 +72,7 @@ $int_rule_line
 
 - If the answer is a single integer, provide the integer as a number.
 - If multiple integers are required, provide them as a JSON array of integers.
-- If you cannot find an answer, respond exactly with `"None"`.
+- If you cannot find an answer, respond exactly with 'None'.
 - Do not include any additional text or explanation.
 """
 )
@@ -79,7 +91,7 @@ You are tasked with extracting the most relevant keywords from the following que
 
 - Provide the keywords as a JSON array of strings.
 - Ensure all words are in their base (lemmatized) form.
-- If you cannot extract any relevant keywords, respond exactly with `"None"`.
+- If you cannot extract any relevant keywords, respond exactly with 'None'.
 - Do not include any additional text or explanation.
 
 **Keywords**:
@@ -105,7 +117,7 @@ $chunks
 
 - Provide the similar keywords as a JSON array of strings.
 - Only include words that are present in the context and are semantically related to the provided keywords.
-- If you cannot find any similar keywords in the context, respond exactly with `"None"`.
+- If you cannot find any similar keywords in the context, respond exactly with 'None'.
 - Do not include any additional text or explanation.
 
 **Similar Keywords**:
@@ -125,7 +137,7 @@ You are tasked with decomposing the following question into simpler, relevant su
 **Instructions**:
 
 - Provide up to 3 sub-questions as a JSON array of strings.
-- If the question is already simple or cannot be decomposed, respond exactly with `"None"`.
+- If the question is already simple or cannot be decomposed, respond exactly with 'None'.
 - Do not include any additional text or explanation.
 
 **Sub-Questions**:

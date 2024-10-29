@@ -21,6 +21,7 @@ from app.services.llm.prompts import (
     BASE_PROMPT,
     BOOL_INSTRUCTIONS,
     DECOMPOSE_QUERY_PROMPT,
+    INFERRED_BASE_PROMPT,
     INT_ARRAY_INSTRUCTIONS,
     KEYWORD_PROMPT,
     SCHEMA_PROMPT,
@@ -135,6 +136,58 @@ async def generate_response(
     prompt = BASE_PROMPT.substitute(
         query=query,
         chunks=chunks,
+        format_specific_instructions=format_specific_instructions,
+    )
+
+    try:
+        response = await llm_service.generate_completion(prompt, output_model)
+        logger.info(f"Raw response from LLM: {response}")
+
+        if response is None or response.answer is None:
+            logger.warning("LLM returned None response")
+            return {"answer": None}
+
+        logger.info(f"Processed response: {response.answer}")
+        return {"answer": response.answer}
+    except Exception as e:
+        logger.error(f"Error generating response: {str(e)}", exc_info=True)
+        return {"answer": None}
+
+
+async def generate_inferred_response(
+    llm_service: LLMService,
+    query: str,
+    rules: list[Rule],
+    format: FormatType,
+) -> dict[str, Any]:
+    """
+    Generate a response from the language model based on the given query and format.
+
+    Parameters
+    ----------
+    llm_service : LLMService
+        The language model service to use for generating the response.
+    query : str
+        The user's query to be answered.
+    rules : list[Rule]
+        A list of rules to apply when generating the response.
+    format : Literal["int", "str", "bool", "int_array", "str_array"]
+        The desired format of the response.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the generated answer or None if an error occurs.
+    """
+    logger.info(
+        f"Generating inferred response for query: {query} in format: {format}"
+    )
+
+    output_model, format_specific_instructions = _get_model_and_instructions(
+        format, rules, query
+    )
+    prompt = INFERRED_BASE_PROMPT.substitute(
+        query=query,
         format_specific_instructions=format_specific_instructions,
     )
 
