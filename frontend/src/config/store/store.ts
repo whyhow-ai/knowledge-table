@@ -308,7 +308,6 @@ export const useStore = create<Store>()(
               row &&
               column.entityType.trim() &&
               column.generate &&
-              row.sourceData &&
               !loadingCells[key]
               ? { key, column, row }
               : null;
@@ -324,28 +323,42 @@ export const useStore = create<Store>()(
 
         for (const { key, row, column: column_ } of batch) {
           const column = cloneDeep(column_);
+          let shouldRunQuery = true;
+          let hasMatches = false;
 
           // Replace all column references with the row's answer to that column
           for (const [match, columnId] of column.query.matchAll(
             /@\[[^\]]+\]\(([^)]+)\)/g
           )) {
+            hasMatches = true;
             const targetColumn = columns.find(c => c.id === columnId);
             if (!targetColumn) continue;
             const cell = row.cells[targetColumn.id];
-            if (isNil(cell)) continue;
+            if (isNil(cell) || (isNil(cell) && isNil(row.sourceData))) {
+              shouldRunQuery = false;
+              break;
+            }
             column.query = column.query.replace(match, String(cell));
           }
-
-          runQuery(row, column, globalRules).then(({ answer, chunks }) => {
-            editCells(
-              [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
-              activeTableId
-            );
+          if (!hasMatches && isNil(row.sourceData)) {
+            shouldRunQuery = false;
+          }
+          if (shouldRunQuery) {
+            runQuery(row, column, globalRules).then(({ answer, chunks }) => {
+              editCells(
+                [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
+                activeTableId
+              );
+              editTable(activeTableId, {
+                chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
+                loadingCells: omit(getTable(activeTableId).loadingCells, key)
+              });
+            });
+          } else {
             editTable(activeTableId, {
-              chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
               loadingCells: omit(getTable(activeTableId).loadingCells, key)
             });
-          });
+          }
         }
       },
 

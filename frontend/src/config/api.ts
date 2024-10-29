@@ -71,7 +71,12 @@ export async function runQuery(
   column: AnswerTableColumn,
   globalRules: AnswerTableGlobalRule[]
 ) {
-  if (!row.sourceData || !column.entityType.trim() || !column.generate) {
+  // if (!row.sourceData || !column.entityType.trim() || !column.generate) {
+  //   throw new Error(
+  //     "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
+  //   );
+  // }
+  if (!column.entityType.trim() || !column.generate) {
     throw new Error(
       "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
     );
@@ -88,7 +93,9 @@ export async function runQuery(
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      document_id: row.sourceData.document.id,
+      document_id: row.sourceData?.document?.id
+        ? row.sourceData.document.id
+        : "00000000000000000000000000000000",
       prompt: {
         id: column.id,
         entity_type: column.entityType,

@@ -82,6 +82,8 @@ class ArrayResponseModel(BaseResponseModel):
         v = cls.validate_none(v)
         if v is None:
             return None
+        if len(v) == 1 and v[0] == "None":
+            return None
         if not isinstance(v, list):
             raise ValueError("Must be a list or None")
         if max_length and len(v) > max_length:

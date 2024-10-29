@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Allow query without source data if mention is present
 - Removed replace rule as an option for now
 
 ## [v0.1.5] - 2024-10-29

@@ -16,6 +16,7 @@ from app.services.llm.base import LLMService
 from app.services.query_service import (
     decomposition_query,
     hybrid_query,
+    inference_query,
     simple_vector_query,
 )
 from app.services.vector_db.base import VectorDBService
@@ -59,6 +60,30 @@ async def run_query(
     HTTPException
         If there's an error processing the query.
     """
+    if request.document_id == "00000000000000000000000000000000":
+        query_response = await inference_query(
+            request.prompt.query,
+            request.prompt.rules,
+            request.prompt.type,
+            llm_service,
+        )
+
+        if not isinstance(query_response, QueryResult):
+            query_response = QueryResult(**query_response)
+
+        answer = QueryAnswer(
+            id=uuid.uuid4().hex,
+            document_id=request.document_id,
+            prompt_id=request.prompt.id,
+            answer=query_response.answer,
+            type=request.prompt.type,
+        )
+        response_data = QueryAnswerResponse(
+            answer=answer, chunks=query_response.chunks
+        )
+
+        return response_data
+
     try:
         logger.info(f"Received query request: {request.model_dump()}")
 

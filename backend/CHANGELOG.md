@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added support for queries without source data in vector database
 - Graceful failure of triple export when no chunks are found
 
 ## [v0.1.5] - 2024-10-29
