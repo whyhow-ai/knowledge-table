@@ -10,7 +10,9 @@ Our goal is to provide a familiar, spreadsheet-like interface for business users
 
 For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table-demo.whyhow.ai/).
 
-https://github.com/user-attachments/assets/0129ea64-173b-461b-a525-5d870a1e2f41
+
+https://github.com/user-attachments/assets/8e0e5cc6-6468-4bb5-888c-6b552e15b58a
+
 
 To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/).
 
