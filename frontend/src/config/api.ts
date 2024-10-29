@@ -1,6 +1,17 @@
 import { z } from "zod";
-import { isArray, isNil, isPlainObject, isString, mapValues } from "lodash-es";
-import { Prompt } from "./store";
+import {
+  isArray,
+  isNil,
+  isPlainObject,
+  isString,
+  mapValues,
+  omit
+} from "lodash-es";
+import {
+  AnswerTableColumn,
+  AnswerTableGlobalRule,
+  AnswerTableRow
+} from "./store";
 
 // Upload file
 
@@ -34,54 +45,60 @@ export async function deleteDocument(id: string) {
 
 // Run query
 
-export const answerSchema = z
+export const chunkSchema = z
   .object({
-    id: z.string(),
-    document_id: z.string(),
-    prompt_id: z.string(),
-    type: z.enum(["int", "str", "bool", "int_array", "str_array"]),
-    answer: z.union([
-      z.null(),
-      z.number(),
-      z.string(),
-      z.boolean(),
-      z.array(z.number()),
-      z.array(z.string())
-    ]),
-    chunks: z.array(
-      z
-        .object({
-          content: z.string(),
-          page: z.number()
-        })
-        .strict()
-    )
+    content: z.string(),
+    page: z.number()
   })
   .strict();
 
+export const answerSchema = z.union([
+  z.null(),
+  z.number(),
+  z.string(),
+  z.boolean(),
+  z.array(z.number()),
+  z.array(z.string())
+]);
+
+const queryResponseSchema = z.object({
+  answer: z.object({ answer: answerSchema }),
+  chunks: z.array(chunkSchema)
+});
+
 export async function runQuery(
-  documentId: string,
-  prompt: Prompt,
-  previousAnswer?: number | string | boolean | number[] | string[]
+  row: AnswerTableRow,
+  column: AnswerTableColumn,
+  globalRules: AnswerTableGlobalRule[]
 ) {
+  if (!row.sourceData || !column.entityType.trim() || !column.generate) {
+    throw new Error(
+      "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
+    );
+  }
+  const rules = [
+    ...column.rules,
+    ...globalRules
+      .filter(rule => rule.entityType.trim() === column.entityType.trim())
+      .map(r => omit(r, "id", "entityType"))
+  ];
   const result = await fetch("http://localhost:8000/api/v1/query", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      document_id: documentId,
-      previous_answer: previousAnswer,
+      document_id: row.sourceData.document.id,
       prompt: {
-        id: prompt.id,
-        entity_type: prompt.entityType,
-        query: prompt.query,
-        type: prompt.type,
-        rules: prompt.rules
+        id: column.id,
+        entity_type: column.entityType,
+        query: column.query,
+        type: column.type,
+        rules
       }
     })
   });
-  return answerSchema.parse(await result.json());
+  return queryResponseSchema.parse(await result.json());
 }
 
 // Export triples

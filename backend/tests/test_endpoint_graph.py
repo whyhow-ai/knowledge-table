@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings
 from app.models.document import Document
 from app.models.graph import GraphChunk, Node, Relation, Triple
-from app.models.table import Cell, Column, Prompt, Row
+from app.models.table import Column, Row, TablePrompt
 from app.schemas.graph_api import ExportTriplesResponseSchema
 
 
@@ -43,7 +43,7 @@ def client():
 
 
 def create_test_prompt():
-    return Prompt(
+    return TablePrompt(
         entityType="test",
         id="test_prompt",
         query="Test query",
@@ -68,50 +68,67 @@ def test_export_triples_success(
     request_data = {
         "columns": [
             Column(
-                id="Name",
-                name="Name",
-                prompt=create_test_prompt(),
+                id="1",
+                width=160,
                 hidden=False,
+                entityType="Disease",
+                type="str",
+                generate=True,
+                query="Which diseases are mentioned in this article?",
+                rules=[],
             ).model_dump(),
             Column(
-                id="Age",
-                name="Age",
-                prompt=create_test_prompt(),
+                id="2",
+                width=160,
                 hidden=False,
+                entityType="Protein",
+                type="str",
+                generate=True,
+                query="Which treatments are mentioned in this article?",
+                rules=[],
             ).model_dump(),
         ],
         "rows": [
             Row(
-                id="1",
-                document=create_test_document(),
+                id="3",
+                sourceData={
+                    "type": "document",
+                    "document": create_test_document(),
+                },
                 hidden=False,
-            ).model_dump(),
-            Row(
-                id="2",
-                document=create_test_document(),
-                hidden=False,
-            ).model_dump(),
+                cells={"1": "COVID-19", "2": "Vaccine"},
+            ).model_dump()
         ],
-        "cells": [
-            Cell(
-                columnId="Name",
-                rowId="1",
-                answer={"value": "Alice"},
-                dirty=False,
-            ).model_dump(),
-            Cell(
-                columnId="Age", rowId="1", answer={"value": "30"}, dirty=False
-            ).model_dump(),
-            Cell(
-                columnId="Name",
-                rowId="2",
-                answer={"value": "Bob"},
-                dirty=False,
-            ).model_dump(),
-            Cell(
-                columnId="Age", rowId="2", answer={"value": "25"}, dirty=False
-            ).model_dump(),
-        ],
+        "chunks": {
+            "3-1": [
+                {
+                    "page": 1,
+                    "content": "COVID-19 is a disease.",
+                },
+                {
+                    "page": 2,
+                    "content": "Vaccine is a treatment.",
+                },
+                {
+                    "page": 3,
+                    "content": "Flu is a disease.",
+                },
+            ],
+            "3-2": [
+                {
+                    "page": 1,
+                    "content": "COVID-19 is a disease.",
+                },
+                {
+                    "page": 2,
+                    "content": "Vaccine is a treatment.",
+                },
+                {
+                    "page": 3,
+                    "content": "Flu is a disease.",
+                },
+            ],
+        },
     }
 
     mock_generate_schema.return_value = {"schema": {"properties": {}}}
@@ -210,50 +227,67 @@ def test_export_triples_unexpected_error(
     request_data = {
         "columns": [
             Column(
-                id="Name",
-                name="Name",
-                prompt=create_test_prompt(),
+                id="1",
+                width=160,
                 hidden=False,
+                entityType="Disease",
+                type="str",
+                generate=True,
+                query="Which diseases are mentioned in this article?",
+                rules=[],
             ).model_dump(),
             Column(
-                id="Age",
-                name="Age",
-                prompt=create_test_prompt(),
+                id="2",
+                width=160,
                 hidden=False,
+                entityType="Protein",
+                type="str",
+                generate=True,
+                query="Which treatments are mentioned in this article?",
+                rules=[],
             ).model_dump(),
         ],
         "rows": [
             Row(
-                id="1",
-                document=create_test_document(),
+                id="3",
+                sourceData={
+                    "type": "document",
+                    "document": create_test_document(),
+                },
                 hidden=False,
-            ).model_dump(),
-            Row(
-                id="2",
-                document=create_test_document(),
-                hidden=False,
-            ).model_dump(),
+                cells={"1": "COVID-19", "2": "Vaccine"},
+            ).model_dump()
         ],
-        "cells": [
-            Cell(
-                columnId="Name",
-                rowId="1",
-                answer={"value": "Alice"},
-                dirty=False,
-            ).model_dump(),
-            Cell(
-                columnId="Age", rowId="1", answer={"value": "30"}, dirty=False
-            ).model_dump(),
-            Cell(
-                columnId="Name",
-                rowId="2",
-                answer={"value": "Bob"},
-                dirty=False,
-            ).model_dump(),
-            Cell(
-                columnId="Age", rowId="2", answer={"value": "25"}, dirty=False
-            ).model_dump(),
-        ],
+        "chunks": {
+            "3-1": [
+                {
+                    "page": 1,
+                    "content": "COVID-19 is a disease.",
+                },
+                {
+                    "page": 2,
+                    "content": "Vaccine is a treatment.",
+                },
+                {
+                    "page": 3,
+                    "content": "Flu is a disease.",
+                },
+            ],
+            "3-2": [
+                {
+                    "page": 1,
+                    "content": "COVID-19 is a disease.",
+                },
+                {
+                    "page": 2,
+                    "content": "Vaccine is a treatment.",
+                },
+                {
+                    "page": 3,
+                    "content": "Flu is a disease.",
+                },
+            ],
+        },
     }
 
     mock_generate_schema.side_effect = Exception("Unexpected error")

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   ActionIcon,
   BoxProps,
@@ -8,14 +9,14 @@ import {
   Tooltip
 } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
-import { shallow } from "zustand/shallow";
 import { isEmpty } from "lodash-es";
 import { useStore } from "@config/store";
 
 export function KtHiddenPill(props: BoxProps) {
-  const hiddenColumns = useStore(
-    store => store.columns.filter(column => column.hidden),
-    shallow
+  const columns = useStore(store => store.getTable().columns);
+  const hiddenColumns = useMemo(
+    () => columns.filter(column => column.hidden),
+    [columns]
   );
 
   return isEmpty(hiddenColumns) ? null : (
@@ -43,13 +44,19 @@ export function KtHiddenPill(props: BoxProps) {
             {hiddenColumns.map(column => (
               <Table.Tr key={column.id}>
                 <Table.Td>
-                  <Text lineClamp={1}>{column.prompt.query}</Text>
+                  {column.entityType.trim() ? (
+                    <Text lineClamp={1}>{column.entityType}</Text>
+                  ) : (
+                    <Text c="dimmed">Empty column</Text>
+                  )}
                 </Table.Td>
                 <Table.Td>
                   <Tooltip label="Show column">
                     <ActionIcon
                       onClick={() =>
-                        useStore.getState().toggleColumn(column.id, false)
+                        useStore
+                          .getState()
+                          .editColumn(column.id, { hidden: false })
                       }
                     >
                       <IconEye />

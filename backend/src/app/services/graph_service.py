@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from app.core.dependencies import get_llm_service
 from app.models.graph import GraphChunk, Node, Relation, Triple
 from app.models.llm_responses import SchemaRelationship, SchemaResponseModel
-from app.models.table import Row, Table
+from app.models.table import Table, TableRow
 from app.schemas.graph_api import ExportTriplesResponseSchema
 from app.services.llm_service import generate_schema
 
@@ -120,27 +120,26 @@ async def generate_triples(
             relationship, table_data
         )
 
-        for triple in triples_for_relationship:
-            head_node = Node(
-                label=relationship.head,
-                name=str(triple.head.name),
-                properties={"value": triple.head.name},
-            )
-            tail_node = Node(
-                label=relationship.tail,
-                name=str(triple.tail.name),
-                properties={"value": triple.tail.name},
-            )
-            relation = Relation(name=relationship.relation)
-            triples.append(
-                Triple(
-                    triple_id=str(uuid.uuid4()),
-                    head=head_node,
-                    tail=tail_node,
-                    relation=relation,
-                    chunk_ids=[],
-                )
-            )
+        # for triple in triples_for_relationship:
+        #     print(f"Triple: {triple}")
+        #     head_node = Node(
+        #         label=relationship.head,
+        #         name=str(triple.head.name)
+        #     )
+        #     tail_node = Node(
+        #         label=relationship.tail,
+        #         name=str(triple.tail.name)
+        #     )
+        #     relation = Relation(name=relationship.relation)
+        #     triples.append(
+        #         Triple(
+        #             triple_id=str(uuid.uuid4()),
+        #             head=head_node,
+        #             tail=tail_node,
+        #             relation=relation,
+        #             chunk_ids=[],
+        #         )
+        #     )
 
         chunks.extend(
             generate_chunks_for_triples(triples_for_relationship, table_data)
@@ -148,7 +147,9 @@ async def generate_triples(
 
     logger.info(f"Generated {len(triples)} triples and {len(chunks)} chunks")
 
-    return ExportTriplesResponseSchema(triples=triples, chunks=chunks)
+    return ExportTriplesResponseSchema(
+        triples=triples_for_relationship, chunks=chunks
+    )
 
 
 def generate_triples_for_relationship(
@@ -181,7 +182,7 @@ def generate_triples_for_relationship(
 
 
 def create_triple_for_row(
-    relationship: SchemaRelationship, row: Row, table_data: Table
+    relationship: SchemaRelationship, row: TableRow, table_data: Table
 ) -> Optional[Triple]:
     """
     Create a single triple for a given relationship and row.
@@ -211,18 +212,14 @@ def create_triple_for_row(
                 label=get_label(relationship.head),
                 name=str(head_value),
                 properties=(
-                    {"document": row.document.name}
-                    if row.document.name
-                    else {}
+                    {"document": row.document.name} if row.document else {}
                 ),
             ),
             tail=Node(
                 label=relationship.tail,
                 name=str(tail_value),
                 properties=(
-                    {"document": row.document.name}
-                    if row.document.name
-                    else {}
+                    {"document": row.document.name} if row.document else {}
                 ),
             ),
             relation=Relation(name=relationship.relation),
@@ -232,7 +229,7 @@ def create_triple_for_row(
 
 
 def get_cell_value(
-    entity_type: str, row: Row, table_data: Table
+    entity_type: str, row: TableRow, table_data: Table
 ) -> Optional[str]:
     """
     Get the cell value for a given entity type and row.
@@ -368,8 +365,8 @@ def generate_chunks_for_triple(
                     chunks.append(
                         GraphChunk(
                             chunk_id=chunk_id,
-                            content=chunk.get("content", ""),
-                            page=chunk.get("page", ""),
+                            content=chunk.content,
+                            page=chunk.page,
                             triple_id=triple.triple_id,
                         )
                     )

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updating backend to work with new UI
+- Tweaked query output for separating answers and chunks
 - Support for [Qdrant](https://qdrant.tech/) vector database.
 - Updated Milvus reference in the factory to be more robust to other Milvus datastores
 

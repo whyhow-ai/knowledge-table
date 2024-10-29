@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import get_llm_service, get_vector_db_service
 from app.schemas.query_api import (
+    QueryAnswer,
+    QueryAnswerResponse,
     QueryRequestSchema,
-    QueryResponseSchema,
     QueryResult,
 )
 from app.services.llm.base import LLMService
@@ -26,12 +27,12 @@ router = APIRouter(tags=["query"])
 logger.info("Query router initialized")
 
 
-@router.post("", response_model=QueryResponseSchema)
+@router.post("", response_model=QueryAnswerResponse)
 async def run_query(
     request: QueryRequestSchema,
     llm_service: LLMService = Depends(get_llm_service),
     vector_db_service: VectorDBService = Depends(get_vector_db_service),
-) -> QueryResponseSchema:
+) -> QueryAnswerResponse:
     """
     Run a query and generate a response.
 
@@ -86,13 +87,24 @@ async def run_query(
         if not isinstance(query_response, QueryResult):
             query_response = QueryResult(**query_response)
 
-        response_data = QueryResponseSchema(
-            id=str(uuid.uuid4()),
+        # response_data = QueryResponseSchema(
+        #     id=str(uuid.uuid4()),
+        #     document_id=request.document_id,
+        #     prompt_id=request.prompt.id,
+        #     type=request.prompt.type,
+        #     answer=query_response.answer,
+        #     chunks=query_response.chunks,
+        # )
+
+        answer = QueryAnswer(
+            id=uuid.uuid4().hex,
             document_id=request.document_id,
             prompt_id=request.prompt.id,
-            type=request.prompt.type,
             answer=query_response.answer,
-            chunks=query_response.chunks,
+            type=request.prompt.type,
+        )
+        response_data = QueryAnswerResponse(
+            answer=answer, chunks=query_response.chunks
         )
 
         return response_data

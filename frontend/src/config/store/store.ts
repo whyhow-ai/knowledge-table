@@ -1,233 +1,439 @@
-import { createWithEqualityFn } from "zustand/traditional";
+import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   castArray,
-  clamp,
   cloneDeep,
   compact,
-  differenceBy,
-  differenceWith,
+  fromPairs,
+  groupBy,
   isArray,
-  isMatch,
-  partition,
-  uniq
+  isEmpty,
+  isNil,
+  keyBy,
+  mapValues,
+  omit
 } from "lodash-es";
 import cuid from "@bugsnag/cuid";
-import { toSingleType } from "./store.utils";
 import {
-  AnswerTableCell,
-  AnswerTableColumn,
-  AnswerTableRow,
-  Store
-} from "./store.types";
-import { deleteDocument, runQuery, uploadFile } from "../api";
-import { where } from "@utils/functions";
+  getBlankColumn,
+  getBlankRow,
+  getBlankTable,
+  getCellKey,
+  getInitialData,
+  isArrayType,
+  toSingleType
+} from "./store.utils";
+import { AnswerTableRow, SourceData, Store } from "./store.types";
+import { runQuery, uploadFile } from "../api";
+import { insertAfter, insertBefore, where } from "@utils/functions";
 
-export const useStore = createWithEqualityFn(
-  persist<Store>(
+export const useStore = create<Store>()(
+  persist(
     (set, get) => ({
       colorScheme: "light",
-      columns: [],
-      rows: [],
-      cells: [],
-      filters: [],
-      selection: [],
-      uploadingFiles: false,
+      ...getInitialData(),
 
       toggleColorScheme: () => {
         set({ colorScheme: get().colorScheme === "light" ? "dark" : "light" });
       },
 
-      addColumn: prompt => {
-        const id = cuid();
-        const column: AnswerTableColumn = {
-          id,
-          prompt: { id, ...prompt },
-          width: 240,
-          hidden: false
-        };
-        set({ columns: [...get().columns, column] });
-        get()._syncAnswers();
+      getTable: (id = get().activeTableId) => {
+        const current = get().tables.find(t => t.id === id);
+        if (!current) {
+          throw new Error(`No table with id ${id}`);
+        }
+        return current;
       },
 
-      editColumn: (id, prompt) => {
+      addTable: name => {
+        const newTable = getBlankTable(name);
         set({
-          columns: where(
-            get().columns,
-            column => column.id === id,
-            column => ({ ...column, prompt: { ...column.prompt, ...prompt } })
+          tables: [...get().tables, newTable],
+          activeTableId: newTable.id
+        });
+      },
+
+      editTable: (id, table) => {
+        set({ tables: where(get().tables, t => t.id === id, table) });
+      },
+
+      editActiveTable: table => {
+        get().editTable(get().activeTableId, table);
+      },
+
+      switchTable: id => {
+        if (get().tables.find(t => t.id === id)) {
+          set({ activeTableId: id });
+        }
+      },
+
+      deleteTable: id => {
+        const { tables, activeTableId } = get();
+        const nextTables = tables.filter(t => t.id !== id);
+        if (isEmpty(nextTables)) return;
+        const nextActiveTable =
+          activeTableId === id ? nextTables[0].id : activeTableId;
+        set({ tables: nextTables, activeTableId: nextActiveTable });
+      },
+
+      insertColumnBefore: id => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          columns: insertBefore(
+            getTable().columns,
+            getBlankColumn(),
+            id ? c => c.id === id : undefined
           )
         });
       },
 
-      resizeColumn: (id, width) => {
-        set({
-          columns: where(get().columns, column => column.id === id, {
-            width: clamp(width, 160, 2000)
-          })
+      insertColumnAfter: id => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          columns: insertAfter(
+            getTable().columns,
+            getBlankColumn(),
+            id ? c => c.id === id : undefined
+          )
         });
       },
 
-      rerunColumn: id => {
-        set({ cells: get().cells.filter(cell => cell.columnId !== id) });
-        get()._syncAnswers();
+      editColumn: (id, column) => {
+        // TODO (maybe): Handle column type changes
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          columns: where(getTable().columns, column => column.id === id, column)
+        });
+      },
+
+      rerunColumns: ids => {
+        const { getTable, rerunCells } = get();
+        rerunCells(
+          getTable()
+            .rows.filter(row => !row.hidden)
+            .flatMap(row => ids.map(id => ({ rowId: row.id, columnId: id })))
+        );
+      },
+
+      clearColumns: ids => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          rows: getTable().rows.map(row => ({
+            ...row,
+            cells: omit(row.cells, ids)
+          }))
+        });
       },
 
       unwindColumn: id => {
-        const { rows, columns } = get();
-        const cellMap = get()._getCellMap();
+        const { getTable, editActiveTable } = get();
+        const { rows, columns } = getTable();
         const newRows: AnswerTableRow[] = [];
-        const newCells: AnswerTableCell[] = [];
+        const column = columns.find(c => c.id === id);
+        if (!column || !isArrayType(column.type)) return;
 
         for (const row of rows) {
-          const pivot = cellMap.get(`${row.id}-${id}`);
-          if (!pivot || !isArray(pivot.answer.answer)) continue;
-          for (const answer of pivot.answer.answer) {
+          const pivot = row.cells[id];
+          if (!isArray(pivot)) continue;
+          for (const part of pivot) {
             const newRow: AnswerTableRow = {
               id: cuid(),
-              document: row.document,
-              hidden: false
+              sourceData: row.sourceData,
+              hidden: false,
+              cells: {}
             };
             newRows.push(newRow);
             for (const column of columns) {
-              const cell = cellMap.get(`${row.id}-${column.id}`);
-              if (!cell) continue;
-              newCells.push({
-                columnId: column.id,
-                rowId: newRow.id,
-                dirty: false,
-                answer:
-                  cell !== pivot
-                    ? cell.answer
-                    : {
-                        ...cell.answer,
-                        id: cuid(),
-                        type: toSingleType(cell.answer.type),
-                        answer
-                      }
-              });
+              newRow.cells[column.id] =
+                column.id === id ? part : row.cells[column.id];
             }
           }
         }
 
-        set({
+        editActiveTable({
           rows: newRows,
-          cells: newCells,
-          columns: where(
-            columns,
-            column => column.id === id,
-            column => ({
-              ...column,
-              prompt: {
-                ...column.prompt,
-                type: toSingleType(column.prompt.type)
-              }
-            })
-          )
-        });
-      },
-
-      toggleColumn: (id, hidden) => {
-        set({
-          selection: [],
-          columns: where(get().columns, column => column.id === id, { hidden })
+          columns: where(columns, column => column.id === id, {
+            type: toSingleType(column.type)
+          })
         });
       },
 
       toggleAllColumns: hidden => {
-        set({
-          selection: [],
-          columns: get().columns.map(column => ({ ...column, hidden }))
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          columns: getTable().columns.map(column => ({ ...column, hidden }))
         });
       },
 
       deleteColumns: ids => {
-        set({
-          selection: [],
-          columns: get().columns.filter(column => !ids.includes(column.id)),
-          cells: get().cells.filter(cell => !ids.includes(cell.columnId))
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          columns: getTable().columns.filter(
+            column => !ids.includes(column.id)
+          ),
+          rows: getTable().rows.map(row => ({
+            ...row,
+            cells: omit(row.cells, ids)
+          }))
         });
       },
 
-      addRows: async files => {
-        set({ uploadingFiles: true });
+      insertRowBefore: id => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          rows: insertBefore(
+            getTable().rows,
+            getBlankRow(),
+            id ? c => c.id === id : undefined
+          )
+        });
+      },
+
+      insertRowAfter: id => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          rows: insertAfter(
+            getTable().rows,
+            getBlankRow(),
+            id ? c => c.id === id : undefined
+          )
+        });
+      },
+
+      fillRow: async (id, file) => {
+        const { activeTableId, getTable, editTable } = get();
+        const sourceData: SourceData = {
+          type: "document",
+          document: await uploadFile(file)
+        };
+        editTable(activeTableId, {
+          rows: where(getTable(activeTableId).rows, r => r.id === id, {
+            sourceData,
+            cells: {}
+          })
+        });
+        get().rerunRows([id]);
+      },
+
+      fillRows: async files => {
+        const { activeTableId, getTable, editTable } = get();
+        editTable(activeTableId, { uploadingFiles: true });
         try {
           for (const file of files) {
-            const row: AnswerTableRow = {
-              id: cuid(),
-              document: await uploadFile(file),
-              hidden: false
+            const sourceData: SourceData = {
+              type: "document",
+              document: await uploadFile(file)
             };
-            set({ rows: [...get().rows, row] });
-            get()._syncAnswers();
+            const rows = getTable(activeTableId).rows;
+            let id = rows.find(r => !r.sourceData)?.id;
+            if (id) {
+              editTable(activeTableId, {
+                rows: where(rows, r => r.id === id, {
+                  sourceData,
+                  cells: {}
+                })
+              });
+            } else {
+              const newRow: AnswerTableRow = {
+                id: (id = cuid()),
+                sourceData,
+                hidden: false,
+                cells: {}
+              };
+              editTable(activeTableId, { rows: [...rows, newRow] });
+            }
+            get().rerunRows([id]);
           }
         } finally {
-          set({ uploadingFiles: false });
+          editTable(activeTableId, { uploadingFiles: false });
         }
       },
 
-      rerunRow: id => {
-        set({ cells: get().cells.filter(cell => cell.rowId !== id) });
-        get()._syncAnswers();
+      rerunRows: ids => {
+        const { getTable, rerunCells } = get();
+        rerunCells(
+          getTable()
+            .columns.filter(column => !column.hidden)
+            .flatMap(column =>
+              ids.map(id => ({ rowId: id, columnId: column.id }))
+            )
+        );
       },
 
-      deleteRows: async ids => {
-        const [rowsToDelete, rowsToKeep] = partition(get().rows, row =>
-          ids.includes(row.id)
-        );
-        const documentsToDelete = uniq(
-          differenceBy(rowsToDelete, rowsToKeep, row => row.document.id).map(
-            row => row.document.id
-          )
-        );
-        set({
-          selection: [],
-          rows: rowsToKeep,
-          cells: get().cells.filter(cell => !ids.includes(cell.rowId))
+      clearRows: ids => {
+        const { getTable, editActiveTable } = get();
+        const idSet = new Set(ids);
+        editActiveTable({
+          rows: where(getTable().rows, r => idSet.has(r.id), {
+            sourceData: null,
+            cells: {}
+          })
         });
-        await Promise.all(documentsToDelete.map(deleteDocument));
       },
 
-      editCell: (cell, answer) => {
-        set({
-          cells: where(
-            get().cells,
-            c => c.rowId === cell.rowId && c.columnId === cell.columnId,
-            c => ({ ...c, answer: { ...c.answer, ...answer } })
+      deleteRows: ids => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          rows: getTable().rows.filter(r => !ids.includes(r.id))
+        });
+      },
+
+      editCells: (cells, tableId = get().activeTableId) => {
+        const { getTable, editTable } = get();
+        const valuesByRow = mapValues(
+          groupBy(cells, c => c.rowId),
+          c => c.map(c => [c.columnId, c.cell])
+        );
+        editTable(tableId, {
+          rows: where(
+            getTable(tableId).rows,
+            r => valuesByRow[r.id],
+            r => ({ cells: { ...r.cells, ...fromPairs(valuesByRow[r.id]) } })
           )
         });
       },
 
       rerunCells: cells => {
-        set({ cells: differenceWith(get().cells, cells, isMatch) });
-        get()._syncAnswers();
+        const { activeTableId, getTable, editTable, editCells } = get();
+        const { columns, rows, globalRules, loadingCells } = getTable();
+        const colMap = keyBy(columns, c => c.id);
+        const rowMap = keyBy(rows, r => r.id);
+
+        const batch = compact(
+          cells.map(({ rowId, columnId }) => {
+            const key = getCellKey(rowId, columnId);
+            const column = colMap[columnId];
+            const row = rowMap[rowId];
+            return column &&
+              row &&
+              column.entityType.trim() &&
+              column.generate &&
+              row.sourceData &&
+              !loadingCells[key]
+              ? { key, column, row }
+              : null;
+          })
+        );
+
+        editTable(activeTableId, {
+          loadingCells: {
+            ...loadingCells,
+            ...fromPairs(batch.map(m => [m.key, true]))
+          }
+        });
+
+        for (const { key, row, column: column_ } of batch) {
+          const column = cloneDeep(column_);
+
+          // Replace all column references with the row's answer to that column
+          for (const [match, columnId] of column.query.matchAll(
+            /@\[[^\]]+\]\(([^)]+)\)/g
+          )) {
+            const targetColumn = columns.find(c => c.id === columnId);
+            if (!targetColumn) continue;
+            const cell = row.cells[targetColumn.id];
+            if (isNil(cell)) continue;
+            column.query = column.query.replace(match, String(cell));
+          }
+
+          runQuery(row, column, globalRules).then(({ answer, chunks }) => {
+            editCells(
+              [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
+              activeTableId
+            );
+            editTable(activeTableId, {
+              chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
+              loadingCells: omit(getTable(activeTableId).loadingCells, key)
+            });
+          });
+        }
+      },
+
+      clearCells: cells => {
+        const { getTable, editActiveTable } = get();
+        const columnsByRow = mapValues(
+          groupBy(cells, c => c.rowId),
+          c => c.map(c => c.columnId)
+        );
+        editActiveTable({
+          rows: where(
+            getTable().rows,
+            r => columnsByRow[r.id],
+            r => ({ cells: omit(r.cells, columnsByRow[r.id]) })
+          )
+        });
+      },
+
+      addGlobalRules: rules => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          globalRules: [
+            ...getTable().globalRules,
+            ...rules.map(rule => ({ id: cuid(), ...rule }))
+          ]
+        });
+      },
+
+      editGlobalRule: (id, rule) => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          globalRules: where(
+            getTable().globalRules,
+            rule => rule.id === id,
+            rule
+          )
+        });
+      },
+
+      deleteGlobalRules: ids => {
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          globalRules: !ids
+            ? []
+            : getTable().globalRules.filter(rule => !ids.includes(rule.id))
+        });
+      },
+
+      openChunks: cells => {
+        get().editActiveTable({
+          openedChunks: cells.map(c => getCellKey(c.rowId, c.columnId))
+        });
+      },
+
+      closeChunks: () => {
+        get().editActiveTable({ openedChunks: [] });
       },
 
       addFilter: filter => {
-        set({ filters: [...get().filters, { id: cuid(), ...filter }] });
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          filters: [...getTable().filters, { id: cuid(), ...filter }]
+        });
         get().applyFilters();
       },
 
       editFilter: (id, filter) => {
-        set({
-          filters: where(get().filters, filter => filter.id === id, filter)
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
+          filters: where(getTable().filters, filter => filter.id === id, filter)
         });
         get().applyFilters();
       },
 
       deleteFilters: ids => {
-        set({
+        const { getTable, editActiveTable } = get();
+        editActiveTable({
           filters: !ids
             ? []
-            : get().filters.filter(filter => !ids.includes(filter.id))
+            : getTable().filters.filter(filter => !ids.includes(filter.id))
         });
         get().applyFilters();
       },
 
       applyFilters: () => {
-        const { rows, columns, filters } = get();
-        const cellMap = get()._getCellMap();
-        set({
+        const { getTable, editActiveTable } = get();
+        const { rows, columns, filters } = getTable();
+        editActiveTable({
           rows: rows.map(row => {
             const visible = filters.every(filter => {
               if (!filter.value.trim()) return true;
@@ -235,11 +441,9 @@ export const useStore = createWithEqualityFn(
                 column => column.id === filter.columnId
               );
               if (!column) return true;
-              const cell = cellMap.get(`${row.id}-${column.id}`);
-              if (!cell) return true;
-              const answer = cell.answer.answer;
-              if (answer === null) return true;
-              const contains = castArray(answer)
+              const cell = row.cells[column.id];
+              if (isNil(cell)) return true;
+              const contains = castArray(cell)
                 .map(value => String(value).toLowerCase())
                 .some(value =>
                   value.includes(filter.value.trim().toLowerCase())
@@ -251,84 +455,18 @@ export const useStore = createWithEqualityFn(
         });
       },
 
-      clear: () => {
-        set({
-          columns: [],
-          rows: [],
-          cells: [],
-          filters: [],
-          selection: [],
-          uploadingFiles: false
-        });
-      },
-
-      _syncAnswers: async () => {
-        const { rows, columns } = get();
-        const cellMap = get()._getCellMap();
-
-        const missingAnswers = compact(
-          rows.flatMap(row =>
-            columns.map(column => {
-              const cell = cellMap.get(`${row.id}-${column.id}`);
-              if (cell && !cell.dirty) return null;
-              return { row, column, cell };
-            })
-          )
-        );
-
-        for (const missing of missingAnswers) {
-          const prompt = cloneDeep(missing.column.prompt);
-
-          // Replace all column references with the row's answer to that column
-          for (const [match, key] of prompt.query.matchAll(
-            /@\[[^\]]+\]\(([^)]+)\)/g
-          )) {
-            const column = get().columns.find(
-              ({ prompt }) => prompt.id === key
-            );
-            if (!column) continue;
-            const cell = cellMap.get(`${missing.row.id}-${column.id}`);
-            if (!cell) continue;
-            prompt.query = prompt.query.replace(
-              match,
-              String(cell.answer.answer)
-            );
-          }
-
-          runQuery(missing.row.document.id, prompt).then(answer =>
-            get()._upsertCell({
-              columnId: missing.column.id,
-              rowId: missing.row.id,
-              dirty: false,
-              answer
-            })
-          );
-        }
-      },
-
-      _upsertCell: cell => {
-        const cells = [...get().cells];
-        const index = cells.findIndex(
-          c => c.rowId === cell.rowId && c.columnId === cell.columnId
-        );
-        if (index === -1) {
-          set({ cells: [...cells, cell] });
+      clear: allTables => {
+        if (allTables) {
+          set(getInitialData());
         } else {
-          cells[index] = cell;
-          set({ cells });
+          const { id, name, ...table } = getBlankTable();
+          get().editActiveTable(table);
         }
-      },
-
-      _getCellMap: () => {
-        const { cells } = get();
-        return new Map(
-          cells.map(cell => [`${cell.rowId}-${cell.columnId}`, cell])
-        );
       }
     }),
     {
       name: "store",
-      version: 4
+      version: 9
     }
   )
 );

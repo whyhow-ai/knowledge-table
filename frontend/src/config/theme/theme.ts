@@ -3,8 +3,10 @@ import {
   ActionIcon,
   Anchor,
   Badge,
+  Blockquote,
   Button,
   Checkbox,
+  ColorSwatch,
   createTheme,
   DEFAULT_THEME,
   Group,
@@ -53,16 +55,30 @@ const getTheme = (colorScheme: "light" | "dark") =>
             variant: "light"
           }
         }),
+        Blockquote: Blockquote.extend({
+          defaultProps: {
+            fz: "sm"
+          },
+          styles: {
+            root: {
+              padding: `${DEFAULT_THEME.spacing.xs} ${DEFAULT_THEME.spacing.md}`
+            }
+          }
+        }),
         Button: Button.extend({
           defaultProps: {
             variant: "subtle",
-            size: "compact-sm",
             color: colorScheme === "dark" ? "gray" : "dark"
           }
         }),
         Checkbox: Checkbox.extend({
           defaultProps: {
             radius: "sm"
+          }
+        }),
+        ColorSwatch: ColorSwatch.extend({
+          defaultProps: {
+            withShadow: false
           }
         }),
         Group: Group.extend({

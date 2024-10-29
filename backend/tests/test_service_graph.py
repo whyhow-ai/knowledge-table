@@ -5,7 +5,14 @@ import pytest
 from app.models.document import Document
 from app.models.graph import GraphChunk, Node, Relation, Triple
 from app.models.llm_responses import SchemaRelationship, SchemaResponseModel
-from app.models.table import Cell, Column, Prompt, Row, Table
+from app.models.table import (
+    Chunk,
+    Table,
+    TableCell,
+    TableColumn,
+    TablePrompt,
+    TableRow,
+)
 from app.schemas.graph_api import ExportTriplesResponseSchema
 from app.services.graph_service import (
     create_triple_for_row,
@@ -23,7 +30,7 @@ from app.services.graph_service import (
 def sample_table_data():
     return Table(
         rows=[
-            Row(
+            TableRow(
                 id="1",
                 document=Document(
                     id="doc1",
@@ -36,9 +43,9 @@ def sample_table_data():
             )
         ],
         columns=[
-            Column(
+            TableColumn(
                 id="col1",
-                prompt=Prompt(
+                prompt=TablePrompt(
                     id="prompt1",
                     entityType="Entity1",
                     type="text",
@@ -47,9 +54,9 @@ def sample_table_data():
                 ),
                 hidden=False,
             ),
-            Column(
+            TableColumn(
                 id="col2",
-                prompt=Prompt(
+                prompt=TablePrompt(
                     id="prompt2",
                     entityType="Entity2",
                     type="text",
@@ -60,21 +67,21 @@ def sample_table_data():
             ),
         ],
         cells=[
-            Cell(
+            TableCell(
                 rowId="1",
                 columnId="col1",
                 answer={
                     "answer": "Value1",
-                    "chunks": [{"content": "Chunk1", "page": 1}],
+                    "chunks": [Chunk(content="Chunk1", page=1)],
                 },
                 dirty=False,
             ),
-            Cell(
+            TableCell(
                 rowId="1",
                 columnId="col2",
                 answer={
                     "answer": "Value2",
-                    "chunks": [{"content": "Chunk2", "page": 1}],
+                    "chunks": [Chunk(content="Chunk2", page=1)],
                 },
                 dirty=False,
             ),
