@@ -106,26 +106,38 @@ async def export_triples(
     columns_dict = {item.id: item for item in request.columns}
     for row in request.rows:
         for key, value in row.cells.items():
-            converted_cells.append(
-                TableCell(
-                    answer={
-                        "answer": value,
-                        "document_id": (
-                            row.sourceData.document.id
-                            if hasattr(row.sourceData, "document")
-                            and hasattr(row.sourceData.document, "id")
-                            else ""
-                        ),
-                        "id": "",
-                        "prompt_id": "",
-                        "type": columns_dict[key].type,
-                        "chunks": request.chunks["-".join([row.id, key])],
-                    },
-                    columnId=key,
-                    dirty=False,
-                    rowId=row.id,
+            # Skip if value is not a string or is "None" or "none"
+            if not isinstance(value, str):
+                continue
+
+            # Remove any surrounding quotes and whitespace before checking
+            cleaned_value = value.strip().strip("\"'") if value else ""
+            if cleaned_value and cleaned_value.lower() != "none":
+                chunk_key = "-".join([row.id, key])
+                chunks = request.chunks.get(
+                    chunk_key, []
+                )  # Use .get() with default empty list
+
+                converted_cells.append(
+                    TableCell(
+                        answer={
+                            "answer": value,
+                            "document_id": (
+                                row.sourceData.document.id
+                                if hasattr(row.sourceData, "document")
+                                and hasattr(row.sourceData.document, "id")
+                                else ""
+                            ),
+                            "id": "",
+                            "prompt_id": "",
+                            "type": columns_dict[key].type,
+                            "chunks": chunks,
+                        },
+                        columnId=key,
+                        dirty=False,
+                        rowId=row.id,
+                    )
                 )
-            )
 
     try:
         table = Table(

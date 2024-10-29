@@ -125,8 +125,8 @@ export function KTGlobalRules(props: BoxProps) {
                 must_return,"red,blue,green",Color
                 <br />
                 max_length,3,
-                <br />
-                replace,"blue,ultramarine,sapphire",Color
+                {/* <br />
+                replace,"blue,ultramarine,sapphire",Color */}
               </Code>
             </Box>
           </Group>
@@ -247,7 +247,8 @@ export function KTGlobalRules(props: BoxProps) {
 
 const csvJsonSchema = z.array(
   z.object({
-    rule_type: z.enum(["must_return", "may_return", "max_length", "replace"]),
+    // rule_type: z.enum(["must_return", "may_return", "max_length", "replace"]),
+    rule_type: z.enum(["must_return", "may_return", "max_length"]),
     value: z.string(),
     entity_type: z.string().optional()
   })
