@@ -56,7 +56,7 @@ export function getBlankTable(name?: string): AnswerTable {
     id: cuid(),
     name: name ?? "First Table",
     columns: times(10, getBlankColumn),
-    rows: times(1000, getBlankRow),
+    rows: times(100, getBlankRow),
     globalRules: [],
     filters: [],
     chunks: {},
