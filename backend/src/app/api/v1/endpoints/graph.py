@@ -5,7 +5,14 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import get_llm_service
-from app.models.table import Table
+from app.models.document import Document
+from app.models.table import (
+    Table,
+    TableCell,
+    TableColumn,
+    TablePrompt,
+    TableRow,
+)
 from app.schemas.graph_api import (
     ExportTriplesRequestSchema,
     ExportTriplesResponseSchema,
@@ -51,9 +58,80 @@ async def export_triples(
     -----
     The function logs the generated schema and the number of triples and chunks created.
     """
+    # Convert column type
+    converted_columns = []
+    for column in request.columns:
+        converted_columns.append(
+            TableColumn(
+                id=column.id,
+                hidden=column.hidden,
+                prompt=TablePrompt(
+                    entityType=column.entityType,
+                    query=column.query,
+                    rules=column.rules,
+                    type=column.type,
+                ),
+            )
+        )
+
+    # Convert row type
+    converted_rows = []
+    for row in request.rows:
+        if (
+            isinstance(row.sourceData, dict)
+            and row.sourceData["type"] == "document"
+        ):
+            document = Document(
+                id=row.sourceData["document"]["id"],
+                name=row.sourceData["document"]["name"],
+                author=row.sourceData["document"]["author"],
+                tag=row.sourceData["document"]["tag"],
+                page_count=row.sourceData["document"]["page_count"],
+            )
+        else:
+            document = Document(
+                id="",
+                name="",
+                author="",
+                tag="",
+                page_count=0,
+            )
+
+        converted_rows.append(
+            TableRow(id=row.id, hidden=row.hidden, document=document)
+        )
+
+    # Converted cell type
+    converted_cells = []
+    columns_dict = {item.id: item for item in request.columns}
+    for row in request.rows:
+        for key, value in row.cells.items():
+            converted_cells.append(
+                TableCell(
+                    answer={
+                        "answer": value,
+                        "document_id": (
+                            row.sourceData.document.id
+                            if hasattr(row.sourceData, "document")
+                            and hasattr(row.sourceData.document, "id")
+                            else ""
+                        ),
+                        "id": "",
+                        "prompt_id": "",
+                        "type": columns_dict[key].type,
+                        "chunks": request.chunks["-".join([row.id, key])],
+                    },
+                    columnId=key,
+                    dirty=False,
+                    rowId=row.id,
+                )
+            )
+
     try:
         table = Table(
-            columns=request.columns, rows=request.rows, cells=request.cells
+            columns=converted_columns,
+            rows=converted_rows,
+            cells=converted_cells,
         )
 
         schema_result = await generate_schema(llm_service, table)

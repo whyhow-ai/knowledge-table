@@ -23,6 +23,8 @@
     "paths": {
       "@components": ["./src/components"],
       "@components/*": ["./src/components/*"],
+      "@hooks": ["./src/hooks"],
+      "@hooks/*": ["./src/hooks/*"],
       "@config": ["./src/config"],
       "@config/*": ["./src/config/*"],
       "@utils": ["./src/utils"],

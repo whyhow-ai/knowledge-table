@@ -82,7 +82,10 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
-    assert response.json()["answer"] == "The capital of France is Paris."
+    assert (
+        response.json()["answer"]["answer"]
+        == "The capital of France is Paris."
+    )
     assert len(response.json()["chunks"]) == 1
 
 
@@ -117,7 +120,10 @@ def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
-    assert response.json()["answer"] == "Yes, Paris is the capital of France."
+    assert (
+        response.json()["answer"]["answer"]
+        == "Yes, Paris is the capital of France."
+    )
     assert len(response.json()["chunks"]) == 1
 
 
@@ -181,7 +187,7 @@ def test_run_query_empty_chunks(
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
-    assert response.json()["answer"] == ""
+    assert response.json()["answer"]["answer"] == ""
     assert len(response.json()["chunks"]) == 0
 
 

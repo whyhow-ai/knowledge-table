@@ -1,11 +1,11 @@
 """Routing schemas for the graph API."""
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
 from app.models.graph import GraphChunk, Triple
-from app.models.table import Cell, Column, Row
+from app.models.table import Chunk, Column, Row
 
 
 class PromptSchema(BaseModel):
@@ -23,7 +23,7 @@ class ExportTriplesRequestSchema(BaseModel):
 
     columns: List[Column]
     rows: List[Row]
-    cells: List[Cell]
+    chunks: Dict[str, List[Chunk]]
 
 
 class ExportTriplesResponseSchema(BaseModel):

@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [v0.1.5] - 2024-10-29
 
 ### Changed
 
+- Updating backend to work with new UI
+- Tweaked query output for separating answers and chunks
 - Support for [Qdrant](https://qdrant.tech/) vector database.
 - Updated Milvus reference in the factory to be more robust to other Milvus datastores
 

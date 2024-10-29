@@ -3,6 +3,8 @@ import { ActionIcon, Divider, Group, MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { IconMoon, IconSun } from "@tabler/icons-react";
 import "@mantine/core/styles.css";
+import "@mantine/dropzone/styles.css";
+import "@silevis/reactgrid/styles.css";
 import { queryClient } from "@config/query";
 import { useTheme } from "@config/theme";
 import { useStore } from "@config/store";

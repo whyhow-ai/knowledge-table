@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.1.5] - 2024-10-29
+
+### Added
+
+- Updating backend to work with new UI
+- UI: Global rules
+- UI: Reactgrid integration
+- UI: "Replace" rule
+- UI: Multi-table support
+
 ## [v0.1.4] - 2024-10-16
 
 ### Improved

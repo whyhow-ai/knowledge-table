@@ -14,6 +14,8 @@ import {
 import { Pack } from "./types";
 import { colors } from "@config/theme";
 
+// Misc
+
 export function pack<T>(...args: Pack<T>[]): T[] {
   return compact(flattenDeep(args));
 }
@@ -26,6 +28,12 @@ export function cn(...classes: Pack<string>[]) {
   return pack(...classes)
     .map(c => (c.startsWith(".") ? c.substring(1) : c))
     .join(" ");
+}
+
+export function niceTry<T>(fn: () => T) {
+  try {
+    return fn();
+  } catch {}
 }
 
 export function stopPropagation<
@@ -47,19 +55,43 @@ export function plur(word: string, count: number | any[]) {
   return `${word}s`;
 }
 
+// Array helpers
+
 export function where<T extends object>(
   array: T[],
-  predicate: (item: T) => boolean,
+  predicate: (item: T, index: number) => unknown,
   change: Partial<T> | ((item: T) => Partial<T>)
 ) {
   const changeFn = isFunction(change) ? change : () => change;
-  return array.map(item => {
-    if (!predicate(item)) return item;
+  return array.map((item, index) => {
+    if (!predicate(item, index)) return item;
     return { ...item, ...changeFn(item) };
   });
 }
 
-// download
+export function insertBefore<T>(
+  array: T[],
+  element: T,
+  predicate?: (item: T) => unknown
+) {
+  const index = predicate ? array.findIndex(predicate) : 0;
+  return index === -1
+    ? array
+    : [...array.slice(0, index), element, ...array.slice(index)];
+}
+
+export function insertAfter<T>(
+  array: T[],
+  element: T,
+  predicate?: (item: T) => unknown
+) {
+  const index = predicate ? array.findIndex(predicate) : array.length - 1;
+  return index === -1
+    ? array
+    : [...array.slice(0, index + 1), element, ...array.slice(index + 1)];
+}
+
+// Download
 
 export function download(
   filename: string,
@@ -85,7 +117,7 @@ export function download(
   });
 }
 
-// entityColor
+// Entity color
 
 const entityColorCache = new Map<string, { fill: string; text: string }>();
 

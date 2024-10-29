@@ -1,5 +1,6 @@
 import { ReactNode, useMemo } from "react";
 import { Box, Text, Input, InputWrapperProps, Paper } from "@mantine/core";
+import { useUncontrolled } from "@mantine/hooks";
 import styled from "@emotion/styled";
 import {
   MentionsInput,
@@ -11,7 +12,9 @@ import classes from "./index.module.css";
 
 interface Props extends Omit<InputWrapperProps, "onChange"> {
   placeholder?: string;
-  value: string;
+  disabled?: boolean;
+  value?: string;
+  defaultValue?: string;
   onChange: (value: string) => void;
   options: Array<{
     trigger: string;
@@ -23,11 +26,19 @@ interface Props extends Omit<InputWrapperProps, "onChange"> {
 
 export function Mention({
   placeholder,
-  value,
+  disabled,
+  value: value_,
+  defaultValue,
   onChange,
   options,
   ...props
 }: Props) {
+  const [value, setValue] = useUncontrolled({
+    value: value_,
+    defaultValue,
+    onChange
+  });
+
   const colors = useMemo(() => {
     const matches = [...value.matchAll(/.\[[^\]]+\]\((\w+)\)/g)];
     return matches.map(match => {
@@ -44,11 +55,12 @@ export function Mention({
       className={cn(classes.wrapper, props.className)}
     >
       <MentionsInput
+        disabled={disabled}
         allowSpaceInQuery
         allowSuggestionsAboveCursor
         placeholder={placeholder}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => setValue(e.target.value)}
         className="mentions"
         a11ySuggestionsListLabel="Suggested mentions"
         customSuggestionsContainer={node => (

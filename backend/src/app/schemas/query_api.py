@@ -55,5 +55,22 @@ class QueryResponseSchema(BaseModel):
     type: str
 
 
+class QueryAnswer(BaseModel):
+    """Query answer model."""
+
+    id: str
+    document_id: str
+    prompt_id: str
+    answer: Optional[Union[int, str, bool, List[int], List[str]]]
+    type: str
+
+
+class QueryAnswerResponse(BaseModel):
+    """Query answer response model."""
+
+    answer: QueryAnswer
+    chunks: List[Chunk]
+
+
 # Type for search responses (used in service layer)
 SearchResponse = Union[dict[str, List[Chunk]], VectorResponseSchema]

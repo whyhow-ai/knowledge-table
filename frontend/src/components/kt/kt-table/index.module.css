@@ -1,0 +1,71 @@
+.react-grid-wrapper {
+  --border-color: light-dark(
+    var(--mantine-color-gray-3),
+    var(--mantine-color-dark-4)
+  );
+
+  :global {
+    .rg-cell {
+      font-size: var(--mantine-font-size-sm) !important;
+      color: var(--mantine-color-text) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    .rg-header-cell,
+    .rg-kt-column-cell,
+    .rg-kt-row-cell {
+      font-weight: 500;
+      background-color: light-dark(
+        var(--mantine-color-gray-0),
+        var(--mantine-color-dark-6)
+      ) !important;
+    }
+
+    .rg-kt-column-cell,
+    .rg-kt-row-cell {
+      padding: 0 !important;
+    }
+
+    .rg-kt-cell-cell {
+      white-space: normal !important;
+    }
+
+    .rg-cell-focus {
+      border-color: var(--mantine-color-blue-filled) !important;
+    }
+
+    .rg-partial-area-selected-range {
+      background-color: var(--mantine-color-blue-light) !important;
+    }
+
+    .rg-celleditor {
+      padding: 0 !important;
+      font-size: var(--mantine-font-size-sm) !important;
+      background-color: var(--mantine-color-body) !important;
+      height: unset !important;
+      min-height: 49px !important;
+    }
+
+    .rg-context-menu {
+      overflow: hidden;
+      min-width: 80px;
+      border-radius: var(--mantine-radius-default);
+      box-shadow: var(--mantine-shadow-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--mantine-color-body);
+      color: var(--mantine-color-text);
+
+      .rg-context-menu-option {
+        padding: calc(var(--mantine-spacing-xs) * 0.5) var(--mantine-spacing-sm);
+        font-size: var(--mantine-font-size-sm);
+
+        &:hover {
+          background-color: light-dark(
+            var(--mantine-color-gray-light),
+            var(--mantine-color-dark-light)
+          );
+        }
+      }
+    }
+  }
+}

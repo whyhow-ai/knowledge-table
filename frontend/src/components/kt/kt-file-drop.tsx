@@ -28,7 +28,7 @@ export function KTFileDrop() {
       setDraggingOver(false);
       const files = e.dataTransfer?.files;
       if (files) {
-        useStore.getState().addRows([...files]);
+        useStore.getState().fillRows([...files]);
       }
     };
 
