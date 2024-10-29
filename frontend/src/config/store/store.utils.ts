@@ -80,7 +80,7 @@ export const defaultRules: Record<AnswerTableRule["type"], AnswerTableRule> = {
   must_return: { type: "must_return", options: [] },
   may_return: { type: "may_return", options: [] },
   max_length: { type: "max_length", length: 1 },
-  replace: { type: "replace", options: [] }
+  // replace: { type: "replace", options: [] }
 };
 
 export const ruleOptions: {
@@ -90,14 +90,14 @@ export const ruleOptions: {
   { value: "must_return", label: "Must return" },
   { value: "may_return", label: "May return" },
   { value: "max_length", label: "Allowed # of responses" },
-  { value: "replace", label: "Replace" }
+  // { value: "replace", label: "Replace" }
 ];
 
 export const ruleInfo: Record<AnswerTableRule["type"], string> = {
   must_return: "The column must return the specified values",
   may_return: "The column may return the specified values",
   max_length: "The column must return at most N values",
-  replace: "Replace all specified values with the first one from the list"
+  // replace: "Replace all specified values with the first one from the list"
 };
 
 // Casting
