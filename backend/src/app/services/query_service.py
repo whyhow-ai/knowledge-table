@@ -137,7 +137,6 @@ async def inference_query(
     llm_service: LLMService,
 ) -> QueryResult:
     """Generate a response, no need for vector retrieval."""
-
     # Since we are just answering this query based on data provided in the query,
     # ther is no need to retrieve any chunks from the vector database.
 
