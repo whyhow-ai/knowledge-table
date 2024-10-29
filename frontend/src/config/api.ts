@@ -95,7 +95,7 @@ export async function runQuery(
     body: JSON.stringify({
       document_id: row.sourceData?.document?.id
         ? row.sourceData.document.id
-        : "ffffffffffffffffffffffffffffffff",
+        : "00000000000000000000000000000000",
       prompt: {
         id: column.id,
         entity_type: column.entityType,

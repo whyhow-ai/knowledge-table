@@ -60,7 +60,7 @@ async def run_query(
     HTTPException
         If there's an error processing the query.
     """
-    if request.document_id == "ffffffffffffffffffffffffffffffff":
+    if request.document_id == "00000000000000000000000000000000":
         query_response = await inference_query(
             request.prompt.query,
             request.prompt.rules,
