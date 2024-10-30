@@ -16,15 +16,13 @@ class OpenAIEmbeddingService(EmbeddingService):
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        if settings.openai_api_key:
-            self.embeddings = OpenAIEmbeddings(
-                model=self.settings.embedding_model
-            )
-        else:
-            self.embeddings = None  # type: ignore
-            logger.warning(
-                "OpenAI API key is not set. LLM features will be disabled."
-            )
+        if not settings.openai_api_key:
+            raise ValueError("OpenAI API key is required but not set")
+        
+        self.embeddings = OpenAIEmbeddings(
+            api_key=settings.openai_api_key,
+            model=settings.embedding_model
+        )
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for text."""
