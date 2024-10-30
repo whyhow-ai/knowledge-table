@@ -13,7 +13,7 @@ class MockVectorDBService(VectorDBService):
         self.embedding_service = embedding_service
         self.llm_service = llm_service
         self.settings = settings
-        self.client = Mock()  # Use regular Mock instead of AsyncMock
+        self.client = Mock()
 
         # Set up synchronous return values
         self.client.has_collection.return_value = True
@@ -36,12 +36,17 @@ class MockVectorDBService(VectorDBService):
         }
 
     async def vector_search(self, queries, document_id):
+        # Mock using get_single_embedding
+        for query in queries:
+            _ = await self.get_single_embedding(query)
         return VectorResponseSchema(message="success", chunks=[])
 
     async def keyword_search(self, query, document_id, keywords):
         return VectorResponseSchema(message="success", chunks=[])
 
     async def hybrid_search(self, query, document_id, rules):
+        # Mock using get_single_embedding
+        _ = await self.get_single_embedding(query)
         return VectorResponseSchema(
             message="Query processed successfully.", chunks=[]
         )
@@ -107,3 +112,27 @@ async def test_delete_document(vector_db_service):
 
     assert result["status"] == "success"
     assert result["message"] == "Document deleted successfully."
+
+
+@pytest.mark.asyncio
+async def test_get_single_embedding(vector_db_service):
+    # Reset the mock before the test
+    vector_db_service.embedding_service.get_embeddings.reset_mock()
+
+    # Mock the embedding service to return a known value
+    vector_db_service.embedding_service.get_embeddings.return_value = [
+        [0.1, 0.2, 0.3]
+    ]
+
+    # Test getting a single embedding
+    result = await vector_db_service.get_single_embedding("test text")
+
+    # Verify the result
+    assert isinstance(result, list)
+    assert len(result) == 3  # Length of our mock embedding
+    assert result == [0.1, 0.2, 0.3]
+
+    # Verify the embedding service was called correctly
+    vector_db_service.embedding_service.get_embeddings.assert_called_once_with(
+        ["test text"]
+    )

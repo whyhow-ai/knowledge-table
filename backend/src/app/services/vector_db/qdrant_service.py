@@ -75,7 +75,7 @@ class QdrantService(VectorDBService):
 
         for query in queries:
             logger.info("Generating embedding.")
-            embedded_query = await self.get_embeddings(query)
+            embedded_query = await self.get_single_embedding(query)
             logger.info("Searching...")
 
             query_response = self.client.query_points(
@@ -162,7 +162,7 @@ class QdrantService(VectorDBService):
                 reverse=True,
             )
 
-        embedded_query = await self.get_embeddings(query)
+        embedded_query = await self.get_single_embedding(query)
         logger.info("Running semantic similarity search.")
 
         semantic_response = self.client.query_points(
@@ -193,8 +193,6 @@ class QdrantService(VectorDBService):
         combined_sorted_chunks = sorted(
             combined_chunks, key=lambda chunk: chunk["chunk_number"]
         )
-
-        # Optionally, for each chunk, retrieve neighbouring chunks to ensure full context is retrieved
 
         # Eliminate duplicate chunks
         seen_chunks = set()

@@ -155,9 +155,8 @@ class MilvusService(VectorDBService):
         # Search for each query
         for query in queries:
             logger.info("Generating embedding.")
-
-            # Embed the query
-            embedded_query = await self.get_embeddings(query)
+            # Use get_single_embedding but wrap result in list for Milvus
+            embedded_query = [await self.get_single_embedding(query)]
 
             logger.info("Searching...")
 
@@ -323,7 +322,7 @@ class MilvusService(VectorDBService):
             )
 
         # Embed the query
-        embedded_query = await self.get_embeddings(query)
+        embedded_query = [await self.get_single_embedding(query)]
 
         try:
             # First, let's check if there are any vectors for this document_id

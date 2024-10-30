@@ -2,7 +2,7 @@
 
 from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.models.query_core import Chunk, FormatType, Rule
 
@@ -23,10 +23,7 @@ class QueryRequestSchema(BaseModel):
     document_id: str
     prompt: QueryPromptSchema
 
-    class Config:
-        """Pydantic configuration."""
-
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class VectorResponseSchema(BaseModel):
