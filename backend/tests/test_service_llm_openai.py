@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
@@ -8,14 +8,12 @@ from app.services.llm.openai_llm_service import OpenAICompletionService
 
 @pytest.fixture
 def openai_service(test_settings):
-    with (
-        patch("app.services.llm.openai_llm_service.OpenAICompletionService"),
-        patch(
-            "app.services.embedding.openai_embedding_service.OpenAIEmbeddingService"
-        ),
-    ):
-        service = OpenAICompletionService(test_settings)
-        yield service
+    service = OpenAICompletionService(test_settings)
+    service.client = MagicMock()  # Mock the entire client
+    service.client.beta = MagicMock()  # Add the beta attribute
+    service.client.beta.chat = MagicMock()
+    service.client.beta.chat.completions = MagicMock()
+    return service
 
 
 @pytest.mark.asyncio
