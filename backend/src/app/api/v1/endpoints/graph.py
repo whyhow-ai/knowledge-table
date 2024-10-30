@@ -18,7 +18,7 @@ from app.schemas.graph_api import (
     ExportTriplesResponseSchema,
 )
 from app.services.graph_service import generate_triples
-from app.services.llm.base import LLMService
+from app.services.llm.base import CompletionService
 from app.services.llm_service import generate_schema
 
 router = APIRouter(tags=["Graph"])
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @router.post("/export-triples", response_model=ExportTriplesResponseSchema)
 async def export_triples(
     request: ExportTriplesRequestSchema,
-    llm_service: LLMService = Depends(get_llm_service),
+    llm_service: CompletionService = Depends(get_llm_service),
 ) -> ExportTriplesResponseSchema:
     """
     Generate and export triples from a table.
@@ -40,7 +40,7 @@ async def export_triples(
     ----------
     request : ExportTriplesRequestSchema
         The request body containing the table data (columns, rows, and cells).
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service used for generating the schema, injected by FastAPI.
 
     Returns

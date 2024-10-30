@@ -13,7 +13,8 @@ from qdrant_client import QdrantClient, models
 from app.core.config import Settings
 from app.models.query_core import Chunk, Rule
 from app.schemas.query_api import VectorResponseSchema
-from app.services.llm_service import LLMService
+from app.services.embedding.base import EmbeddingService
+from app.services.llm_service import CompletionService
 from app.services.vector_db.base import VectorDBService
 
 load_dotenv()
@@ -35,9 +36,15 @@ class QdrantMetadata(BaseModel, extra="forbid"):
 class QdrantService(VectorDBService):
     """Vector service implementation using Qdrant."""
 
-    def __init__(self, llm_service: LLMService, settings: Settings):
+    def __init__(
+        self,
+        embedding_service: EmbeddingService,
+        llm_service: CompletionService,
+        settings: Settings,
+    ):
         self.settings = settings
         self.llm_service = llm_service
+        self.embedding_service = embedding_service
         self.collection_name = settings.index_name
         self.dimensions = settings.dimensions
         qdrant_config = settings.qdrant.model_dump(exclude_none=True)

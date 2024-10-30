@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, List
 from app.models.query_core import Chunk, FormatType, QueryType, Rule
 from app.schemas.query_api import QueryResult, SearchResponse
 from app.services.llm_service import (
-    LLMService,
+    CompletionService,
     generate_inferred_response,
     generate_response,
 )
@@ -44,7 +44,7 @@ async def process_query(
     document_id: str,
     rules: List[Rule],
     format: FormatType,
-    llm_service: LLMService,
+    llm_service: CompletionService,
     vector_db_service: Any,
 ) -> QueryResult:
     """Process the query based on the specified type."""
@@ -75,7 +75,7 @@ async def decomposition_query(
     document_id: str,
     rules: List[Rule],
     format: FormatType,
-    llm_service: LLMService,
+    llm_service: CompletionService,
     vector_db_service: Any,
 ) -> QueryResult:
     """Process the query based on the decomposition type."""
@@ -95,7 +95,7 @@ async def hybrid_query(
     document_id: str,
     rules: List[Rule],
     format: FormatType,
-    llm_service: LLMService,
+    llm_service: CompletionService,
     vector_db_service: Any,
 ) -> QueryResult:
     """Process the query based on the hybrid type."""
@@ -115,7 +115,7 @@ async def simple_vector_query(
     document_id: str,
     rules: List[Rule],
     format: FormatType,
-    llm_service: LLMService,
+    llm_service: CompletionService,
     vector_db_service: Any,
 ) -> QueryResult:
     """Process the query based on the simple vector type."""
@@ -134,7 +134,7 @@ async def inference_query(
     query: str,
     rules: List[Rule],
     format: FormatType,
-    llm_service: LLMService,
+    llm_service: CompletionService,
 ) -> QueryResult:
     """Generate a response, no need for vector retrieval."""
     # Since we are just answering this query based on data provided in the query,

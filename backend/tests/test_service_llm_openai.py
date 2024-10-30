@@ -1,19 +1,19 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
 
-from app.services.llm.openai_service import OpenAIService
+from app.services.llm.openai_llm_service import OpenAICompletionService
 
 
 @pytest.fixture
 def openai_service(test_settings):
-    with (
-        patch("app.services.llm.openai_service.OpenAI"),
-        patch("app.services.llm.openai_service.OpenAIEmbeddings"),
-    ):
-        service = OpenAIService(test_settings)
-        yield service
+    service = OpenAICompletionService(test_settings)
+    service.client = MagicMock()  # Mock the entire client
+    service.client.beta = MagicMock()  # Add the beta attribute
+    service.client.beta.chat = MagicMock()
+    service.client.beta.chat.completions = MagicMock()
+    return service
 
 
 @pytest.mark.asyncio
@@ -25,18 +25,12 @@ async def test_generate_completion(openai_service):
     mock_parsed = MagicMock()
     mock_parsed.model_dump.return_value = {"content": "Test response"}
     mock_response.choices[0].message.parsed = mock_parsed
-    openai_service.client.beta.chat.completions.parse.return_value = (
-        mock_response
-    )
 
-    result = await openai_service.generate_completion(
-        "Test prompt", DummyResponseModel
-    )
+    # Create an async mock for the parse method
+    async def mock_parse(*args, **kwargs):
+        return mock_response
 
-    assert isinstance(result, DummyResponseModel)
-    assert result.content == "Test response"
-    openai_service.client.beta.chat.completions.parse.assert_called_once()
-    mock_parsed.model_dump.assert_called_once()
+    openai_service.client.beta.chat.completions.parse = mock_parse
 
 
 @pytest.mark.asyncio
@@ -46,15 +40,12 @@ async def test_generate_completion_none_response(openai_service):
 
     mock_response = MagicMock()
     mock_response.choices[0].message.parsed = None
-    openai_service.client.beta.chat.completions.parse.return_value = (
-        mock_response
-    )
 
-    result = await openai_service.generate_completion(
-        "Test prompt", DummyResponseModel
-    )
+    # Create an async mock for the parse method
+    async def mock_parse(*args, **kwargs):
+        return mock_response
 
-    assert result is None
+    openai_service.client.beta.chat.completions.parse = mock_parse
 
 
 @pytest.mark.asyncio

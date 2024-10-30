@@ -1,25 +1,14 @@
+# test_endpoint_graph.py
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
 
-from app.core.config import Settings
 from app.models.document import Document
 from app.models.graph import GraphChunk, Node, Relation, Triple
 from app.models.table import Column, Row, TablePrompt
 from app.schemas.graph_api import ExportTriplesResponseSchema
-
-
-@pytest.fixture
-def mock_openai_client():
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_openai_embeddings():
-    return MagicMock()
 
 
 @pytest.fixture
@@ -30,16 +19,6 @@ def mock_generate_schema():
 @pytest.fixture
 def mock_generate_triples():
     return AsyncMock()
-
-
-@pytest.fixture
-def client():
-    with patch("app.core.dependencies.get_settings") as mock_get_settings:
-        mock_get_settings.return_value = Settings(openai_api_key=None)
-        from app.main import app
-
-        with TestClient(app) as test_client:
-            yield test_client
 
 
 def create_test_prompt():
@@ -166,6 +145,7 @@ def test_export_triples_success(
         ],
     )
 
+    # Remove the patch for openai.OpenAI since it's mocked globally
     with (
         patch(
             "app.api.v1.endpoints.graph.get_llm_service",
@@ -178,7 +158,6 @@ def test_export_triples_success(
             "app.api.v1.endpoints.graph.generate_triples",
             mock_generate_triples,
         ),
-        patch("openai.OpenAI", return_value=mock_llm_service.client),
     ):
         response = client.post(
             "/api/v1/graph/export-triples", json=request_data
@@ -300,7 +279,6 @@ def test_export_triples_unexpected_error(
         patch(
             "app.api.v1.endpoints.graph.generate_schema", mock_generate_schema
         ),
-        patch("openai.OpenAI", return_value=mock_llm_service.client),
     ):
         response = client.post(
             "/api/v1/graph/export-triples", json=request_data

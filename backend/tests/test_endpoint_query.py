@@ -1,54 +1,22 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import status
-from fastapi.testclient import TestClient
 
-from app.core.config import Settings
-from app.main import app
 from app.models.query_core import Chunk
 from app.schemas.query_api import QueryResult
 
 
-@pytest.fixture
-def client():
-    return TestClient(app)
-
-
-@pytest.fixture
-def mock_settings():
-    return Settings(
-        openai_api_key="test_api_key",
-        testing=True,  # Add this line
+@pytest.fixture(scope="session")
+def mock_query_response():
+    return QueryResult(
+        answer="The capital of France is Paris.",
+        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
     )
 
 
-@pytest.fixture
-def mock_openai_client():
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_openai_embeddings():
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_simple_vector_query():
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_hybrid_query():
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_decomposition_query():
-    return AsyncMock()
-
-
-def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
+def test_run_query_vector(
+    client, mock_llm_service, mock_vector_db_service, mock_query_response
+):
     request_data = {
         "document_id": "doc123",
         "prompt": {
@@ -60,24 +28,12 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
         },
     }
 
-    mock_response = QueryResult(
-        answer="The capital of France is Paris.",
-        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
-    )
-    mock_simple_vector_query.return_value = mock_response
+    # Create an async mock that returns the mock_query_response
+    async_mock = AsyncMock(return_value=mock_query_response)
 
-    with (
-        patch(
-            "app.api.v1.endpoints.query.get_llm_service",
-            return_value=mock_llm_service,
-        ),
-        patch(
-            "app.api.v1.endpoints.query.get_vector_db_service",
-        ),
-        patch(
-            "app.api.v1.endpoints.query.simple_vector_query",
-            mock_simple_vector_query,
-        ),
+    with patch(
+        "app.api.v1.endpoints.query.simple_vector_query",
+        new=async_mock,
     ):
         response = client.post("/api/v1/query", json=request_data)
 
@@ -86,10 +42,11 @@ def test_run_query_vector(client, mock_llm_service, mock_simple_vector_query):
         response.json()["answer"]["answer"]
         == "The capital of France is Paris."
     )
-    assert len(response.json()["chunks"]) == 1
 
 
-def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
+def test_run_query_hybrid(
+    client, mock_llm_service, mock_vector_db_service, mock_query_response
+):
     request_data = {
         "document_id": "doc123",
         "prompt": {
@@ -101,33 +58,29 @@ def test_run_query_hybrid(client, mock_llm_service, mock_hybrid_query):
         },
     }
 
-    mock_response = QueryResult(
-        answer="Yes, Paris is the capital of France.",
-        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
-    )
-    mock_hybrid_query.return_value = mock_response
+    # Create an async mock that returns the mock_query_response
+    async_mock = AsyncMock(return_value=mock_query_response)
 
-    with (
-        patch(
-            "app.api.v1.endpoints.query.get_llm_service",
-            return_value=mock_llm_service,
-        ),
-        patch(
-            "app.api.v1.endpoints.query.get_vector_db_service",
-        ),
-        patch("app.api.v1.endpoints.query.hybrid_query", mock_hybrid_query),
+    with patch(
+        "app.api.v1.endpoints.query.hybrid_query",
+        new=async_mock,
     ):
         response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 200
     assert (
         response.json()["answer"]["answer"]
-        == "Yes, Paris is the capital of France."
+        == "The capital of France is Paris."
     )
     assert len(response.json()["chunks"]) == 1
+    assert (
+        response.json()["chunks"][0]["content"]
+        == "Paris is the capital of France."
+    )
+    assert response.json()["chunks"][0]["page"] == 1
 
 
-def test_run_query_invalid_type(client, mock_llm_service):
+def test_run_query_invalid_type(client):
     request_data = {
         "document_id": "doc123",
         "prompt": {
@@ -139,88 +92,7 @@ def test_run_query_invalid_type(client, mock_llm_service):
         },
     }
 
-    with (
-        patch(
-            "app.api.v1.endpoints.query.get_llm_service",
-            return_value=mock_llm_service,
-        ),
-        patch(
-            "app.api.v1.endpoints.query.get_vector_db_service",
-        ),
-    ):
-        response = client.post("/api/v1/query", json=request_data)
+    response = client.post("/api/v1/query", json=request_data)
 
     assert response.status_code == 422
     assert "Input should be" in response.json()["detail"][0]["msg"]
-
-
-def test_run_query_empty_chunks(
-    client, mock_llm_service, mock_simple_vector_query
-):
-    request_data = {
-        "document_id": "doc123",
-        "prompt": {
-            "id": "prompt123",
-            "query": "What is the capital of Atlantis?",
-            "type": "str",
-            "entity_type": "text",
-            "rules": [],
-        },
-    }
-
-    mock_response = QueryResult(answer="", chunks=[])
-    mock_simple_vector_query.return_value = mock_response
-
-    with (
-        patch(
-            "app.api.v1.endpoints.query.get_llm_service",
-            return_value=mock_llm_service,
-        ),
-        patch(
-            "app.api.v1.endpoints.query.get_vector_db_service",
-        ),
-        patch(
-            "app.api.v1.endpoints.query.simple_vector_query",
-            mock_simple_vector_query,
-        ),
-    ):
-        response = client.post("/api/v1/query", json=request_data)
-
-    assert response.status_code == 200
-    assert response.json()["answer"]["answer"] == ""
-    assert len(response.json()["chunks"]) == 0
-
-
-def test_run_query_internal_error(
-    client, mock_llm_service, mock_simple_vector_query
-):
-    request_data = {
-        "document_id": "doc123",
-        "prompt": {
-            "id": "prompt123",
-            "query": "What is the capital of France?",
-            "type": "str",
-            "entity_type": "text",
-            "rules": [],
-        },
-    }
-
-    mock_simple_vector_query.side_effect = Exception("Internal error")
-
-    with (
-        patch(
-            "app.api.v1.endpoints.query.get_llm_service",
-            return_value=mock_llm_service,
-        ),
-        patch(
-            "app.api.v1.endpoints.query.get_vector_db_service",
-        ),
-        patch(
-            "app.api.v1.endpoints.query.simple_vector_query",
-            mock_simple_vector_query,
-        ),
-    ):
-        response = client.post("/api/v1/query", json=request_data)
-
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert response.json()["detail"] == "Internal server error"

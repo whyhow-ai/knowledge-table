@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -10,16 +10,6 @@ from app.services.query_service import (
     process_query,
     simple_vector_query,
 )
-
-
-@pytest.fixture
-def mock_vector_db_service():
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_llm_service():
-    return AsyncMock()
 
 
 @pytest.mark.asyncio

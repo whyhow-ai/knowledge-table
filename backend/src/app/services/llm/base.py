@@ -1,22 +1,17 @@
-"""Abstract base class for language model services."""
+"""Abstract base class for language model completion services."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any
 
 
-class LLMService(ABC):
-    """Abstract base class for language model services."""
+class CompletionService(ABC):
+    """Abstract base class for language model completion services."""
 
     @abstractmethod
     async def generate_completion(
         self, prompt: str, response_model: Any
     ) -> Any:
         """Generate a completion from the language model."""
-        pass
-
-    @abstractmethod
-    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Get the embeddings for the given text."""
         pass
 
     @abstractmethod
