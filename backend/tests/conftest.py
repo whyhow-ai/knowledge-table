@@ -7,6 +7,9 @@ from fastapi.testclient import TestClient
 from app import main
 from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
+from app.services.embedding.openai_embedding_service import (
+    OpenAIEmbeddingService,
+)
 from app.services.llm.factory import CompletionServiceFactory
 from app.services.llm.openai_llm_service import OpenAICompletionService
 from app.services.vector_db.base import VectorDBService
@@ -58,16 +61,24 @@ def client(test_app):
 
 
 @pytest.fixture(scope="session")
-def mock_vector_db_service():
-    return AsyncMock(spec=VectorDBService)
+def mock_vector_db_service(mock_embeddings_service):
+    service = AsyncMock(spec=VectorDBService)
+    service.embedding_service = mock_embeddings_service
+    return service
+
+
+@pytest.fixture(scope="session")
+def mock_embeddings_service():
+    service = AsyncMock(spec=OpenAIEmbeddingService)
+    service.get_embeddings.return_value = [0.1, 0.2, 0.3]
+    return service
 
 
 @pytest.fixture(scope="session")
 def mock_llm_service():
-    service = MagicMock(spec=OpenAICompletionService)
+    service = AsyncMock(spec=OpenAICompletionService)
     service.client = MagicMock()
     service.generate_completion.return_value = "Mocked completion"
-    service.get_embeddings.return_value = [0.1, 0.2, 0.3]
     return service
 
 

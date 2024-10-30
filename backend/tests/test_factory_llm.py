@@ -15,7 +15,7 @@ def test_create_openai_service(mock_settings):
     mock_settings.llm_provider = "openai"
 
     with patch(
-        "app.services.llm.factory.OpenAIService"
+        "app.services.llm.factory.OpenAICompletionService"
     ) as mock_openai_service:
         service = CompletionServiceFactory.create_service(mock_settings)
 

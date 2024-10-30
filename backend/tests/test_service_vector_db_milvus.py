@@ -19,7 +19,16 @@ def mock_milvus_client():
 
 
 @pytest.fixture
-def milvus_service(mock_llm_service, mock_embeddings_servce, mock_milvus_client):
+def mock_embeddings_service():
+    service = AsyncMock()
+    service.get_embeddings = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def milvus_service(
+    mock_embeddings_service, mock_llm_service, mock_milvus_client
+):
     settings = Settings(
         milvus_db_uri="test_uri",
         milvus_db_token="test_token",
@@ -30,24 +39,47 @@ def milvus_service(mock_llm_service, mock_embeddings_servce, mock_milvus_client)
         "app.services.vector_db.milvus_service.MilvusClient",
         return_value=mock_milvus_client,
     ):
-        service = MilvusService(mock_llm_service, mock_embeddings_servce, settings)
+        service = MilvusService(
+            mock_embeddings_service, mock_llm_service, settings
+        )
         yield service
 
 
 @pytest.mark.asyncio
-async def test_get_embeddings_single(milvus_service, mock_llm_service):
-    mock_llm_service.get_embeddings.return_value = [[0.1, 0.2, 0.3]]
+async def test_get_embeddings_single(
+    milvus_service, mock_embeddings_service
+):  # Changed from mock_llm_service
+    # Set up the mock return value
+    mock_embeddings_service.get_embeddings.return_value = [[0.1, 0.2, 0.3]]
+
+    # Execute the test
     result = await milvus_service.get_embeddings("test text")
+
+    # Verify the result
     assert result == [[0.1, 0.2, 0.3]]
-    mock_llm_service.get_embeddings.assert_called_once_with(["test text"])
+    mock_embeddings_service.get_embeddings.assert_called_once_with(
+        ["test text"]
+    )
 
 
 @pytest.mark.asyncio
-async def test_get_embeddings_multiple(milvus_service, mock_llm_service):
-    mock_llm_service.get_embeddings.return_value = [[0.1, 0.2], [0.3, 0.4]]
+async def test_get_embeddings_multiple(
+    milvus_service, mock_embeddings_service
+):  # Changed from mock_llm_service
+    # Set up the mock return value
+    mock_embeddings_service.get_embeddings.return_value = [
+        [0.1, 0.2],
+        [0.3, 0.4],
+    ]
+
+    # Execute the test
     result = await milvus_service.get_embeddings(["text1", "text2"])
+
+    # Verify the result
     assert result == [[0.1, 0.2], [0.3, 0.4]]
-    mock_llm_service.get_embeddings.assert_called_once_with(["text1", "text2"])
+    mock_embeddings_service.get_embeddings.assert_called_once_with(
+        ["text1", "text2"]
+    )
 
 
 @pytest.mark.asyncio
