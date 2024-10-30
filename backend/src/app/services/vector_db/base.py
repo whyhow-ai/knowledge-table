@@ -82,10 +82,15 @@ class VectorDBService(ABC):
     async def get_embeddings(
         self, texts: Union[str, List[str]]
     ) -> List[List[float]]:
-        """Get embeddings for the given text(s) using the LLM service."""
+        """Get embeddings for the given text(s) using the embedding service."""
         if isinstance(texts, str):
             texts = [texts]
         return await self.embedding_service.get_embeddings(texts)
+
+    async def get_single_embedding(self, text: str) -> List[float]:
+        """Get a single embedding for the given text."""
+        embeddings = await self.get_embeddings(text)
+        return embeddings[0]
 
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]

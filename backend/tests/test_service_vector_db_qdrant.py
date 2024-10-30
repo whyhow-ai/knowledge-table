@@ -77,7 +77,7 @@ async def test_upsert_vectors(qdrant_service):
 
 @pytest.mark.asyncio
 async def test_vector_search(qdrant_service, mock_embeddings_service):
-    mock_embeddings_service.get_embeddings.return_value = [0.1, 0.2]
+    mock_embeddings_service.get_embeddings.return_value = [[0.1, 0.2]]
 
     result = await qdrant_service.vector_search(["test query"], "test_doc")
 
@@ -88,11 +88,8 @@ async def test_vector_search(qdrant_service, mock_embeddings_service):
 
 @pytest.mark.asyncio
 async def test_hybrid_search(qdrant_service, mock_embeddings_service):
-    # Mock the embedding service response
-    mock_embeddings_service.get_embeddings.return_value = [0.1, 0.2]
+    mock_embeddings_service.get_embeddings.return_value = [[0.1, 0.2]]
 
-    # Mock the extract_keywords method directly on the qdrant_service
-    # since it's a method of QdrantService, not CompletionService
     with patch.object(
         qdrant_service,
         "extract_keywords",
@@ -134,3 +131,27 @@ async def test_delete_document(qdrant_service):
 async def test_keyword_search_not_implemented(qdrant_service):
     with pytest.raises(NotImplementedError):
         await qdrant_service.keyword_search("query", "doc_id", ["keyword"])
+
+
+@pytest.mark.asyncio
+async def test_get_single_embedding(qdrant_service):
+    # Reset the mock before the test
+    qdrant_service.embedding_service.get_embeddings.reset_mock()
+
+    # Mock the embedding service to return a known value
+    qdrant_service.embedding_service.get_embeddings.return_value = [
+        [0.1, 0.2, 0.3]
+    ]
+
+    # Test getting a single embedding
+    result = await qdrant_service.get_single_embedding("test text")
+
+    # Verify the result
+    assert isinstance(result, list)
+    assert len(result) == 3
+    assert result == [0.1, 0.2, 0.3]
+
+    # Verify the embedding service was called correctly
+    qdrant_service.embedding_service.get_embeddings.assert_called_once_with(
+        ["test text"]
+    )
