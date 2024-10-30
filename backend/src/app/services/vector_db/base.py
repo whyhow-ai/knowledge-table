@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 
 from app.models.query_core import Rule
 from app.schemas.query_api import VectorResponseSchema
-from app.services.llm.base import LLMService
+from app.services.embedding.base import EmbeddingService
+from app.services.llm.base import CompletionService
 from app.services.llm_service import get_keywords
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class Metadata(BaseModel, extra="forbid"):
 class VectorDBService(ABC):
     """The base class for the vector database services."""
 
-    llm_service: LLMService
+    embedding_service: EmbeddingService
 
     @abstractmethod
     async def upsert_vectors(
@@ -84,7 +85,7 @@ class VectorDBService(ABC):
         """Get embeddings for the given text(s) using the LLM service."""
         if isinstance(texts, str):
             texts = [texts]
-        return await self.llm_service.get_embeddings(texts)
+        return await self.embedding_service.get_embeddings(texts)
 
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]
@@ -118,7 +119,7 @@ class VectorDBService(ABC):
         ]
 
     async def extract_keywords(
-        self, query: str, rules: list[Rule], llm_service: LLMService
+        self, query: str, rules: list[Rule], llm_service: CompletionService
     ) -> list[str]:
         """Extract keywords from a user query."""
         keywords = []

@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from app import main
 from app.core.config import Settings, get_settings
 from app.services.document_service import DocumentService
-from app.services.llm.factory import LLMFactory
-from app.services.llm.openai_service import OpenAIService
+from app.services.llm.factory import CompletionServiceFactory
+from app.services.llm.openai_llm_service import OpenAICompletionService
 from app.services.vector_db.base import VectorDBService
 from app.services.vector_db.factory import VectorDBFactory
 
@@ -64,7 +64,7 @@ def mock_vector_db_service():
 
 @pytest.fixture(scope="session")
 def mock_llm_service():
-    service = MagicMock(spec=OpenAIService)
+    service = MagicMock(spec=OpenAICompletionService)
     service.client = MagicMock()
     service.generate_completion.return_value = "Mocked completion"
     service.get_embeddings.return_value = [0.1, 0.2, 0.3]
@@ -75,8 +75,8 @@ def mock_llm_service():
 def mock_factories(mock_llm_service, mock_vector_db_service):
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            LLMFactory,
-            "create_llm_service",
+            CompletionServiceFactory,
+            "create_service",
             lambda *args, **kwargs: mock_llm_service,
         )
         m.setattr(

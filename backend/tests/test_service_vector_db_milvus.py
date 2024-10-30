@@ -19,7 +19,7 @@ def mock_milvus_client():
 
 
 @pytest.fixture
-def milvus_service(mock_llm_service, mock_milvus_client):
+def milvus_service(mock_llm_service, mock_embeddings_servce, mock_milvus_client):
     settings = Settings(
         milvus_db_uri="test_uri",
         milvus_db_token="test_token",
@@ -30,7 +30,7 @@ def milvus_service(mock_llm_service, mock_milvus_client):
         "app.services.vector_db.milvus_service.MilvusClient",
         return_value=mock_milvus_client,
     ):
-        service = MilvusService(mock_llm_service, settings)
+        service = MilvusService(mock_llm_service, mock_embeddings_servce, settings)
         yield service
 
 

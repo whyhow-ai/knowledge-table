@@ -1,31 +1,26 @@
-"""Service for interacting with OpenAI models."""
+"""OpenAI completion service implementation."""
 
 import logging
-from typing import Any, List, Optional, Type
+from typing import Any, Optional, Type
 
-from langchain_openai import OpenAIEmbeddings
 from openai import OpenAI
 from pydantic import BaseModel
 
 from app.core.config import Settings
-from app.services.llm.base import LLMService
+from app.services.llm.base import CompletionService
 
 logger = logging.getLogger(__name__)
 
 
-class OpenAIService(LLMService):
-    """Service for interacting with OpenAI models."""
+class OpenAICompletionService(CompletionService):
+    """OpenAI completion service implementation."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         if settings.openai_api_key:
             self.client = OpenAI(api_key=settings.openai_api_key)
-            self.embeddings = OpenAIEmbeddings(
-                model=self.settings.embedding_model
-            )
         else:
             self.client = None  # type: ignore
-            self.embeddings = None  # type: ignore
             logger.warning(
                 "OpenAI API key is not set. LLM features will be disabled."
             )
@@ -65,16 +60,6 @@ class OpenAIService(LLMService):
         except ValueError as e:
             logger.error(f"Error validating response: {e}")
             return None
-
-    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Get embeddings for text."""
-        if self.client is None:
-            logger.warning(
-                "OpenAI client is not initialized. Skipping embeddings."
-            )
-            return []
-
-        return self.embeddings.embed_documents(texts)
 
     async def decompose_query(self, query: str) -> dict[str, Any]:
         """Decompose the query into smaller sub-queries."""

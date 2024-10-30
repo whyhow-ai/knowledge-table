@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from app.services.llm.openai_service import OpenAIService
+from app.services.llm.openai_llm_service import OpenAICompletionService
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def openai_service(test_settings):
         patch("app.services.llm.openai_service.OpenAI"),
         patch("app.services.llm.openai_service.OpenAIEmbeddings"),
     ):
-        service = OpenAIService(test_settings)
+        service = OpenAICompletionService(test_settings)
         yield service
 
 

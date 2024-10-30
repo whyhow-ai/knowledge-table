@@ -16,8 +16,8 @@ from app.models.llm_responses import (
 )
 from app.models.query_core import FormatType, Rule
 from app.models.table import Table
-from app.services.llm.base import LLMService
-from app.services.llm.prompts import (
+from app.services.llm.base import CompletionService
+from app.services.llm.openai_prompts import (
     BASE_PROMPT,
     BOOL_INSTRUCTIONS,
     DECOMPOSE_QUERY_PROMPT,
@@ -100,7 +100,7 @@ def _get_model_and_instructions(
 
 
 async def generate_response(
-    llm_service: LLMService,
+    llm_service: CompletionService,
     query: str,
     chunks: str,
     rules: list[Rule],
@@ -111,7 +111,7 @@ async def generate_response(
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for generating the response.
     query : str
         The user's query to be answered.
@@ -155,7 +155,7 @@ async def generate_response(
 
 
 async def generate_inferred_response(
-    llm_service: LLMService,
+    llm_service: CompletionService,
     query: str,
     rules: list[Rule],
     format: FormatType,
@@ -165,7 +165,7 @@ async def generate_inferred_response(
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for generating the response.
     query : str
         The user's query to be answered.
@@ -207,14 +207,14 @@ async def generate_inferred_response(
 
 
 async def get_keywords(
-    llm_service: LLMService, query: str
+    llm_service: CompletionService, query: str
 ) -> dict[str, list[str] | None]:
     """
     Extract keywords from a query using the language model.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for keyword extraction.
     query : str
         The query from which to extract keywords.
@@ -242,14 +242,14 @@ async def get_keywords(
 
 
 async def get_similar_keywords(
-    llm_service: LLMService, chunks: str, rule: list[str]
+    llm_service: CompletionService, chunks: str, rule: list[str]
 ) -> dict[str, Any]:
     """
     Retrieve keywords similar to the provided keywords from the given text chunks.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for finding similar keywords.
     chunks : str
         The text chunks to search for similar keywords.
@@ -287,14 +287,14 @@ async def get_similar_keywords(
 
 
 async def decompose_query(
-    llm_service: LLMService, query: str
+    llm_service: CompletionService, query: str
 ) -> dict[str, Any]:
     """
     Decompose a complex query into multiple simpler sub-queries.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for query decomposition.
     query : str
         The complex query to be decomposed.
@@ -329,14 +329,14 @@ async def decompose_query(
 
 
 async def generate_schema(
-    llm_service: LLMService, data: Table
+    llm_service: CompletionService, data: Table
 ) -> dict[str, Any]:
     """
     Generate a schema for the table based on column information and questions.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for schema generation.
     data : Table
         The table data containing information about columns, rows, and documents.

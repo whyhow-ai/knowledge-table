@@ -3,14 +3,14 @@ from unittest.mock import Mock
 import pytest
 
 from app.core.config import Settings
-from app.services.llm.base import LLMService
+from app.services.llm.base import CompletionService
 from app.services.vector_db.factory import VectorDBFactory
 from app.services.vector_db.milvus_service import MilvusService
 
 
 @pytest.fixture
 def mock_llm_service():
-    return Mock(spec=LLMService)
+    return Mock(spec=CompletionService)
 
 
 def test_create_milvus_service(mock_llm_service):
