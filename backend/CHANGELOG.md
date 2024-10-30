@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added support for queries without source data in vector database
 - Graceful failure of triple export when no chunks are found
+- Tested Qdrant vector database service
 
 ### Changed
 

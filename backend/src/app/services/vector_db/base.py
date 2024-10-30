@@ -90,7 +90,7 @@ class VectorDBService(ABC):
     async def prepare_chunks(
         self, document_id: str, chunks: List[Document]
     ) -> List[Dict[str, Any]]:
-        """Prepare chunks for insertion into the Milvus database."""
+        """Prepare chunks for insertion into the vector database."""
         logger.info(f"Preparing {len(chunks)} chunks")
 
         # Clean the chunks
