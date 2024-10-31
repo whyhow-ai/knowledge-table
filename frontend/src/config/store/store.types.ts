@@ -98,8 +98,7 @@ export interface AnswerTableGlobalRule extends AnswerTableRule {
 }
 
 export interface AnswerTableRule {
-  // type: "must_return" | "may_return" | "max_length" | "replace";
-  type: "must_return" | "may_return" | "max_length";
+  type: "must_return" | "may_return" | "max_length" | "resolve_entity";
   options?: string[];
   length?: number;
 }

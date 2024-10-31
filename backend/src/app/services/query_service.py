@@ -38,6 +38,17 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
     )
 
 
+def replace_keywords(text: str, keyword_replacements: dict[str, str]) -> str:
+    """Replace keywords in text based on provided replacement dictionary."""
+    if not text or not keyword_replacements:
+        return text
+
+    result = text
+    for old_word, new_word in keyword_replacements.items():
+        result = result.replace(old_word, new_word)
+    return result
+
+
 async def process_query(
     query_type: QueryType,
     query: str,
@@ -58,6 +69,25 @@ async def process_query(
         llm_service, query, concatenated_chunks, rules, format
     )
     answer_value = answer["answer"]
+
+    # Extract and apply keyword replacements from all resolve_entity rules
+    resolve_entity_rules = [
+        rule for rule in rules if rule.type == "resolve_entity"
+    ]
+    
+    if resolve_entity_rules and answer_value:
+        # Combine all replacements from all resolve_entity rules
+        replacements = {}
+        for rule in resolve_entity_rules:
+            if rule.options:
+                rule_replacements = dict(
+                    option.split(":") for option in rule.options
+                )
+                replacements.update(rule_replacements)
+        
+        if replacements:
+            print(f"Resolving entities in answer: {answer_value}")
+            answer_value = replace_keywords(answer_value, replacements)
 
     result_chunks = (
         []
@@ -144,5 +174,24 @@ async def inference_query(
         llm_service, query, rules, format
     )
     answer_value = answer["answer"]
+
+    # Extract and apply keyword replacements from all resolve_entity rules
+    resolve_entity_rules = [
+        rule for rule in rules if rule.type == "resolve_entity"
+    ]
+    
+    if resolve_entity_rules and answer_value:
+        # Combine all replacements from all resolve_entity rules
+        replacements = {}
+        for rule in resolve_entity_rules:
+            if rule.options:
+                rule_replacements = dict(
+                    option.split(":") for option in rule.options
+                )
+                replacements.update(rule_replacements)
+        
+        if replacements:
+            print(f"Resolving entities in answer: {answer_value}")
+            answer_value = replace_keywords(answer_value, replacements)
 
     return QueryResult(answer=answer_value, chunks=[])
