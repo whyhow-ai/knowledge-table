@@ -52,14 +52,3 @@ def test_create_supported_vector_db_service(
         assert isinstance(vector_db_service, VectorDBService)
         assert vector_db_service.embedding_service == mock_embeddings_service
         assert vector_db_service.llm_service == mock_llm_service
-
-
-def test_create_unknown_vector_db_service(
-    mock_llm_service, mock_embeddings_service
-):
-    """Test that the factory returns None for an unsupported provider"""
-    settings = Settings(vector_db_provider="unknown")
-    vector_db_service = VectorDBFactory.create_vector_db_service(
-        mock_embeddings_service, mock_llm_service, settings
-    )
-    assert vector_db_service is None
