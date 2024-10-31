@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Allow query without source data if mention is present
-- Removed "resolve entity" rule as an option for now
+- Added resolve entity rule
 
 ## [v0.1.5] - 2024-10-29
 
