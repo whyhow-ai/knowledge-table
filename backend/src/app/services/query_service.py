@@ -74,7 +74,7 @@ async def process_query(
     resolve_entity_rules = [
         rule for rule in rules if rule.type == "resolve_entity"
     ]
-    
+
     if resolve_entity_rules and answer_value:
         # Combine all replacements from all resolve_entity rules
         replacements = {}
@@ -84,7 +84,7 @@ async def process_query(
                     option.split(":") for option in rule.options
                 )
                 replacements.update(rule_replacements)
-        
+
         if replacements:
             print(f"Resolving entities in answer: {answer_value}")
             answer_value = replace_keywords(answer_value, replacements)
@@ -179,7 +179,7 @@ async def inference_query(
     resolve_entity_rules = [
         rule for rule in rules if rule.type == "resolve_entity"
     ]
-    
+
     if resolve_entity_rules and answer_value:
         # Combine all replacements from all resolve_entity rules
         replacements = {}
@@ -189,7 +189,7 @@ async def inference_query(
                     option.split(":") for option in rule.options
                 )
                 replacements.update(rule_replacements)
-        
+
         if replacements:
             print(f"Resolving entities in answer: {answer_value}")
             answer_value = replace_keywords(answer_value, replacements)
