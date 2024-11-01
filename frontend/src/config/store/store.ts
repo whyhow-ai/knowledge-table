@@ -174,7 +174,8 @@ export const useStore = create<Store>()(
           rows: getTable().rows.map(row => ({
             ...row,
             cells: omit(row.cells, ids)
-          }))
+          })),
+          resolvedEntities: undefined
         });
       },
 
@@ -474,7 +475,10 @@ export const useStore = create<Store>()(
           set(getInitialData());
         } else {
           const { id, name, ...table } = getBlankTable();
-          get().editActiveTable(table);
+          get().editActiveTable({
+            ...table,
+            resolvedEntities: undefined
+          });
         }
       }
     }),
