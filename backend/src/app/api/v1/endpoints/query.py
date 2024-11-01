@@ -128,8 +128,11 @@ async def run_query(
             answer=query_response.answer,
             type=request.prompt.type,
         )
+        # Include resolved_entities in the response
         response_data = QueryAnswerResponse(
-            answer=answer, chunks=query_response.chunks
+            answer=answer,
+            chunks=query_response.chunks,
+            resolved_entities=query_response.resolved_entities,  # Add this line
         )
 
         return response_data

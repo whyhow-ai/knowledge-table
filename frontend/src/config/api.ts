@@ -61,21 +61,22 @@ export const answerSchema = z.union([
   z.array(z.string())
 ]);
 
+// Update the resolved entities schema to match backend format
+export const resolvedEntitiesSchema = z.record(z.string(), z.string()).optional();
+
+// Update the query response schema
 const queryResponseSchema = z.object({
   answer: z.object({ answer: answerSchema }),
-  chunks: z.array(chunkSchema)
+  chunks: z.array(chunkSchema),
+  resolved_entities: resolvedEntitiesSchema 
 });
 
+// Update the runQuery function to transform the data format
 export async function runQuery(
   row: AnswerTableRow,
   column: AnswerTableColumn,
   globalRules: AnswerTableGlobalRule[]
 ) {
-  // if (!row.sourceData || !column.entityType.trim() || !column.generate) {
-  //   throw new Error(
-  //     "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
-  //   );
-  // }
   if (!column.entityType.trim() || !column.generate) {
     throw new Error(
       "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
@@ -87,6 +88,7 @@ export async function runQuery(
       .filter(rule => rule.entityType.trim() === column.entityType.trim())
       .map(r => omit(r, "id", "entityType"))
   ];
+  
   const result = await fetch("http://localhost:8000/api/v1/query", {
     method: "POST",
     headers: {
@@ -105,7 +107,27 @@ export async function runQuery(
       }
     })
   });
-  return queryResponseSchema.parse(await result.json());
+  
+  const response = await result.json();
+  console.log('Raw API Response:', response);
+  
+  const parsed = queryResponseSchema.parse(response);
+  console.log('Parsed Response:', parsed);
+  
+  const resolvedEntities = parsed.resolved_entities 
+    ? Object.entries(parsed.resolved_entities).map(([original, resolved]) => ({
+        original,
+        resolved,
+        fullAnswer: parsed.answer.answer as string
+      }))
+    : undefined;
+  console.log('Transformed Resolved Entities:', resolvedEntities);
+
+  return {
+    answer: parsed.answer,
+    chunks: parsed.chunks,
+    resolvedEntities
+  };
 }
 
 // Export triples

@@ -97,9 +97,9 @@ async def process_query(
     )
 
     return QueryResult(
-        answer=answer_value, 
+        answer=answer_value,
         chunks=result_chunks[:10],
-        resolved_entities=replacements if replacements else None
+        resolved_entities=replacements if replacements else None,
     )
 
 

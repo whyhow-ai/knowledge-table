@@ -69,6 +69,7 @@ class QueryAnswerResponse(BaseModel):
 
     answer: QueryAnswer
     chunks: List[Chunk]
+    resolved_entities: Optional[dict[str, str]] = None
 
 
 # Type for search responses (used in service layer)
