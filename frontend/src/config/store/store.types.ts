@@ -65,6 +65,11 @@ export interface AnswerTable {
   openedChunks: CellKey[];
   loadingCells: Record<CellKey, true>;
   uploadingFiles: boolean;
+  resolvedEntities?: {
+    original: string;
+    resolved: string;
+    fullAnswer: string;
+  }[];
 }
 
 export interface AnswerTableColumn {

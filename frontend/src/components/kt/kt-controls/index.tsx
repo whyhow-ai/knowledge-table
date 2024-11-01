@@ -4,6 +4,7 @@ import { KtHiddenPill } from "./kt-hidden-pill";
 import { KtClear } from "./kt-clear";
 import { KtFilters } from "./kt-filters";
 import { KTGlobalRules } from "./kt-global-rules";
+import { KtResolvedEntities } from "./kt-resolved-entities";
 import { KtDownload } from "./kt-download";
 import { KtChunks } from "./kt-chunks";
 import { useStore } from "@config/store";
@@ -23,6 +24,7 @@ export function KtControls(props: BoxProps) {
       <KtClear />
       <KtFilters />
       <KTGlobalRules />
+      <KtResolvedEntities />
       <KtDownload.Csv />
       <KtDownload.Triples />
       <KtChunks />
