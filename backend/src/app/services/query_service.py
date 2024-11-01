@@ -1,7 +1,7 @@
 """Query service."""
 
 import logging
-from typing import Any, Awaitable, Callable, Dict, List
+from typing import Any, Awaitable, Callable, Dict, List, Union
 
 from app.models.query_core import Chunk, FormatType, QueryType, Rule
 from app.schemas.query_api import QueryResult, SearchResponse
@@ -39,10 +39,36 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
 
 
 def replace_keywords(
-    text: str, keyword_replacements: dict[str, str]
-) -> tuple[str, dict[str, str]]:
+    text: Union[str, List[str]], 
+    keyword_replacements: dict[str, str]
+) -> tuple[Union[str, List[str]], dict[str, str]]:
     """Replace keywords in text and return both the modified text and transformation details."""
     if not text or not keyword_replacements:
+        return text, {}
+
+    transformations: Dict[str, str] = {}
+
+    # Handle list of strings
+    if isinstance(text, list):
+        result = []
+        for item in text:
+            transformed_item, item_transformations = replace_keywords_in_string(
+                item, 
+                keyword_replacements
+            )
+            result.append(transformed_item)
+            transformations.update(item_transformations)
+        return result, transformations
+
+    # Handle single string
+    return replace_keywords_in_string(text, keyword_replacements)
+
+def replace_keywords_in_string(
+    text: str, 
+    keyword_replacements: dict[str, str]
+) -> tuple[str, dict[str, str]]:
+    """Helper function to replace keywords in a single string."""
+    if not text:
         return text, {}
 
     result = text
@@ -50,7 +76,6 @@ def replace_keywords(
 
     for original, new_word in keyword_replacements.items():
         if original in text:
-            # Find all occurrences of the original word
             current_pos = 0
             while True:
                 start_idx = text.find(original, current_pos)
@@ -58,26 +83,21 @@ def replace_keywords(
                     break
 
                 end_idx = start_idx + len(original)
-                current_pos = end_idx  # Move position for next iteration
+                current_pos = end_idx
 
-                # Look ahead for any suffixes
                 while end_idx < len(text) and (
                     text[end_idx].isalnum() or text[end_idx] in "()"
                 ):
                     end_idx += 1
 
-                # Get the full original word with any suffix
                 full_original = text[start_idx:end_idx]
-                # Create new word with the same suffix
                 suffix = text[start_idx + len(original) : end_idx]
                 full_new = new_word + suffix
 
-                # Replace in result and store transformation
                 result = result.replace(full_original, full_new)
                 transformations[full_original] = full_new
 
     return result, transformations
-
 
 async def process_query(
     query_type: QueryType,
@@ -100,36 +120,40 @@ async def process_query(
     )
     answer_value = answer["answer"]
 
-    # Extract and apply keyword replacements from all resolve_entity rules
-    resolve_entity_rules = [
-        rule for rule in rules if rule.type == "resolve_entity"
-    ]
+    transformations: Dict[str, str] = {}
 
-    result_chunks = (
-        []
-        if answer_value in ("not found", None)
-        and query_type != "decomposition"
-        else chunks
-    )
+    if format in ["str", "str_array"]:
 
-    replacements: Dict[str, str] = {}
-    transformations: Dict[str, str] = {}  # Initialize transformations here
+        # Extract and apply keyword replacements from all resolve_entity rules
+        resolve_entity_rules = [
+            rule for rule in rules if rule.type == "resolve_entity"
+        ]
 
-    if resolve_entity_rules and answer_value:
-        # Combine all replacements from all resolve_entity rules
-        for rule in resolve_entity_rules:
-            if rule.options:
-                rule_replacements = dict(
-                    option.split(":") for option in rule.options
+        result_chunks = (
+            []
+            if answer_value in ("not found", None)
+            and query_type != "decomposition"
+            else chunks
+        )
+
+        replacements: Dict[str, str] = {}
+
+        if resolve_entity_rules and answer_value:
+            # Combine all replacements from all resolve_entity rules
+            for rule in resolve_entity_rules:
+                if rule.options:
+                    rule_replacements = dict(
+                        option.split(":") for option in rule.options
+                    )
+                    replacements.update(rule_replacements)
+
+            if replacements:
+                print(f"Resolving entities in answer: {answer_value}")
+                # Handle both string and list cases
+                answer_value, transformations = replace_keywords(
+                    answer_value, 
+                    replacements
                 )
-                replacements.update(rule_replacements)
-
-        if replacements:
-            print(f"Resolving entities in answer: {answer_value}")
-            # Unpack the tuple returned by replace_keywords
-            answer_value, transformations = replace_keywords(
-                answer_value, replacements
-            )
 
     return QueryResult(
         answer=answer_value,
