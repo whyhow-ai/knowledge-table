@@ -121,6 +121,8 @@ async def process_query(
 
     transformations: Dict[str, str] = {}
 
+    result_chunks = []
+
     if format in ["str", "str_array"]:
 
         # Extract and apply keyword replacements from all resolve_entity rules
