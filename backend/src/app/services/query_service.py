@@ -39,8 +39,7 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
 
 
 def replace_keywords(
-    text: Union[str, List[str]], 
-    keyword_replacements: dict[str, str]
+    text: Union[str, List[str]], keyword_replacements: dict[str, str]
 ) -> tuple[Union[str, List[str]], dict[str, str]]:
     """Replace keywords in text and return both the modified text and transformation details."""
     if not text or not keyword_replacements:
@@ -52,9 +51,8 @@ def replace_keywords(
     if isinstance(text, list):
         result = []
         for item in text:
-            transformed_item, item_transformations = replace_keywords_in_string(
-                item, 
-                keyword_replacements
+            transformed_item, item_transformations = (
+                replace_keywords_in_string(item, keyword_replacements)
             )
             result.append(transformed_item)
             transformations.update(item_transformations)
@@ -63,11 +61,11 @@ def replace_keywords(
     # Handle single string
     return replace_keywords_in_string(text, keyword_replacements)
 
+
 def replace_keywords_in_string(
-    text: str, 
-    keyword_replacements: dict[str, str]
+    text: str, keyword_replacements: dict[str, str]
 ) -> tuple[str, dict[str, str]]:
-    """Helper function to replace keywords in a single string."""
+    """Keywords for single string."""
     if not text:
         return text, {}
 
@@ -98,6 +96,7 @@ def replace_keywords_in_string(
                 transformations[full_original] = full_new
 
     return result, transformations
+
 
 async def process_query(
     query_type: QueryType,
@@ -151,8 +150,7 @@ async def process_query(
                 print(f"Resolving entities in answer: {answer_value}")
                 # Handle both string and list cases
                 answer_value, transformations = replace_keywords(
-                    answer_value, 
-                    replacements
+                    answer_value, replacements
                 )
 
     return QueryResult(
