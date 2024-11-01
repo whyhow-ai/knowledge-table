@@ -50,7 +50,6 @@ export function KtResolvedEntities(props: BoxProps) {
   return (
     <Group gap={8} {...props}>
       <Button
-        variant="light"
         leftSection={<IconReplace size={16} />}
         onClick={handlers.open}
       >
