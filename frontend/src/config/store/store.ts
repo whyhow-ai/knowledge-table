@@ -23,7 +23,7 @@ import {
   isArrayType,
   toSingleType
 } from "./store.utils";
-import { AnswerTableRow, SourceData, Store } from "./store.types";
+import { AnswerTableRow, ResolvedEntity, SourceData, Store } from "./store.types";
 import { runQuery, uploadFile } from "../api";
 import { insertAfter, insertBefore, where } from "@utils/functions";
 
@@ -344,14 +344,15 @@ export const useStore = create<Store>()(
             shouldRunQuery = false;
           }
           if (shouldRunQuery) {
-            runQuery(row, column, globalRules).then(({ answer, chunks }) => {
+            runQuery(row, column, globalRules).then(({ answer, chunks, resolvedEntities }) => {
               editCells(
                 [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
                 activeTableId
               );
               editTable(activeTableId, {
                 chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
-                loadingCells: omit(getTable(activeTableId).loadingCells, key)
+                loadingCells: omit(getTable(activeTableId).loadingCells, key),
+                resolvedEntities: resolvedEntities as ResolvedEntity[] | undefined
               });
             });
           } else {

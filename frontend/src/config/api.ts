@@ -62,13 +62,17 @@ export const answerSchema = z.union([
 ]);
 
 // Update the resolved entities schema to match backend format
-export const resolvedEntitiesSchema = z.record(z.string(), z.string()).optional();
+export const resolvedEntitiesSchema = z.union([
+  z.record(z.string(), z.string()),
+  z.null(),
+  z.undefined()
+]);
 
 // Update the query response schema
 const queryResponseSchema = z.object({
   answer: z.object({ answer: answerSchema }),
   chunks: z.array(chunkSchema),
-  resolved_entities: resolvedEntitiesSchema 
+  resolved_entities: resolvedEntitiesSchema
 });
 
 // Update the runQuery function to transform the data format
@@ -114,13 +118,14 @@ export async function runQuery(
   const parsed = queryResponseSchema.parse(response);
   console.log('Parsed Response:', parsed);
   
-  const resolvedEntities = parsed.resolved_entities 
+  // Update resolved entities transformation to handle null/undefined
+  const resolvedEntities = parsed.resolved_entities && typeof parsed.resolved_entities === 'object'
     ? Object.entries(parsed.resolved_entities).map(([original, resolved]) => ({
         original,
         resolved,
         fullAnswer: parsed.answer.answer as string
       }))
-    : undefined;
+    : null;  // Change to null instead of undefined to match expected type
   console.log('Transformed Resolved Entities:', resolvedEntities);
 
   return {

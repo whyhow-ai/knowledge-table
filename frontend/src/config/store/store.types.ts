@@ -54,6 +54,12 @@ export interface Store {
   clear: (allTables?: boolean) => void;
 }
 
+export interface ResolvedEntity {
+  original: string;
+  resolved: string;
+  fullAnswer: string;
+}
+
 export interface AnswerTable {
   id: string;
   name: string;
@@ -65,11 +71,7 @@ export interface AnswerTable {
   openedChunks: CellKey[];
   loadingCells: Record<CellKey, true>;
   uploadingFiles: boolean;
-  resolvedEntities?: {
-    original: string;
-    resolved: string;
-    fullAnswer: string;
-  }[];
+  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableColumn {
