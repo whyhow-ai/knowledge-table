@@ -39,6 +39,7 @@ class QueryResult(BaseModel):
 
     answer: Any
     chunks: List[Chunk]
+    resolved_entities: Optional[dict[str, str]] = None
 
 
 class QueryResponseSchema(BaseModel):
@@ -50,6 +51,7 @@ class QueryResponseSchema(BaseModel):
     answer: Optional[Any] = None
     chunks: List[Chunk]
     type: str
+    resolved_entities: Optional[dict[str, str]] = None
 
 
 class QueryAnswer(BaseModel):

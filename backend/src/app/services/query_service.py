@@ -75,9 +75,9 @@ async def process_query(
         rule for rule in rules if rule.type == "resolve_entity"
     ]
 
+    replacements = {}
     if resolve_entity_rules and answer_value:
         # Combine all replacements from all resolve_entity rules
-        replacements = {}
         for rule in resolve_entity_rules:
             if rule.options:
                 rule_replacements = dict(
@@ -96,7 +96,11 @@ async def process_query(
         else chunks
     )
 
-    return QueryResult(answer=answer_value, chunks=result_chunks[:10])
+    return QueryResult(
+        answer=answer_value, 
+        chunks=result_chunks[:10],
+        resolved_entities=replacements if replacements else None
+    )
 
 
 # Convenience functions for specific query types
