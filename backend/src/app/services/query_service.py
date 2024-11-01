@@ -38,15 +38,42 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
     )
 
 
-def replace_keywords(text: str, keyword_replacements: dict[str, str]) -> str:
-    """Replace keywords in text based on provided replacement dictionary."""
+def replace_keywords(text: str, keyword_replacements: dict[str, str]) -> tuple[str, dict[str, str]]:
+    """Replace keywords in text and return both the modified text and transformation details."""
     if not text or not keyword_replacements:
-        return text
+        return text, {}
 
     result = text
-    for old_word, new_word in keyword_replacements.items():
-        result = result.replace(old_word, new_word)
-    return result
+    transformations = {}
+    
+    for original, new_word in keyword_replacements.items():
+        if original in text:
+            # Find all occurrences of the original word
+            current_pos = 0
+            while True:
+                start_idx = text.find(original, current_pos)
+                if start_idx == -1:  # No more occurrences
+                    break
+                    
+                end_idx = start_idx + len(original)
+                current_pos = end_idx  # Move position for next iteration
+                
+                # Look ahead for any suffixes
+                while (end_idx < len(text) and 
+                       (text[end_idx].isalnum() or text[end_idx] in "()")):
+                    end_idx += 1
+                
+                # Get the full original word with any suffix
+                full_original = text[start_idx:end_idx]
+                # Create new word with the same suffix
+                suffix = text[start_idx + len(original):end_idx]
+                full_new = new_word + suffix
+                
+                # Replace in result and store transformation
+                result = result.replace(full_original, full_new)
+                transformations[full_original] = full_new
+    
+    return result, transformations
 
 
 async def process_query(
@@ -76,6 +103,7 @@ async def process_query(
     ]
 
     replacements = {}
+    transformations = []
     if resolve_entity_rules and answer_value:
         # Combine all replacements from all resolve_entity rules
         for rule in resolve_entity_rules:
@@ -87,7 +115,8 @@ async def process_query(
 
         if replacements:
             print(f"Resolving entities in answer: {answer_value}")
-            answer_value = replace_keywords(answer_value, replacements)
+            # Unpack the tuple returned by replace_keywords
+            answer_value, transformations = replace_keywords(answer_value, replacements)
 
     result_chunks = (
         []
@@ -99,7 +128,7 @@ async def process_query(
     return QueryResult(
         answer=answer_value,
         chunks=result_chunks[:10],
-        resolved_entities=replacements if replacements else None,
+        resolved_entities=transformations if transformations else None,
     )
 
 

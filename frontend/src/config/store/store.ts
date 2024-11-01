@@ -300,6 +300,11 @@ export const useStore = create<Store>()(
         const colMap = keyBy(columns, c => c.id);
         const rowMap = keyBy(rows, r => r.id);
 
+        // Clear existing resolvedEntities before starting new queries
+        editTable(activeTableId, {
+          resolvedEntities: []
+        });
+
         const batch = compact(
           cells.map(({ rowId, columnId }) => {
             const key = getCellKey(rowId, columnId);
@@ -350,10 +355,21 @@ export const useStore = create<Store>()(
                 [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
                 activeTableId
               );
+              
+              // Get current state
+              const currentTable = getTable(activeTableId);
+              const currentEntities = currentTable.resolvedEntities || [];
+              
+              // Merge new entities with existing ones
+              const newEntities = resolvedEntities as ResolvedEntity[] | undefined;
+              const mergedEntities = newEntities 
+                ? [...currentEntities, ...newEntities]
+                : currentEntities;
+      
               editTable(activeTableId, {
-                chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
-                loadingCells: omit(getTable(activeTableId).loadingCells, key),
-                resolvedEntities: resolvedEntities as ResolvedEntity[] | undefined
+                chunks: { ...currentTable.chunks, [key]: chunks },
+                loadingCells: omit(currentTable.loadingCells, key),
+                resolvedEntities: mergedEntities
               });
             });
           } else {

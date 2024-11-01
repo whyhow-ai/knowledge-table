@@ -1,6 +1,5 @@
 import {
   Button,
-  Modal,
   Group,
   Text,
   Code,
@@ -11,16 +10,12 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconReplace } from "@tabler/icons-react";
-import { isEmpty } from "lodash-es";
 import { useStore } from "@config/store";
+import { Drawer } from '@mantine/core'; 
 
 export function KtResolvedEntities(props: BoxProps) {
   const [opened, handlers] = useDisclosure(false);
   const resolvedEntities = useStore(state => state.getTable().resolvedEntities);
-  
-  console.log('Resolved Entities:', resolvedEntities);
-  console.log('Is Array:', Array.isArray(resolvedEntities));
-  console.log('Is Empty:', isEmpty(resolvedEntities));
 
   return (
     <Group gap={8} {...props}>
@@ -32,23 +27,24 @@ export function KtResolvedEntities(props: BoxProps) {
         Resolved entities
       </Button>
 
-      <Modal
-        size="xl"
+      <Drawer
+        position="right"
+        size="md"
         title="Resolved entities"
         opened={opened}
         onClose={handlers.close}
       >
-        {resolvedEntities && Array.isArray(resolvedEntities) && resolvedEntities.length > 0 ? (
+        {resolvedEntities && resolvedEntities.length > 0 ? (
           <Stack>
             <Text size="sm">The following transformations were applied:</Text>
             <Paper withBorder p="md">
               <List spacing="xs">
-                {resolvedEntities.map(({ original, resolved }, index) => (
+                {resolvedEntities.map(({ original, fullAnswer }, index) => (
                   <List.Item key={index}>
                     <Group>
-                      <Code>{original}</Code>
+                      <Code>{String(original)}</Code>
                       <Text span>→</Text>
-                      <Code>{resolved}</Code>
+                      <Code>{String(fullAnswer)}</Code>
                     </Group>
                   </List.Item>
                 ))}
@@ -58,7 +54,7 @@ export function KtResolvedEntities(props: BoxProps) {
         ) : (
           <Text>No transformations available.</Text>
         )}
-      </Modal>
+      </Drawer>
     </Group>
   );
 }
