@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added the resolved entities modal to view the full answer with resolved entities
+
 ### Changed
 
 - Allow query without source data if mention is present
