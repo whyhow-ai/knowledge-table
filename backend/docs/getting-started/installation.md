@@ -1,46 +1,124 @@
-# Installation Guide
+# 🚀 Installation Guide
 
-This guide will help you set up the Knowledge Table backend.
+This guide will walk you through setting up and running the Knowledge Table backend and frontend.
 
-## Prerequisites
+> **Prerequisites**
+>
+> - Python 3.10+
+> - Git
+> - [Bun](https://bun.sh/) (for frontend)
 
-- Python 3.10+
-- Git
+---
 
-## Steps
+## Setup and Run
 
-1. **Clone the repository**
+### Backend
 
-   ```bash
-   git clone https://github.com/whyhow-ai/knowledge-table.git
-   cd knowledge-table/backend/
-   ```
+> **Step 1:** Clone the Knowledge Table repository
 
-2. **Create and activate a virtual environment**
+```bash
+git clone https://github.com/whyhow-ai/knowledge-table.git
+cd knowledge-table/backend/
+```
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-   ```
+> **Step 2:** Create and activate a virtual environment
 
-3. **Install the dependencies**
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+```
 
-   ```bash
-   pip install .
-   ```
+> **Step 3:** Install the necessary packages
 
-4. **Install development dependencies (optional)**
+```bash
+pip install .
+```
 
-   ```bash
-   pip install .[dev]
-   ```
+_To install additional development dependencies:_
 
-5. **Start the backend server**
+```bash
+pip install .[dev]
+```
 
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+> **Step 4:** Launch the backend server
 
-   The backend API will be available at `http://localhost:8000`.
+```bash
+uvicorn app.main:app --reload
+```
 
-[Next: Configuration](configuration.md)
+**API** available at: [http://localhost:8000](http://localhost:8000)
+
+---
+
+### Frontend
+
+> **Step 1:** Navigate to the frontend directory and install dependencies
+
+```bash
+cd ../frontend
+bun install
+```
+
+> **Step 2:** Start the frontend
+
+```bash
+bun start
+```
+
+**Frontend** available at: [http://localhost:5173](http://localhost:5173)
+
+---
+
+## Configuration
+
+The backend uses environment variables for configuration.
+
+> **Create a `.env` file**
+
+```bash
+cp .env.sample .env
+```
+
+> **Add API keys**
+
+Open `.env` and set up your OpenAI API key:
+
+```dotenv
+OPENAI_API_KEY=sk-yourkeyhere
+```
+
+_Optional: Add the Unstructured API key:_
+
+```dotenv
+UNSTRUCTURED_API_KEY=your-unstructured-api-key
+```
+
+| Variable               | Description                            |
+| ---------------------- | -------------------------------------- |
+| `OPENAI_API_KEY`       | Your OpenAI API key                    |
+| `UNSTRUCTURED_API_KEY` | API key for Unstructured.io (optional) |
+
+---
+
+## Explore the API
+
+Once the application is running, you can access the interactive API documentation:
+
+- **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+Use these interfaces to try out API requests directly in your browser.
+
+---
+
+## Run Tests
+
+To ensure that everything is working correctly, you can run the unit tests:
+
+```bash
+pytest
+```
+
+---
+
+🎉 **Your Knowledge Table backend and frontend setup is now complete!**

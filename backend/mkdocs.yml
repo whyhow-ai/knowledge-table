@@ -25,15 +25,16 @@ theme:
         name: Switch to light mode
 
 nav:
-  - Home: index.md
   - Getting Started:
-      - Quickstart Guide: getting-started/quickstart.md  # (New, we'll create this file)
+      - Welcome to Knowledge Table: index.md
       - Installation: getting-started/installation.md
-      - Configuration: getting-started/configuration.md
-  - User Guide:
-      - API Overview: api/overview.md
-      - Tutorials:
-          - Extracting Data from Documents: tutorials/extracting-data.md
+  - Tutorial: tutorials/extracting-data.md
+  - API Reference:
+      - Overview: api/overview.md
+      - Endpoints:
+          - Document: api/v1/endpoints/document.md
+          - Graph: api/v1/endpoints/graph.md
+          - Query: api/v1/endpoints/query.md
   - Developer Guide:
       - Architecture Overview: architecture.md
       - Development Setup: development/setup.md
@@ -71,12 +72,6 @@ nav:
       - Document: schemas/document.md
       - Graph: schemas/graph.md
       - Query: schemas/query.md
-  - API Reference:
-      - v1:
-          - Endpoints:
-              - Document: api/v1/endpoints/document.md
-              - Graph: api/v1/endpoints/graph.md
-              - Query: api/v1/endpoints/query.md
   - Deployment:
       - Docker: deployment/docker.md
       - Native: deployment/native.md
@@ -115,4 +110,5 @@ markdown_extensions:
   - pymdownx.tasklist
   - pymdownx.tilde
   - pymdownx.emoji:
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg

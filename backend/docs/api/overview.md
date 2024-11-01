@@ -1,84 +1,59 @@
-# API Overview
+# Knowledge Table API Overview
 
-Welcome to the Knowledge Table API! This page provides a high-level overview of the available API endpoints and their use.
+Welcome to the Knowledge Table API! This summary provides a quick overview of key endpoints, usage guidelines, and how to access the interactive API documentation.
 
-## Base URL
+---
 
-All API requests should be made to the following base URL (for version 1):
+**Base URL**
+
+All API requests should be made to the following base URL for version 1:
 
 ```
 https://api.example.com/v1
 ```
 
-## Accessing the Interactive API Docs
+---
 
-Knowledge Table's backend uses [FastAPI](https://fastapi.tiangolo.com), which automatically generates interactive API documentation. You can explore all API endpoints, see request and response formats, and try out requests using the following interfaces:
+**Documentation**
 
-- **Swagger UI**: [https://api.example.com/docs](https://api.example.com/docs)
-  - A user-friendly interface to explore the API.
-  
-- **ReDoc**: [https://api.example.com/redoc](https://api.example.com/redoc)
-  - A clean and detailed API reference using ReDoc.
+Explore and test all API endpoints through the interactive docs provided by FastAPI:
 
-## Error Handling
-
-The API follows standard HTTP status codes to indicate the success or failure of requests. Here are some of the common status codes you may encounter:
-
-- **200 OK**: The request was successful.
-- **400 Bad Request**: The request was malformed or contained invalid parameters.
-- **401 Unauthorized**: Authentication failed or was not provided.
-- **403 Forbidden**: You do not have the necessary permissions for this request.
-- **404 Not Found**: The requested resource could not be found.
-- **500 Internal Server Error**: An error occurred on the server.
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs) – A user-friendly interface for API exploration.
+- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc) – A clean reference for detailed API information.
 
 ---
 
-## API Endpoints Overview
+Knowledge Table currently offers the following backend endpoints for document management, graph export, and query processing:
 
-Here is a summary of the key endpoints available in version 1 of the Knowledge Table API:
+**Document**  
+ Upload and manage documents within the Knowledge Table system.
 
-### Document Management
+- **POST** `/document` – Uploads and processes a document.
+- **DELETE** `/document/{document_id}` – Deletes a document by its ID.  
+  For details, refer to [Document Endpoints](v1/endpoints/document.md).
 
-These endpoints allow you to upload, delete, and manage documents in the system.
+**Graph**  
+ Export structured data from processed documents in the form of triples.
 
-- **POST** `/document`
-- Upload and process a document.
-- **Request**: Multipart form data containing the document file.
-- **Response**: Document metadata and status.
+- **POST** `/graph/export-triples` – Exports triples (subject, predicate, object) based on table data.  
+  More information is available at [Graph Endpoints](v1/endpoints/graph.md).
 
-- **DELETE** `/document/{document_id}`
-- Delete a document by its ID.
-- **Request**: Path parameter `document_id`.
-- **Response**: Confirmation of document deletion.
+**Query**  
+ Run queries to interact with documents using natural language or structured queries.
 
-For more details on document-related endpoints, see [Document Endpoints](v1/endpoints/document.md).
-
----
-
-### Graph Management
-
-The graph endpoints allow you to export structured data (e.g., triples) from processed documents.
-
-- **POST** `/graph/export-triples`
-- Export triples (subject, predicate, object) from a table.
-- **Request**: JSON body containing table data.
-- **Response**: Triples and associated chunk information.
-
-For more information, see [Graph Endpoints](v1/endpoints/graph.md).
+- **POST** `/query` – Submits a query and receives a structured response with relevant document data.  
+  See [Query Endpoints](v1/endpoints/query.md) for further details.
 
 ---
 
-### Query Processing
+**Error Codes**
 
-These endpoints handle the processing of queries, enabling you to interact with the documents using natural language or other forms of structured querying.
+Standard HTTP status codes are used to indicate request success or failure:
 
-- **POST** `/query`
-- Submit a query and receive a structured response.
-- **Request**: JSON body with query details.
-- **Response**: Query result, including chunks of extracted data.
-
-For additional details, see [Query Endpoints](v1/endpoints/query.md).
-
----
-
-For more detailed information on specific endpoints and their schema, please refer to the interactive API documentation provided by FastAPI.
+| Status Code | Error                   | Description                      |
+| ----------- | ----------------------- | -------------------------------- |
+| `200`       | `OK`                    | Successful request               |
+| `400`       | `Bad Request`           | Invalid request parameters       |
+| `401`       | `Unauthorized`          | Authentication failed or missing |
+| `404`       | `Not Found`             | Resource not found               |
+| `500`       | `Internal Server Error` | Server encountered an error      |

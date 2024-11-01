@@ -1,123 +1,125 @@
-# Query API Endpoints
+# Query API Overview
 
-This section covers the API endpoints related to querying documents in the Knowledge Table backend. The query system allows you to ask questions about documents using different methods, including vector search, hybrid search, and decomposed search. These queries utilize a combination of keyword searches and vector-based methods to generate answers from the document data.
-
-## Available Endpoint
-
-1. **POST** `/query` – Run a query and generate a response based on document data.
-
-For detailed API schemas and auto-generated documentation, refer to:
-
-::: app.api.v1.endpoints.query
+This section covers the API endpoints related to querying documents in the Knowledge Table backend. The query system allows you to ask questions about documents using different retrieval methods, including vector search, hybrid search, and decomposed search. These queries utilize a combination of keyword searches and vector-based methods to generate answers from the document data.
 
 ---
 
-## POST `/query`
+## **Run Query**
 
-### Overview
+`POST /query`
 
-This endpoint runs a query against a document using one of three methods:
-
-1. **Simple Vector Search**: A vector search is performed on the document to find relevant chunks, which are then used to generate an answer.
-2. **Hybrid Search**: Both a keyword search and a vector search are performed. The most relevant chunks from both searches are used to generate the answer.
-3. **Decomposed Search**: The query is broken down into smaller sub-queries. A vector search is run for each sub-query, and the results are combined to form the final answer.
+**Description**  
+Run a query against a document using one of three methods: Simple Vector Search, Hybrid Search, or Decomposed Search.
 
 ### Request
 
-- **Method**: `POST`
-- **URL**: `/query`
-- **Headers**:
-  - `Authorization`: Bearer token (if required)
-  - `Content-Type`: `application/json`
-- **Body**: A JSON object containing the query request details, including the RAG (retrieval-augmented generation) type, document ID, and the prompt/query itself.
+**Method**: `POST`
 
-#### Example Request
+**URL**: `/query`
 
-```bash
-curl -X POST "https://api.example.com/v1/query" \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "rag_type": "hybrid",
-        "document_id": "abc123",
-        "prompt": {
-          "query": "What is the key takeaway from this document?",
-          "id": "prompt1",
-          "type": "text",
-          "rules": ["summarize"]
-        }
-      }'
-````
+**Headers**:
 
-#### Body Fields
+- `Content-Type`: `application/json`
 
-- `rag_type`: Specifies the query type (vector, hybrid, or decomposed).
-- `document_id`: The ID of the document to query.
-- `prompt`: An object containing:
-  - `query`: The actual query or question to ask.
-  - `id`: A unique identifier for the prompt.
-  - `type`: The type of answer expected (e.g., text, bool, etc.).
-  - `rules`: Optional rules for modifying or guiding the query (e.g., "summarize").
+**Body**: JSON object containing the query details, including the retrieval type, document ID, and the prompt/query itself.
+
+**Parameters**
+
+| Name          | In   | Type     | Description                                       |
+| ------------- | ---- | -------- | ------------------------------------------------- |
+| `document_id` | body | `string` | The ID of the document to query                   |
+| `prompt`      | body | `object` | A column prompt in the `QueryPromptSchema` format |
+
+### QueryPromptSchema Structure
+
+| Name          | Type      | Description                                                               |
+| ------------- | --------- | ------------------------------------------------------------------------- |
+| `id`          | `string`  | ID of the column                                                          |
+| `entity_type` | `string`  | The name of the entity in the Knowledge Table                             |
+| `query`       | `string`  | The actual query or question                                              |
+| `type`        | `Literal` | One of `"int"`, `"str"`, `"bool"`, `"int_array"`, `"str_array"`           |
+| `rules`       | `list`    | _(Optional) `"must_return"`, `"may_return"`, `"max_length"`, `"replace"`_ |
+
+**Example**
+
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/query"
+headers = {
+    "Authorization": "Bearer YOUR_API_TOKEN",
+    "Content-Type": "application/json"
+}
+data = {
+    "document_id": "abc123",
+    "prompt": {
+        "id": "prompt1",
+        "entity_type": "Disease",
+        "query": "Which diseases are mentioned in this document?",
+        "type": "str_array",
+        "rules": [
+            {
+                "type": "must_return",
+                "options": ["asthma", "diabetes","cancer"]
+            }
+        ]
+    }
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())
+```
 
 ### Response
 
-- **Status**: 200 OK
-- **Content-Type**: application/json
+**Status Code**: `200 OK`
 
-The response will contain the answer to the query, along with the chunks of document text that were used to generate the answer.
+**Content-Type**: `application/json`
 
-#### Example Response
+**Body**:
 
-````json
+```json
 {
-  "id": "e7f4a6b8c5df4c099f39bdf0e2a1db8e",
-  "document_id": "abc123",
-  "prompt_id": "prompt1",
-  "answer": "The key takeaway is to focus on long-term sustainability.",
+  "answer": {
+    "id": "e7f4a6b8c5df4c099f39bdf0e2a1db8e",
+    "document_id": "abc123",
+    "prompt_id": "prompt1",
+    "answer": ["diabetes", "cancer"],
+    "type": "str_array"
+  },
   "chunks": [
     {
-      "start": 0,
-      "end": 100,
-      "text": "In this document, we emphasize the importance of sustainable practices..."
+      "content": "This is some content from page 1.",
+      "page": 1
     },
     {
-      "start": 101,
-      "end": 200,
-      "text": "Key takeaways include long-term sustainability as a priority..."
+      "content": "Additional content from page 2.",
+      "page": 2
     }
   ],
-  "type": "text"
+  "resolved_entities": null
 }
-````
+```
 
-#### Fields
+### Error Responses
 
-- `id`: Unique identifier for the query result.
-- `document_id`: The document's ID.
-- `prompt_id`: The prompt's ID.
-- `answer`: The final answer generated by the system.
-- `chunks`: An array of document chunks that contributed to the answer, including their start and end positions within the document.
-- `type`: The type of answer (e.g., text, bool).
+| Status Code | Error                   | Description                                                          |
+| ----------- | ----------------------- | -------------------------------------------------------------------- |
+| `400`       | `Bad Request`           | The request contains an invalid query type or is otherwise malformed |
+| `500`       | `Internal Server Error` | An error occurred while processing the query                         |
 
-### Error Codes
+---
 
-- `400 Bad Request`: The request contains an invalid query type or is otherwise malformed.
-- `500 Internal Server Error`: An error occurred while processing the query.
+### Retrieval Types
 
-## Query Types
-
-### 1. Vector Search
+#### 1. Vector Search
 
 Performs a simple vector search on the document and retrieves the most relevant chunks of text based on the query. Ideal for finding similar passages in large documents.
 
-### 2. Hybrid Search
+#### 2. Hybrid Search (Default)
 
-Combines both keyword and vector searches to retrieve relevant chunks from both methods, creating a more comprehensive response. This is particularly useful when the document contains both structured and unstructured data.
+Combines both keyword and vector searches to retrieve relevant chunks from both methods, creating a more comprehensive response. Useful when the document contains both structured and unstructured data.
 
-### 3. Decomposed Search
+#### 3. Decomposed Search
 
-Breaks the main query into smaller sub-queries, runs vector searches for each sub-query, and then compiles the results into a cohesive answer. This is ideal for complex queries that require a step-by-step breakdown.
-
-## Notes
-
-For further details on request/response schemas and more advanced interactions, see the interactive API documentation generated by FastAPI.
+Breaks the main query into smaller sub-queries, runs vector searches for each sub-query, and then compiles the results into a cohesive answer. Ideal for complex queries that require a step-by-step breakdown.

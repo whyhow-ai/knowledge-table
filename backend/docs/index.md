@@ -1,43 +1,23 @@
-# Knowledge Table Backend Documentation
+# Knowledge Table Documentation
 
-Welcome to the official documentation for the Knowledge Table backend. This site provides all the information you need to understand, install, and extend the backend of Knowledge Table.
+Knowledge Table is an open-source package designed to simplify extracting and exploring structured data from unstructured documents. This site provides all the information you need to understand, use, and extend Knowledge Table.
 
-## Overview
-
-Knowledge Table is an open-source package designed to simplify extracting and exploring structured data from unstructured documents. This documentation covers the backend, which is powered by FastAPI and provides RESTful APIs for interacting with the system.
+![screenshot](image-1.png)
 
 ## Features
 
 - Extract structured data using natural language queries
-- Customizable extraction rules and formatting
-- Support for various vector databases and LLMs
-- Extensible architecture for adding new services
-- Chunk linking for traceability and provenance
-- Filtering based on metadata or extracted data
+- Build custom extraction rules and formatting
+- Link chunks to answers for traceability and provenance
+- Explore and filter data using extracted data
 - Export data as CSV or graph triples
-- Chained extraction using references to previous columns
+- Chain extraction and answer generation by referencing other cells
+- Extend to include new AI services, vector databases, and LLMs
+- And much more...
 
-## Key Components
+## Table of Contents
 
-- [Document Service](services/document_service.md): Handles document processing and storage
-- [Graph Service](services/graph_service.md): Manages graph-related operations
-- [LLM Service](services/llm_service.md): Interfaces with language models
-- [Query Service](services/query_service.md): Processes various types of queries
-
-## Data Models
-
-- [Document Models](models/document.md): Represents document data
-- [Graph Models](models/graph.md): Defines graph-related data structures
-- [LLM Models](models/llm.md): Structures for LLM responses
-- [Query Models](models/query.md): Represents query-related data
-
-## API Schemas
-
-- [Document Schemas](schemas/document.md): API schemas for document operations
-- [Graph Schemas](schemas/graph.md): API schemas for graph operations
-- [Query Schemas](schemas/query.md): API schemas for query operations
-
-## Getting Started
+- [Getting Started](getting-started/quickstart.md)
 
 To get started with the Knowledge Table backend:
 
