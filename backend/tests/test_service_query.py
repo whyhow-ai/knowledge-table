@@ -107,7 +107,7 @@ async def test_process_query_simple_vector(
             answer="Test answer",
             chunks=[Chunk(content="Test content", page=1)],
         )
-        
+
         # Reset the mock and then check the call
         mock_vector_db_service.vector_search.assert_called_once_with(
             ["test query"], "doc_id"
