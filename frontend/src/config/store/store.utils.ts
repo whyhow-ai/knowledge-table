@@ -97,7 +97,8 @@ export const ruleInfo: Record<AnswerTableRule["type"], string> = {
   must_return: "The column must return the specified values",
   may_return: "The column may return the specified values",
   max_length: "The column must return at most N values",
-  resolve_entity: "Replace all specified values with the first one from the list"
+  resolve_entity:
+    "Replace all specified values with the first one from the list (i.e. 'turquioise:blue')"
 };
 
 // Casting

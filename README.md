@@ -10,9 +10,7 @@ Our goal is to provide a familiar, spreadsheet-like interface for business users
 
 For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table-demo.whyhow.ai/).
 
-
 https://github.com/user-attachments/assets/8e0e5cc6-6468-4bb5-888c-6b552e15b58a
-
 
 To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/).
 
@@ -102,11 +100,13 @@ The frontend can be accessed at `http://localhost:3000`, and the backend can be 
 4. **Install the dependencies:**
 
    For basic installation:
+
    ```sh
    pip install .
    ```
 
    For installation with development tools:
+
    ```sh
    pip install .[dev]
    ```
@@ -180,6 +180,7 @@ To set up the project for development:
    black .
    isort .
    ```
+
 ---
 
 ## Features
@@ -189,12 +190,12 @@ To set up the project for development:
 - **Chunk Linking** - Link raw source text chunks to the answers for traceability and provenance.
 - **Extract with natural language** - Use natural language queries to extract structured data from unstructured documents.
 - **Customizable extraction rules** - Define rules to guide the extraction process and ensure data quality.
-- **Custom formatting** - Control the output format of your extracted data.
+- **Custom formatting** - Control the output format of your extracted data. Knowledge table current supports text, list of text, number, list of numbers, and boolean formats.
 - **Filtering** - Filter documents based on metadata or extracted data.
 - **Exporting as CSV or Triples** - Download extracted data as CSV or graph triples.
 - **Chained extraction** - Reference previous columns in your extraction questions using @ i.e. "What are the treatments for `@disease`?".
 - **Split Cell Into Rows** - Turn outputs within a single cell from List of Numbers or List of Values and split it into individual rows to do more complex Chained Extraction
- 
+
 ---
 
 ## Concepts
@@ -211,6 +212,15 @@ Each **document** is an unstructured data source (e.g., a contract, article, or 
 
 A **Question** is the core mechanism for guiding extraction. It defines what data you want to extract from a document.
 
+### Rule
+
+A **Rule** guides the extraction from the LLM. You can add rules on a column level or on a global level. Currently, the following rule types are supported:
+
+- **May Return** rules give the LLM examples of answers that can be used to guide the extraction. This is a great way to give more guidance for the LLM on the type of things it should keep an eye out for.
+- **Must Return** rules give the LLM an exhaustive list of answers that are allowed to be returned. This is a great way to give guardrails for the LLM to ensure only certain terms are returned.
+- **Allowed # of Responses** rules are useful for provide guardrails in the event there are may be a range of potential ‘grey-area’ answers and we want to only restrict and guarantee only a certain number of the top responses are provided.
+- **Resolve Entity** rules allow you to resolve values to a specific entity. This is useful for ensuring output conforms to a specific entity type. For example, you can write rules that ensure "blackrock", "Blackrock, Inc.", and "Blackrock Corporation" all resolve to the same entity - "Blackrock".
+
 ---
 
 ## Practical Usage
@@ -225,6 +235,7 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 - **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
 
 ---
+
 ## Export to Triples
 
 To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
@@ -263,8 +274,7 @@ To use the Unstructured API integration:
 
 When the `UNSTRUCTURED_API_KEY` is set, Knowledge Table will automatically use the Unstructured API for document processing. If the key is not set or if there's an issue with the Unstructured API, the system will fall back to the default document loaders.
 
-Note: Usage of the Unstructured API may incur costs based on your plan with Unstructured.io.
----
+## Note: Usage of the Unstructured API may incur costs based on your plan with Unstructured.io.
 
 ## Roadmap
 
