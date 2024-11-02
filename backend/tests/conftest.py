@@ -63,15 +63,26 @@ def mock_llm_service(test_settings):
     service.settings = test_settings
     service.model = test_settings.llm_model
 
-    # Create a mock response that matches test expectations
-    mock_response = QueryResult(
-        answer="The capital of France is Paris.",
-        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
-    )
+    async def mock_generate_response(*args, **kwargs):
+        # Check the format type from the args
+        format_type = args[3] if len(args) > 3 else kwargs.get('format', 'str')
+        
+        if format_type == 'str_array':
+            return QueryResult(
+                answer=["Paris", "London", "Berlin"],
+                chunks=[Chunk(content="European capitals include Paris, London, and Berlin.", page=1)]
+            )
+        else:
+            # Default string response for backward compatibility
+            return QueryResult(
+                answer="The capital of France is Paris.",
+                chunks=[Chunk(content="Paris is the capital of France.", page=1)]
+            )
 
-    # Update the mock methods to return the same response
-    service.generate_completion = AsyncMock(return_value=mock_response)
-    service.generate_response = AsyncMock(return_value=mock_response)
+    # Update the mock methods with the new dynamic response
+    service.generate_completion = AsyncMock(side_effect=mock_generate_response)
+    service.generate_response = AsyncMock(side_effect=mock_generate_response)
+    
     return service
 
 
