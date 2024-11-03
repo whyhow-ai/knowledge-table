@@ -71,7 +71,6 @@ export interface AnswerTable {
   openedChunks: CellKey[];
   loadingCells: Record<CellKey, true>;
   uploadingFiles: boolean;
-  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableColumn {
@@ -83,6 +82,7 @@ export interface AnswerTableColumn {
   generate: boolean;
   query: string;
   rules: AnswerTableRule[];
+  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableRow {
