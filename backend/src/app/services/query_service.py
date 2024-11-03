@@ -50,12 +50,16 @@ def replace_keywords(
     # Handle list of strings
     if isinstance(text, list):
         result = []
+        # Track which strings were modified
         for item in text:
-            transformed_item, item_transformations = (
-                replace_keywords_in_string(item, keyword_replacements)
-            )
-            result.append(transformed_item)
-            transformations.update(item_transformations)
+            if any(keyword in item.split() for keyword in keyword_replacements):
+                # Only process strings that contain keywords
+                transformed_item, item_transformations = replace_keywords_in_string(item, keyword_replacements)
+                result.append(transformed_item)
+                # Store the full before/after for the list item
+                transformations[item] = transformed_item
+            else:
+                result.append(item)
         return result, transformations
 
     # Handle single string

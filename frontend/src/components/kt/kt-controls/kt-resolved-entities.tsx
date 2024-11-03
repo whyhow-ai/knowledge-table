@@ -25,16 +25,66 @@ export function KtResolvedEntities(props: BoxProps) {
   const allResolvedEntities = useMemo(() => {
     const globalEntities = table.globalRules.flatMap(rule => rule.resolvedEntities || []);
     const columnEntities = table.columns.flatMap(column => column.resolvedEntities || []);
-    return [...globalEntities, ...columnEntities];
+    const entities = [...globalEntities, ...columnEntities];
+    return entities;
   }, [table.globalRules, table.columns]);
+
+  // Helper to format display value based on type
+  const getDisplayValue = (value: string, entity: ResolvedEntity, isOriginal: boolean) => {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        if (isOriginal) {
+          
+          return (
+            <Code block style={{ whiteSpace: 'pre-wrap' }}>
+              {parsed
+                .map(item => {
+                  // Check if the item contains the resolved value
+                  const shouldReplace = item.includes(entity.resolved);
+                  // If it contains the resolved value, replace that part with the original
+                  return shouldReplace ? item.replace(entity.resolved, entity.original) : item;
+                })
+                .join('\n')}
+            </Code>
+          );
+        } else {
+          // For "To": Show fullAnswer as is
+          return (
+            <Code block style={{ whiteSpace: 'pre-wrap' }}>
+              {parsed.join('\n')}
+            </Code>
+          );
+        }
+      }
+    } catch {
+      // If not an array, show the original value for "From" or the value as is for "To"
+      return (
+        <Code block style={{ whiteSpace: 'pre-wrap' }}>
+          {isOriginal ? entity.original : value}
+        </Code>
+      );
+    }
+  };
 
   const handleUndoTransformation = (entity: ResolvedEntity) => {
     const rows = table.rows.map(row => ({
       ...row,
       cells: Object.fromEntries(
         Object.entries(row.cells).map(([columnId, cellValue]) => {
-          if (typeof cellValue === 'string' && cellValue.includes(entity.fullAnswer)) {
-            return [columnId, cellValue.replace(entity.fullAnswer, entity.original)];
+          if (typeof cellValue === 'string') {
+            // Exact match for string values
+            return [columnId, cellValue === entity.fullAnswer ? entity.original : cellValue];
+          } else if (Array.isArray(cellValue)) {
+            // Exact match for array values
+            return [
+              columnId, 
+              cellValue.map(item => 
+                typeof item === 'string' && item === entity.fullAnswer
+                  ? entity.original
+                  : item
+              )
+            ];
           }
           return [columnId, cellValue];
         })
@@ -68,21 +118,22 @@ export function KtResolvedEntities(props: BoxProps) {
       <Button leftSection={<IconReplace size={16} />} onClick={handlers.open}>
         Resolved entities
       </Button>
-
+  
       <Drawer position="right" size="md" title="Resolved entities" opened={opened} onClose={handlers.close}>
         {allResolvedEntities.length > 0 ? (
           <Stack>
             <Text size="sm">The following transformations were applied:</Text>
             <Paper withBorder p="md">
-              <List spacing="xs">
+              <List spacing="md">
                 {allResolvedEntities.map((entity, index) => (
                   <List.Item key={index}>
-                    <Group justify="space-between" wrap="nowrap">
-                      <Group gap="xs">
-                        <Code>{entity.original}</Code>
-                        <Text span>→</Text>
-                        <Code>{entity.fullAnswer}</Code>
-                      </Group>
+                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                      <Stack gap="xs" style={{ flex: 1 }}>
+                        <Text size="sm" fw={500}>From:</Text>
+                        {getDisplayValue(entity.fullAnswer, entity, true)}
+                        <Text size="sm" fw={500}>To:</Text>
+                        {getDisplayValue(entity.fullAnswer, entity, false)}
+                        </Stack>
                       <Tooltip label="Undo transformation">
                         <ActionIcon
                           variant="subtle"
