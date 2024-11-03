@@ -302,11 +302,26 @@ export const useStore = create<Store>()(
 
       rerunCells: cells => {
         const { activeTableId, getTable, editTable, editCells } = get();
-        const currentTable = getTable(); // Get the current table
+        const currentTable = getTable();
         const { columns, rows, globalRules, loadingCells } = currentTable;
         const colMap = keyBy(columns, c => c.id);
         const rowMap = keyBy(rows, r => r.id);
-
+      
+        // Get the set of column IDs being rerun
+        const rerunColumnIds = new Set(cells.map(cell => cell.columnId));
+      
+        // Only clear resolvedEntities for columns being rerun
+        editTable(activeTableId, {
+          columns: columns.map(col => ({
+            ...col,
+            resolvedEntities: rerunColumnIds.has(col.id) ? [] : col.resolvedEntities
+          })),
+          globalRules: globalRules.map(rule => ({ 
+            ...rule, 
+            resolvedEntities: rule.resolvedEntities || [] 
+          }))
+        });
+      
         const batch = compact(
           cells.map(({ rowId, columnId }) => {
             const key = getCellKey(rowId, columnId);
