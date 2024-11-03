@@ -58,6 +58,11 @@ export interface ResolvedEntity {
   original: string;
   resolved: string;
   fullAnswer: string;
+  entityType: string;
+  source: {
+    type: 'global' | 'column';
+    id: string;
+  };
 }
 
 export interface AnswerTable {
@@ -102,6 +107,7 @@ export interface AnswerTableFilter {
 export interface AnswerTableGlobalRule extends AnswerTableRule {
   id: string;
   entityType: string;
+  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableRule {

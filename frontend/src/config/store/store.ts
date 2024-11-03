@@ -167,15 +167,21 @@ export const useStore = create<Store>()(
 
       deleteColumns: ids => {
         const { getTable, editActiveTable } = get();
+        const table = getTable();
         editActiveTable({
-          columns: getTable().columns.filter(
-            column => !ids.includes(column.id)
-          ),
-          rows: getTable().rows.map(row => ({
+          columns: table.columns
+            .filter(column => !ids.includes(column.id))
+            // Keep resolvedEntities for columns we're not deleting
+            .map(col => ({ ...col })),
+          rows: table.rows.map(row => ({
             ...row,
             cells: omit(row.cells, ids)
           })),
-          resolvedEntities: undefined
+          globalRules: table.globalRules.map(rule => ({ 
+            ...rule, 
+            // Keep resolvedEntities for global rules
+            resolvedEntities: rule.resolvedEntities || [] 
+          }))
         });
       },
 
@@ -296,14 +302,10 @@ export const useStore = create<Store>()(
 
       rerunCells: cells => {
         const { activeTableId, getTable, editTable, editCells } = get();
-        const { columns, rows, globalRules, loadingCells } = getTable();
+        const currentTable = getTable(); // Get the current table
+        const { columns, rows, globalRules, loadingCells } = currentTable;
         const colMap = keyBy(columns, c => c.id);
         const rowMap = keyBy(rows, r => r.id);
-
-        // Clear existing resolvedEntities before starting new queries
-        editTable(activeTableId, {
-          resolvedEntities: []
-        });
 
         const batch = compact(
           cells.map(({ rowId, columnId }) => {
@@ -350,6 +352,7 @@ export const useStore = create<Store>()(
             shouldRunQuery = false;
           }
           if (shouldRunQuery) {
+            // Inside runQuery.then callback in rerunCells:
             runQuery(row, column, globalRules).then(({ answer, chunks, resolvedEntities }) => {
               editCells(
                 [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
@@ -358,18 +361,30 @@ export const useStore = create<Store>()(
               
               // Get current state
               const currentTable = getTable(activeTableId);
-              const currentEntities = currentTable.resolvedEntities || [];
               
-              // Merge new entities with existing ones
-              const newEntities = resolvedEntities as ResolvedEntity[] | undefined;
-              const mergedEntities = newEntities 
-                ? [...currentEntities, ...newEntities]
-                : currentEntities;
-      
               editTable(activeTableId, {
                 chunks: { ...currentTable.chunks, [key]: chunks },
                 loadingCells: omit(currentTable.loadingCells, key),
-                resolvedEntities: mergedEntities
+                columns: currentTable.columns.map(col => ({
+                  ...col,
+                  resolvedEntities: col.id === column.id 
+                    ? [
+                        ...(col.resolvedEntities || []),
+                        ...(resolvedEntities || []).map(entity => ({
+                          ...entity,
+                          entityType: column.entityType,
+                          source: {
+                            type: 'column' as const,
+                            id: column.id
+                          }
+                        })) as ResolvedEntity[]
+                      ]
+                    : (col.resolvedEntities || [])
+                })),
+                globalRules: currentTable.globalRules.map(rule => ({
+                  ...rule,
+                  resolvedEntities: rule.resolvedEntities || []
+                }))
               });
             });
           } else {
@@ -493,7 +508,8 @@ export const useStore = create<Store>()(
           const { id, name, ...table } = getBlankTable();
           get().editActiveTable({
             ...table,
-            resolvedEntities: undefined
+            columns: table.columns.map(col => ({ ...col, resolvedEntities: [] })),
+            globalRules: table.globalRules.map(rule => ({ ...rule, resolvedEntities: [] }))
           });
         }
       }
