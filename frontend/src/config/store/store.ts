@@ -313,27 +313,26 @@ export const useStore = create<Store>()(
         // Get the set of row IDs being rerun
         const rerunRowIds = new Set(cells.map(cell => cell.rowId));
       
+        // Create a Set of cell keys being rerun for easy lookup
+        const rerunCellKeys = new Set(
+          cells.map(cell => `${cell.rowId}-${cell.columnId}`)
+        );
+      
         // Only clear resolvedEntities for the specific cells being rerun
         editTable(activeTableId, {
           columns: columns.map(col => ({
             ...col,
-            resolvedEntities: rerunColumnIds.has(col.id) 
-              ? (col.resolvedEntities || []).filter(entity => {
-                  // Keep entities that aren't from the rows being rerun
-                  if (entity.source.type === 'column') {
-                    const entityRowId = cells.find(cell => 
-                      cell.columnId === entity.source.id
-                    )?.rowId;
-                    return !entityRowId || !rerunRowIds.has(entityRowId);
-                  }
-                  return true;
-                })
-              : (col.resolvedEntities || [])
+            resolvedEntities: (col.resolvedEntities || []).filter(entity => {
+              // Keep entities that aren't from the cells being rerun
+              const cellKey = `${entity.source.type === 'column' ? cells.find(cell => 
+                cell.columnId === entity.source.id
+              )?.rowId : ''}-${entity.source.id}`;
+              return !rerunCellKeys.has(cellKey);
+            })
           })),
           globalRules: globalRules.map(rule => ({ 
             ...rule,
             resolvedEntities: (rule.resolvedEntities || []).filter(entity => {
-              // Keep entities that aren't from the rows being rerun
               if (entity.source.type === 'global') {
                 const affectedRows = cells.filter(cell => 
                   rerunColumnIds.has(cell.columnId)

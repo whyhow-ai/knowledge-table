@@ -72,6 +72,11 @@ export function KtResolvedEntities(props: BoxProps) {
       ...row,
       cells: Object.fromEntries(
         Object.entries(row.cells).map(([columnId, cellValue]) => {
+          // Only modify cells in the source column or if it's a global rule
+          if (entity.source.type === 'column' && columnId !== entity.source.id) {
+            return [columnId, cellValue];
+          }
+  
           if (typeof cellValue === 'string') {
             // Replace resolved with original in string values
             return [columnId, cellValue.includes(entity.resolved) 
