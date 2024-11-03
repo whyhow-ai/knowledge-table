@@ -73,15 +73,17 @@ export function KtResolvedEntities(props: BoxProps) {
       cells: Object.fromEntries(
         Object.entries(row.cells).map(([columnId, cellValue]) => {
           if (typeof cellValue === 'string') {
-            // Exact match for string values
-            return [columnId, cellValue === entity.fullAnswer ? entity.original : cellValue];
+            // Replace resolved with original in string values
+            return [columnId, cellValue.includes(entity.resolved) 
+              ? cellValue.replace(entity.resolved, entity.original) 
+              : cellValue];
           } else if (Array.isArray(cellValue)) {
-            // Exact match for array values
+            // Replace resolved with original in array values
             return [
               columnId, 
               cellValue.map(item => 
-                typeof item === 'string' && item === entity.fullAnswer
-                  ? entity.original
+                typeof item === 'string' && item.includes(entity.resolved)
+                  ? item.replace(entity.resolved, entity.original)
                   : item
               )
             ];
