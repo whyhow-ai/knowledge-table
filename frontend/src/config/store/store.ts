@@ -309,16 +309,30 @@ export const useStore = create<Store>()(
       
         // Get the set of column IDs being rerun
         const rerunColumnIds = new Set(cells.map(cell => cell.columnId));
+        
+        // Get the set of row IDs being rerun
+        const rerunRowIds = new Set(cells.map(cell => cell.rowId));
       
-        // Only clear resolvedEntities for columns being rerun
+        // Only clear resolvedEntities for the specific cells being rerun
         editTable(activeTableId, {
           columns: columns.map(col => ({
             ...col,
-            resolvedEntities: rerunColumnIds.has(col.id) ? [] : col.resolvedEntities
+            resolvedEntities: rerunColumnIds.has(col.id) 
+              ? (col.resolvedEntities || []).filter(entity => {
+                  // Keep entities that aren't from the rows being rerun
+                  if (entity.source.type === 'column') {
+                    const entityRowId = cells.find(cell => 
+                      cell.columnId === entity.source.id
+                    )?.rowId;
+                    return !entityRowId || !rerunRowIds.has(entityRowId);
+                  }
+                  return true;
+                })
+              : (col.resolvedEntities || [])
           })),
           globalRules: globalRules.map(rule => ({ 
-            ...rule, 
-            resolvedEntities: rule.resolvedEntities || [] 
+            ...rule,
+            resolvedEntities: rule.resolvedEntities || []
           }))
         });
       
