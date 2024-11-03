@@ -126,7 +126,7 @@ export function KTGlobalRules(props: BoxProps) {
                 <br />
                 max_length,3,
                 <br />
-                resolve_entity,"blue,ultramarine,sapphire",Color
+                resolve_entity,"blue:ultramarine,red:crimson",Color
               </Code>
             </Box>
           </Group>

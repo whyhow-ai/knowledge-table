@@ -332,7 +332,16 @@ export const useStore = create<Store>()(
           })),
           globalRules: globalRules.map(rule => ({ 
             ...rule,
-            resolvedEntities: rule.resolvedEntities || []
+            resolvedEntities: (rule.resolvedEntities || []).filter(entity => {
+              // Keep entities that aren't from the rows being rerun
+              if (entity.source.type === 'global') {
+                const affectedRows = cells.filter(cell => 
+                  rerunColumnIds.has(cell.columnId)
+                ).map(cell => cell.rowId);
+                return !affectedRows.some(rowId => rerunRowIds.has(rowId));
+              }
+              return true;
+            })
           }))
         });
       
@@ -391,6 +400,16 @@ export const useStore = create<Store>()(
               // Get current state
               const currentTable = getTable(activeTableId);
               
+              // Helper to check if an entity matches any global rule patterns
+              const isGlobalEntity = (entity: { original: string; resolved: string }) => {
+                return globalRules.some(rule => 
+                  rule.type === 'resolve_entity' && 
+                  rule.options?.some(pattern => 
+                    entity.original.toLowerCase().includes(pattern.toLowerCase())
+                  )
+                );
+              };
+              
               editTable(activeTableId, {
                 chunks: { ...currentTable.chunks, [key]: chunks },
                 loadingCells: omit(currentTable.loadingCells, key),
@@ -399,20 +418,36 @@ export const useStore = create<Store>()(
                   resolvedEntities: col.id === column.id 
                     ? [
                         ...(col.resolvedEntities || []),
-                        ...(resolvedEntities || []).map(entity => ({
-                          ...entity,
-                          entityType: column.entityType,
-                          source: {
-                            type: 'column' as const,
-                            id: column.id
-                          }
-                        })) as ResolvedEntity[]
+                        ...(resolvedEntities || [])
+                          .filter(entity => !isGlobalEntity(entity))
+                          .map(entity => ({
+                            ...entity,
+                            entityType: column.entityType,
+                            source: {
+                              type: 'column' as const,
+                              id: column.id
+                            }
+                          })) as ResolvedEntity[]
                       ]
                     : (col.resolvedEntities || [])
                 })),
                 globalRules: currentTable.globalRules.map(rule => ({
                   ...rule,
-                  resolvedEntities: rule.resolvedEntities || []
+                  resolvedEntities: rule.type === 'resolve_entity'
+                    ? [
+                        ...(rule.resolvedEntities || []),
+                        ...(resolvedEntities || [])
+                          .filter(entity => isGlobalEntity(entity))
+                          .map(entity => ({
+                            ...entity,
+                            entityType: 'global',
+                            source: {
+                              type: 'global' as const,
+                              id: rule.id
+                            }
+                          })) as ResolvedEntity[]
+                      ]
+                    : (rule.resolvedEntities || [])
                 }))
               });
             });
