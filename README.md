@@ -241,6 +241,17 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
 
 ---
+## Rules
+
+We now have 3 types of [Rules](https://medium.com/enterprise-rag/rules-extraction-guardrails-knowledge-table-studio-e84999ade353) you can now incorporate within your processes, which are:
+
+- **Entity Resolution Rules**: Resolving discrepencies between Entities or imposing a common terminology on top of Entities
+
+- **Entity Extraction Rules**: Imposing Guardrails and Context for the Entities that should be detected and returned across Documents
+
+- **Entity Relationship Rules**: Imposing Guardrails on the types of Patterns that should be returned on the Relationships between the extracted Entities
+
+---
 
 ## Extending the Project
 
@@ -278,10 +289,11 @@ When the `UNSTRUCTURED_API_KEY` is set, Knowledge Table will automatically use t
 
 ## Roadmap
 
-- [ ] Expansion of Rules System
-  - [ ] Upload Extraction Rules via CSV
-  - [ ] Entity Resolution Rules
-  - [ ] Rules Dashboard
+- [x] Expansion of Rules System
+  - [x] Upload Extraction Rules via CSV
+  - [x] Entity Resolution Rules
+  - [x] Rules Dashboard
+  - [x] Rules Log
 - [ ] Support for more LLMs
   - [ ] Azure OpenAI
   - [ ] Llama3
