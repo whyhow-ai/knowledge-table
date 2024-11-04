@@ -54,6 +54,17 @@ export interface Store {
   clear: (allTables?: boolean) => void;
 }
 
+export interface ResolvedEntity {
+  original: string | string[];  // Allow both string and array of strings
+  resolved: string | string[];  // Allow both string and array of strings
+  fullAnswer: string;
+  entityType: string;
+  source: {
+    type: 'global' | 'column';
+    id: string;
+  };
+}
+
 export interface AnswerTable {
   id: string;
   name: string;
@@ -76,6 +87,7 @@ export interface AnswerTableColumn {
   generate: boolean;
   query: string;
   rules: AnswerTableRule[];
+  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableRow {
@@ -95,11 +107,11 @@ export interface AnswerTableFilter {
 export interface AnswerTableGlobalRule extends AnswerTableRule {
   id: string;
   entityType: string;
+  resolvedEntities?: ResolvedEntity[];
 }
 
 export interface AnswerTableRule {
-  // type: "must_return" | "may_return" | "max_length" | "replace";
-  type: "must_return" | "may_return" | "max_length";
+  type: "must_return" | "may_return" | "max_length" | "resolve_entity";
   options?: string[];
   length?: number;
 }

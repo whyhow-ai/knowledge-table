@@ -102,7 +102,7 @@ export function KtColumnSettings({
     });
   };
 
-  const rulesMenu = (
+const rulesMenu = (
     <Box w={430}>
       {isEmpty(state.rules) ? (
         <Empty message="No rules are applied" />
@@ -132,6 +132,31 @@ export function KtColumnSettings({
                   })
                 }
               />
+            ) : rule.type === "resolve_entity" ? (
+              <Group gap="xs" wrap="nowrap">
+                <TextInput
+                  w={100}
+                  placeholder="Before"
+                  value={rule.options?.[0]?.split(":")[0] ?? ""}
+                  onChange={e => {
+                    const after = rule.options?.[0]?.split(":")[1] ?? "";
+                    handleRuleChange(rule, {
+                      options: [`${e.target.value}:${after}`]
+                    });
+                  }}
+                />
+                <TextInput
+                  w={100}
+                  placeholder="After"
+                  value={rule.options?.[0]?.split(":")[1] ?? ""}
+                  onChange={e => {
+                    const before = rule.options?.[0]?.split(":")[0] ?? "";
+                    handleRuleChange(rule, {
+                      options: [`${before}:${e.target.value}`]
+                    });
+                  }}
+                />
+              </Group>
             ) : (
               <TagsInput
                 w={210}

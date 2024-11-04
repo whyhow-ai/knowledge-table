@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added the resolved entities modal to view the full answer with resolved entities
+
 ### Changed
 
 - Allow query without source data if mention is present
-- Removed replace rule as an option for now
+- Added resolve entity rule
 
 ## [v0.1.5] - 2024-10-29
 
@@ -20,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updating backend to work with new UI
 - UI: Global rules
 - UI: Reactgrid integration
-- UI: "Replace" rule
+- UI: "Resolve entity" rule
 - UI: Multi-table support
 
 ## [v0.1.4] - 2024-10-16

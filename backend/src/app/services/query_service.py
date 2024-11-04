@@ -1,10 +1,15 @@
 """Query service."""
 
 import logging
-from typing import Any, Awaitable, Callable, List
+import re
+from typing import Any, Awaitable, Callable, Dict, List, Union
 
 from app.models.query_core import Chunk, FormatType, QueryType, Rule
-from app.schemas.query_api import QueryResult, SearchResponse
+from app.schemas.query_api import (
+    QueryResult,
+    ResolvedEntitySchema,
+    SearchResponse,
+)
 from app.services.llm_service import (
     CompletionService,
     generate_inferred_response,
@@ -38,6 +43,65 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
     )
 
 
+def replace_keywords(
+    text: Union[str, List[str]], keyword_replacements: Dict[str, str]
+) -> tuple[
+    Union[str, List[str]], Dict[str, Union[str, List[str]]]
+]:  # Changed return type
+    """Replace keywords in text and return both the modified text and transformation details."""
+    if not text or not keyword_replacements:
+        return text, {
+            "original": text,
+            "resolved": text,
+        }  # Return dict instead of TransformationDict
+
+    # Handle list of strings
+    if isinstance(text, list):
+        original_text = text.copy()
+        result = []
+        modified = False
+
+        # Create a single regex pattern for all keywords
+        pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+        regex = re.compile(f"\\b({pattern})\\b")
+
+        for item in text:
+            # Single pass replacement for all keywords
+            new_item = regex.sub(
+                lambda m: keyword_replacements[m.group()], item
+            )
+            result.append(new_item)
+            if new_item != item:
+                modified = True
+
+        if modified:
+            return result, {"original": original_text, "resolved": result}
+        return result, {"original": original_text, "resolved": result}
+
+    # Handle single string
+    return replace_keywords_in_string(text, keyword_replacements)
+
+
+def replace_keywords_in_string(
+    text: str, keyword_replacements: Dict[str, str]
+) -> tuple[str, Dict[str, Union[str, List[str]]]]:  # Changed return type
+    """Keywords for single string."""
+    if not text:
+        return text, {"original": text, "resolved": text}
+
+    # Create a single regex pattern for all keywords
+    pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+    regex = re.compile(f"\\b({pattern})\\b")
+
+    # Single pass replacement
+    result = regex.sub(lambda m: keyword_replacements[m.group()], text)
+
+    # Only return transformation if something changed
+    if result != text:
+        return result, {"original": text, "resolved": result}
+    return text, {"original": text, "resolved": text}
+
+
 async def process_query(
     query_type: QueryType,
     query: str,
@@ -59,14 +123,69 @@ async def process_query(
     )
     answer_value = answer["answer"]
 
-    result_chunks = (
-        []
-        if answer_value in ("not found", None)
-        and query_type != "decomposition"
-        else chunks
-    )
+    transformations: Dict[str, Union[str, List[str]]] = {
+        "original": "",
+        "resolved": "",
+    }
 
-    return QueryResult(answer=answer_value, chunks=result_chunks[:10])
+    result_chunks = []
+
+    if format in ["str", "str_array"]:
+
+        # Extract and apply keyword replacements from all resolve_entity rules
+        resolve_entity_rules = [
+            rule for rule in rules if rule.type == "resolve_entity"
+        ]
+
+        result_chunks = (
+            []
+            if answer_value in ("not found", None)
+            and query_type != "decomposition"
+            else chunks
+        )
+
+        # First populate the replacements dictionary
+        replacements: Dict[str, str] = {}
+        if resolve_entity_rules and answer_value:
+            for rule in resolve_entity_rules:
+                if rule.options:
+                    rule_replacements = dict(
+                        option.split(":") for option in rule.options
+                    )
+                    replacements.update(rule_replacements)
+
+            # Then apply the replacements if we have any
+            if replacements:
+                print(f"Resolving entities in answer: {answer_value}")
+                if isinstance(answer_value, list):
+                    transformed_list, transform_dict = replace_keywords(
+                        answer_value, replacements
+                    )
+                    transformations = transform_dict
+                    answer_value = transformed_list
+                else:
+                    transformed_value, transform_dict = replace_keywords(
+                        answer_value, replacements
+                    )
+                    transformations = transform_dict
+                    answer_value = transformed_value
+
+    return QueryResult(
+        answer=answer_value,
+        chunks=result_chunks[:10],
+        resolved_entities=(
+            [
+                ResolvedEntitySchema(
+                    original=transformations["original"],
+                    resolved=transformations["resolved"],
+                    source={"type": "column", "id": "some-id"},
+                    entityType="some-type",
+                )
+            ]
+            if transformations["original"] or transformations["resolved"]
+            else None
+        ),
+    )
 
 
 # Convenience functions for specific query types
@@ -144,5 +263,24 @@ async def inference_query(
         llm_service, query, rules, format
     )
     answer_value = answer["answer"]
+
+    # Extract and apply keyword replacements from all resolve_entity rules
+    resolve_entity_rules = [
+        rule for rule in rules if rule.type == "resolve_entity"
+    ]
+
+    if resolve_entity_rules and answer_value:
+        # Combine all replacements from all resolve_entity rules
+        replacements = {}
+        for rule in resolve_entity_rules:
+            if rule.options:
+                rule_replacements = dict(
+                    option.split(":") for option in rule.options
+                )
+                replacements.update(rule_replacements)
+
+        if replacements:
+            print(f"Resolving entities in answer: {answer_value}")
+            answer_value = replace_keywords(answer_value, replacements)
 
     return QueryResult(answer=answer_value, chunks=[])

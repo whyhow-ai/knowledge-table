@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app import main
 from app.core.config import Settings, get_settings
 from app.models.query_core import Chunk
-from app.schemas.query_api import QueryResult
+from app.schemas.query_api import QueryResult, VectorResponseSchema
 from app.services.document_service import DocumentService
 from app.services.embedding.base import EmbeddingService
 from app.services.llm.base import CompletionService
@@ -63,15 +63,33 @@ def mock_llm_service(test_settings):
     service.settings = test_settings
     service.model = test_settings.llm_model
 
-    # Create a mock response that matches test expectations
-    mock_response = QueryResult(
-        answer="The capital of France is Paris.",
-        chunks=[Chunk(content="Paris is the capital of France.", page=1)],
-    )
+    async def mock_generate_response(*args, **kwargs):
+        # Check the format type from the args
+        format_type = args[3] if len(args) > 3 else kwargs.get("format", "str")
 
-    # Update the mock methods to return the same response
-    service.generate_completion = AsyncMock(return_value=mock_response)
-    service.generate_response = AsyncMock(return_value=mock_response)
+        if format_type == "str_array":
+            return QueryResult(
+                answer=["Paris", "London", "Berlin"],
+                chunks=[
+                    Chunk(
+                        content="European capitals include Paris, London, and Berlin.",
+                        page=1,
+                    )
+                ],
+            )
+        else:
+            # Default string response for backward compatibility
+            return QueryResult(
+                answer="The capital of France is Paris.",
+                chunks=[
+                    Chunk(content="Paris is the capital of France.", page=1)
+                ],
+            )
+
+    # Update the mock methods with the new dynamic response
+    service.generate_completion = AsyncMock(side_effect=mock_generate_response)
+    service.generate_response = AsyncMock(side_effect=mock_generate_response)
+
     return service
 
 
@@ -83,6 +101,26 @@ def mock_vector_db_service(
     service.embedding_service = mock_embeddings_service
     service.llm_service = mock_llm_service
     service.settings = test_settings
+
+    # Mock hybrid_search to return a proper response
+    service.hybrid_search = AsyncMock(
+        return_value=VectorResponseSchema(
+            message="Success",
+            chunks=[Chunk(content="The patient has ms and als.", page=1)],
+        )
+    )
+
+    # Mock ensure_collection_exists
+    service.ensure_collection_exists = AsyncMock()
+
+    # Mock vector_search
+    service.vector_search = AsyncMock(
+        return_value=VectorResponseSchema(
+            message="Success",
+            chunks=[Chunk(content="The patient has ms and als.", page=1)],
+        )
+    )
+
     return service
 
 
@@ -99,7 +137,7 @@ def mock_dependencies(
 ):
     """Mock dependencies for API endpoints only"""
     with pytest.MonkeyPatch.context() as m:
-        # Only mock the embedding and LLM factories
+        # Mock all three factories
         m.setattr(
             "app.services.embedding.factory.EmbeddingServiceFactory.create_service",
             lambda *args, **kwargs: mock_embeddings_service,
@@ -108,5 +146,8 @@ def mock_dependencies(
             "app.services.llm.factory.CompletionServiceFactory.create_service",
             lambda *args, **kwargs: mock_llm_service,
         )
-        # Don't mock the vector DB factory as we want to test it
+        m.setattr(
+            "app.services.vector_db.factory.VectorDBFactory.create_vector_db_service",
+            lambda *args, **kwargs: mock_vector_db_service,
+        )
         yield

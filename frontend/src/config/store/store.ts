@@ -23,7 +23,7 @@ import {
   isArrayType,
   toSingleType
 } from "./store.utils";
-import { AnswerTableRow, SourceData, Store } from "./store.types";
+import { AnswerTableRow, ResolvedEntity, SourceData, Store } from "./store.types";
 import { runQuery, uploadFile } from "../api";
 import { insertAfter, insertBefore, where } from "@utils/functions";
 
@@ -167,13 +167,20 @@ export const useStore = create<Store>()(
 
       deleteColumns: ids => {
         const { getTable, editActiveTable } = get();
+        const table = getTable();
         editActiveTable({
-          columns: getTable().columns.filter(
-            column => !ids.includes(column.id)
-          ),
-          rows: getTable().rows.map(row => ({
+          columns: table.columns
+            .filter(column => !ids.includes(column.id))
+            // Keep resolvedEntities for columns we're not deleting
+            .map(col => ({ ...col })),
+          rows: table.rows.map(row => ({
             ...row,
             cells: omit(row.cells, ids)
+          })),
+          globalRules: table.globalRules.map(rule => ({ 
+            ...rule, 
+            // Keep resolvedEntities for global rules
+            resolvedEntities: rule.resolvedEntities || [] 
           }))
         });
       },
@@ -295,10 +302,58 @@ export const useStore = create<Store>()(
 
       rerunCells: cells => {
         const { activeTableId, getTable, editTable, editCells } = get();
-        const { columns, rows, globalRules, loadingCells } = getTable();
+        const currentTable = getTable();
+        const { columns, rows, globalRules, loadingCells } = currentTable;
         const colMap = keyBy(columns, c => c.id);
         const rowMap = keyBy(rows, r => r.id);
-
+      
+        // Get the set of column IDs being rerun
+        const rerunColumnIds = new Set(cells.map(cell => cell.columnId));
+        
+        // Get the set of row IDs being rerun
+        const rerunRowIds = new Set(cells.map(cell => cell.rowId));
+      
+        // Create a Set of cell keys being rerun for easy lookup
+        const rerunCellKeys = new Set(
+          cells.map(cell => getCellKey(cell.rowId, cell.columnId))
+        );
+      
+        // Don't clear resolved entities if we're processing new rows
+        const isNewRow = cells.some(cell => {
+          const row = rowMap[cell.rowId];
+          return row && Object.keys(row.cells).length === 0;
+        });
+      
+        if (!isNewRow) {
+          editTable(activeTableId, {
+            columns: columns.map(col => ({
+              ...col,
+              resolvedEntities: (col.resolvedEntities || []).filter(entity => {
+                if (entity.source.type === 'column') {
+                  const cellKey = getCellKey(
+                    cells.find(cell => cell.columnId === entity.source.id)?.rowId || '',
+                    entity.source.id
+                  );
+                  return !rerunCellKeys.has(cellKey);
+                }
+                return true;
+              })
+            })),
+            globalRules: globalRules.map(rule => ({ 
+              ...rule,
+              resolvedEntities: (rule.resolvedEntities || []).filter(entity => {
+                if (entity.source.type === 'global') {
+                  const affectedRows = cells.filter(cell => 
+                    rerunColumnIds.has(cell.columnId)
+                  ).map(cell => cell.rowId);
+                  return !affectedRows.some(rowId => rerunRowIds.has(rowId));
+                }
+                return true;
+              })
+            }))
+          });
+        }
+      
         const batch = compact(
           cells.map(({ rowId, columnId }) => {
             const key = getCellKey(rowId, columnId);
@@ -344,14 +399,74 @@ export const useStore = create<Store>()(
             shouldRunQuery = false;
           }
           if (shouldRunQuery) {
-            runQuery(row, column, globalRules).then(({ answer, chunks }) => {
+            // Inside runQuery.then callback in rerunCells:
+            runQuery(row, column, globalRules).then(({ answer, chunks, resolvedEntities }) => {
               editCells(
                 [{ rowId: row.id, columnId: column.id, cell: answer.answer }],
                 activeTableId
               );
+              
+              // Get current state
+              const currentTable = getTable(activeTableId);
+              
+              // Helper to check if an entity matches any global rule patterns
+              const isGlobalEntity = (entity: { 
+                original: string | string[]; 
+                resolved: string | string[]; 
+                source?: { type: string; id: string }; 
+                entityType?: string 
+              }) => {
+                const originalText = Array.isArray(entity.original) 
+                  ? entity.original.join(' ') 
+                  : entity.original;
+                  
+                return globalRules.some(rule => 
+                  rule.type === 'resolve_entity' && 
+                  rule.options?.some(pattern => 
+                    originalText.toLowerCase().includes(pattern.toLowerCase())
+                  )
+                );
+              };
+              
               editTable(activeTableId, {
-                chunks: { ...getTable(activeTableId).chunks, [key]: chunks },
-                loadingCells: omit(getTable(activeTableId).loadingCells, key)
+                chunks: { ...currentTable.chunks, [key]: chunks },
+                loadingCells: omit(currentTable.loadingCells, key),
+                columns: currentTable.columns.map(col => ({
+                  ...col,
+                  resolvedEntities: col.id === column.id 
+                    ? [
+                        ...(col.resolvedEntities || []),
+                        ...(resolvedEntities || [])
+                          .filter(entity => !isGlobalEntity(entity))
+                          .map(entity => ({
+                            ...entity,
+                            entityType: column.entityType,
+                            source: {
+                              type: 'column' as const,
+                              id: column.id
+                            }
+                          })) as ResolvedEntity[]
+                      ]
+                    : (col.resolvedEntities || [])
+                })),
+                globalRules: currentTable.globalRules.map(rule => ({
+                  ...rule,
+                  resolvedEntities: rule.type === 'resolve_entity'
+                    ? [
+                        ...(rule.resolvedEntities || []),
+                        ...(resolvedEntities || [])
+                          .filter(entity => isGlobalEntity(entity))
+                          .map(entity => ({
+                            ...entity,
+                            entityType: 'global',
+                            source: {
+                              type: 'global' as const,
+                              id: rule.id
+                            }
+                          })) as ResolvedEntity[]
+                      ]
+                    : (rule.resolvedEntities || [])
+                }))
               });
             });
           } else {
@@ -473,7 +588,11 @@ export const useStore = create<Store>()(
           set(getInitialData());
         } else {
           const { id, name, ...table } = getBlankTable();
-          get().editActiveTable(table);
+          get().editActiveTable({
+            ...table,
+            columns: table.columns.map(col => ({ ...col, resolvedEntities: [] })),
+            globalRules: table.globalRules.map(rule => ({ ...rule, resolvedEntities: [] }))
+          });
         }
       }
     }),
