@@ -55,8 +55,8 @@ export interface Store {
 }
 
 export interface ResolvedEntity {
-  original: string;
-  resolved: string;
+  original: string | string[];  // Allow both string and array of strings
+  resolved: string | string[];  // Allow both string and array of strings
   fullAnswer: string;
   entityType: string;
   source: {

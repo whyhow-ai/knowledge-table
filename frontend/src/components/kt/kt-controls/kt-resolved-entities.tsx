@@ -26,7 +26,16 @@ export function KtResolvedEntities(props: BoxProps) {
     const globalEntities = table.globalRules.flatMap(rule => rule.resolvedEntities || []);
     const columnEntities = table.columns.flatMap(column => column.resolvedEntities || []);
     const entities = [...globalEntities, ...columnEntities];
-    return entities;
+    
+    // Only show entities where a transformation was actually applied
+    return entities.filter(entity => {
+      // For arrays, compare stringified versions
+      if (Array.isArray(entity.original) && Array.isArray(entity.resolved)) {
+        return JSON.stringify(entity.original) !== JSON.stringify(entity.resolved);
+      }
+      // For strings, direct comparison
+      return entity.original !== entity.resolved;
+    });
   }, [table.globalRules, table.columns]);
 
   const handleUndoTransformation = (entity: ResolvedEntity) => {
@@ -39,22 +48,16 @@ export function KtResolvedEntities(props: BoxProps) {
             return [columnId, cellValue];
           }
   
-          if (typeof cellValue === 'string') {
-            // Replace resolved with original in string values
-            return [columnId, cellValue.includes(entity.resolved) 
-              ? cellValue.replace(entity.resolved, entity.original) 
-              : cellValue];
-          } else if (Array.isArray(cellValue)) {
-            // Replace resolved with original in array values
-            return [
-              columnId, 
-              cellValue.map(item => 
-                typeof item === 'string' && item.includes(entity.resolved)
-                  ? item.replace(entity.resolved, entity.original)
-                  : item
-              )
-            ];
+          // Check if values match (either both arrays or both strings)
+          const valuesMatch = Array.isArray(cellValue) && Array.isArray(entity.resolved) 
+            ? JSON.stringify(cellValue) === JSON.stringify(entity.resolved)
+            : cellValue === entity.resolved;
+  
+          // If they match, replace with original value
+          if (valuesMatch) {
+            return [columnId, entity.original];
           }
+          
           return [columnId, cellValue];
         })
       )
@@ -84,7 +87,12 @@ export function KtResolvedEntities(props: BoxProps) {
 
   return (
     <Group gap={8} {...props}>
-      <Button leftSection={<IconReplace size={16} />} onClick={handlers.open}>
+      <Button 
+        leftSection={<IconReplace size={16} />} 
+        onClick={handlers.open}
+        disabled={allResolvedEntities.length === 0}
+        variant="light"  // Always light variant
+      >
         Resolved entities
       </Button>
   
