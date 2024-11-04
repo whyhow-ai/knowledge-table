@@ -400,11 +400,20 @@ export const useStore = create<Store>()(
               const currentTable = getTable(activeTableId);
               
               // Helper to check if an entity matches any global rule patterns
-              const isGlobalEntity = (entity: { original: string; resolved: string }) => {
+              const isGlobalEntity = (entity: { 
+                original: string | string[]; 
+                resolved: string | string[]; 
+                source?: { type: string; id: string }; 
+                entityType?: string 
+              }) => {
+                const originalText = Array.isArray(entity.original) 
+                  ? entity.original.join(' ') 
+                  : entity.original;
+                  
                 return globalRules.some(rule => 
                   rule.type === 'resolve_entity' && 
                   rule.options?.some(pattern => 
-                    entity.original.toLowerCase().includes(pattern.toLowerCase())
+                    originalText.toLowerCase().includes(pattern.toLowerCase())
                   )
                 );
               };

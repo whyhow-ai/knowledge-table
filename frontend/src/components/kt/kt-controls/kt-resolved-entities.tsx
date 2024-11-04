@@ -29,44 +29,6 @@ export function KtResolvedEntities(props: BoxProps) {
     return entities;
   }, [table.globalRules, table.columns]);
 
-  // Helper to format display value based on type
-  const getDisplayValue = (value: string, entity: ResolvedEntity, isOriginal: boolean) => {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        if (isOriginal) {
-          
-          return (
-            <Code block style={{ whiteSpace: 'pre-wrap' }}>
-              {parsed
-                .map(item => {
-                  // Check if the item contains the resolved value
-                  const shouldReplace = item.includes(entity.resolved);
-                  // If it contains the resolved value, replace that part with the original
-                  return shouldReplace ? item.replace(entity.resolved, entity.original) : item;
-                })
-                .join('\n')}
-            </Code>
-          );
-        } else {
-          // For "To": Show fullAnswer as is
-          return (
-            <Code block style={{ whiteSpace: 'pre-wrap' }}>
-              {parsed.join('\n')}
-            </Code>
-          );
-        }
-      }
-    } catch {
-      // If not an array, show the original value for "From" or the value as is for "To"
-      return (
-        <Code block style={{ whiteSpace: 'pre-wrap' }}>
-          {isOriginal ? entity.original : value}
-        </Code>
-      );
-    }
-  };
-
   const handleUndoTransformation = (entity: ResolvedEntity) => {
     const rows = table.rows.map(row => ({
       ...row,
@@ -137,10 +99,18 @@ export function KtResolvedEntities(props: BoxProps) {
                     <Group justify="space-between" align="flex-start" wrap="nowrap">
                       <Stack gap="xs" style={{ flex: 1 }}>
                         <Text size="sm" fw={500}>From:</Text>
-                        {getDisplayValue(entity.fullAnswer, entity, true)}
+                        <Code block style={{ whiteSpace: 'pre-wrap' }}>
+                          {Array.isArray(entity.original) 
+                            ? entity.original.join('\n')  // One item per line
+                            : entity.original}
+                        </Code>
                         <Text size="sm" fw={500}>To:</Text>
-                        {getDisplayValue(entity.fullAnswer, entity, false)}
-                        </Stack>
+                        <Code block style={{ whiteSpace: 'pre-wrap' }}>
+                          {Array.isArray(entity.resolved)
+                            ? entity.resolved.join('\n')  // One item per line
+                            : entity.resolved}
+                        </Code>
+                      </Stack>
                       <Tooltip label="Undo transformation">
                         <ActionIcon
                           variant="subtle"
