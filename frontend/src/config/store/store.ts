@@ -420,27 +420,12 @@ export const useStore = create<Store>()(
                   ? entity.original.join(' ') 
                   : entity.original;
                   
-                return globalRules.some(rule => {
-                  // Handle regular resolve_entity rules
-                  if (rule.type === 'resolve_entity') {
-                    return rule.options?.some(pattern => 
-                      originalText.toLowerCase().includes(pattern.split(':')[0].toLowerCase())
-                    );
-                  }
-                  
-                  // Handle conditional resolve rules
-                  if (rule.type === 'resolve_conditional') {
-                    return rule.options?.some(pattern => {
-                      const [conditions] = pattern.split(':');
-                      const requiredWords = conditions.split('+').map(word => word.trim());
-                      return requiredWords.every(word => 
-                        originalText.toLowerCase().includes(word.toLowerCase())
-                      );
-                    });
-                  }
-                  
-                  return false;
-                });
+                return globalRules.some(rule => 
+                  rule.type === 'resolve_entity' && 
+                  rule.options?.some(pattern => 
+                    originalText.toLowerCase().includes(pattern.toLowerCase())
+                  )
+                );
               };
               
               editTable(activeTableId, {
@@ -466,7 +451,7 @@ export const useStore = create<Store>()(
                 })),
                 globalRules: currentTable.globalRules.map(rule => ({
                   ...rule,
-                  resolvedEntities: (rule.type === 'resolve_entity' || rule.type === 'resolve_conditional')
+                  resolvedEntities: rule.type === 'resolve_entity'
                     ? [
                         ...(rule.resolvedEntities || []),
                         ...(resolvedEntities || [])

@@ -80,8 +80,7 @@ export const defaultRules: Record<AnswerTableRule["type"], AnswerTableRule> = {
   must_return: { type: "must_return", options: [] },
   may_return: { type: "may_return", options: [] },
   max_length: { type: "max_length", length: 1 },
-  resolve_entity: { type: "resolve_entity", options: [] },
-  resolve_conditional: { type: "resolve_conditional", options: [] }
+  resolve_entity: { type: "resolve_entity", options: [] }
 };
 
 export const ruleOptions: {
@@ -91,8 +90,7 @@ export const ruleOptions: {
   { value: "must_return", label: "Must return" },
   { value: "may_return", label: "May return" },
   { value: "max_length", label: "Allowed # of responses" },
-  { value: "resolve_entity", label: "Resolve entity" },
-  { value: "resolve_conditional", label: "Resolve conditional" }
+  { value: "resolve_entity", label: "Resolve entity" }
 ];
 
 export const ruleInfo: Record<AnswerTableRule["type"], string> = {
@@ -100,9 +98,7 @@ export const ruleInfo: Record<AnswerTableRule["type"], string> = {
   may_return: "The column may return the specified values",
   max_length: "The column must return at most N values",
   resolve_entity:
-    "Replace all specified values with the first one from the list (i.e. 'turquioise:blue')",
-  resolve_conditional:
-    "Replace all specified values with the first one from the list (i.e. 'word a + word b:word c')"
+    "Replace all specified values with the first one from the list (i.e. 'turquioise:blue')"
 };
 
 // Casting

@@ -31,13 +31,7 @@ class TransformationDict(BaseModel):
 class Rule(BaseModel):
     """Rule model."""
 
-    type: Literal[
-        "must_return",
-        "may_return",
-        "max_length",
-        "resolve_entity",
-        "resolve_conditional",
-    ]
+    type: Literal["must_return", "may_return", "max_length", "resolve_entity"]
     options: Optional[List[str]] = None
     length: Optional[int] = None
 

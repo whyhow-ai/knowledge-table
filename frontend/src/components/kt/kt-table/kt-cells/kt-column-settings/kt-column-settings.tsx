@@ -157,31 +157,6 @@ const rulesMenu = (
                   }}
                 />
               </Group>
-            ) : rule.type === "resolve_conditional" ? (
-              <Group gap="xs" wrap="nowrap">
-                <TextInput
-                  w={150}
-                  placeholder="word a + word b"
-                  value={rule.options?.[0]?.split(":")[0] ?? ""}
-                  onChange={e => {
-                    const after = rule.options?.[0]?.split(":")[1] ?? "";
-                    handleRuleChange(rule, {
-                      options: [`${e.target.value}:${after}`]
-                    });
-                  }}
-                />
-                <TextInput
-                  w={100}
-                  placeholder="word c"
-                  value={rule.options?.[0]?.split(":")[1] ?? ""}
-                  onChange={e => {
-                    const before = rule.options?.[0]?.split(":")[0] ?? "";
-                    handleRuleChange(rule, {
-                      options: [`${before}:${e.target.value}`]
-                    });
-                  }}
-                />
-              </Group>
             ) : (
               <TagsInput
                 w={210}

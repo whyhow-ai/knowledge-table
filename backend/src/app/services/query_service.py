@@ -44,13 +44,16 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
 
 
 def replace_keywords(
-    text: Union[str, List[str]],
-    keyword_replacements: Dict[str, str],
-    conditional_replacements: List[tuple[List[str], str]] = [],
-) -> tuple[Union[str, List[str]], Dict[str, Union[str, List[str]]]]:
+    text: Union[str, List[str]], keyword_replacements: Dict[str, str]
+) -> tuple[
+    Union[str, List[str]], Dict[str, Union[str, List[str]]]
+]:  # Changed return type
     """Replace keywords in text and return both the modified text and transformation details."""
-    if not text or (not keyword_replacements and not conditional_replacements):
-        return text, {"original": text, "resolved": text}
+    if not text or not keyword_replacements:
+        return text, {
+            "original": text,
+            "resolved": text,
+        }  # Return dict instead of TransformationDict
 
     # Handle list of strings
     if isinstance(text, list):
@@ -59,12 +62,13 @@ def replace_keywords(
         modified = False
 
         # Create a single regex pattern for all keywords
-        # pattern = "|".join(map(re.escape, keyword_replacements.keys()))
-        # regex = re.compile(f"\\b({pattern})\\b")
+        pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+        regex = re.compile(f"\\b({pattern})\\b")
 
         for item in text:
-            new_item, _ = replace_keywords_in_string(
-                item, keyword_replacements, conditional_replacements
+            # Single pass replacement for all keywords
+            new_item = regex.sub(
+                lambda m: keyword_replacements[m.group()], item
             )
             result.append(new_item)
             if new_item != item:
@@ -75,46 +79,24 @@ def replace_keywords(
         return result, {"original": original_text, "resolved": result}
 
     # Handle single string
-    return replace_keywords_in_string(
-        text, keyword_replacements, conditional_replacements
-    )
-
-
-def parse_conditional_replacement(option: str) -> tuple[List[str], str]:
-    """Parse a conditional replacement rule like 'word a + word b : word c'."""
-    conditions, replacement = option.split(":")
-    required_words = [word.strip() for word in conditions.split("+")]
-    return required_words, replacement.strip()
+    return replace_keywords_in_string(text, keyword_replacements)
 
 
 def replace_keywords_in_string(
-    text: str,
-    keyword_replacements: Dict[str, str],
-    conditional_replacements: List[tuple[List[str], str]] = [],
-) -> tuple[str, Dict[str, Union[str, List[str]]]]:
+    text: str, keyword_replacements: Dict[str, str]
+) -> tuple[str, Dict[str, Union[str, List[str]]]]:  # Changed return type
     """Keywords for single string."""
-    if not text or (not keyword_replacements and not conditional_replacements):
+    if not text:
         return text, {"original": text, "resolved": text}
 
-    result = text
+    # Create a single regex pattern for all keywords
+    pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+    regex = re.compile(f"\\b({pattern})\\b")
 
-    # First check conditional replacements
-    for required_words, replacement in conditional_replacements:
-        # Check if all required words are present
-        if all(word.lower() in text.lower() for word in required_words):
-            # Create a pattern that matches any of the required words
-            pattern = "|".join(map(re.escape, required_words))
-            # Replace all occurrences of the required words with the replacement
-            result = re.sub(
-                f"\\b({pattern})\\b", replacement, result, flags=re.IGNORECASE
-            )
+    # Single pass replacement
+    result = regex.sub(lambda m: keyword_replacements[m.group()], text)
 
-    # Then do normal replacements
-    if keyword_replacements:
-        pattern = "|".join(map(re.escape, keyword_replacements.keys()))
-        regex = re.compile(f"\\b({pattern})\\b")
-        result = regex.sub(lambda m: keyword_replacements[m.group()], result)
-
+    # Only return transformation if something changed
     if result != text:
         return result, {"original": text, "resolved": result}
     return text, {"original": text, "resolved": text}
@@ -149,12 +131,10 @@ async def process_query(
     result_chunks = []
 
     if format in ["str", "str_array"]:
-        # Extract rules by type
+
+        # Extract and apply keyword replacements from all resolve_entity rules
         resolve_entity_rules = [
             rule for rule in rules if rule.type == "resolve_entity"
-        ]
-        conditional_rules = [
-            rule for rule in rules if rule.type == "resolve_conditional"
         ]
 
         result_chunks = (
@@ -164,43 +144,28 @@ async def process_query(
             else chunks
         )
 
-        # Process both types of replacements if we have an answer
-        if answer_value and (resolve_entity_rules or conditional_rules):
-            # Build regular replacements dictionary
-            replacements: Dict[str, str] = {}
-            if resolve_entity_rules:
-                for rule in resolve_entity_rules:
-                    if rule.options:
-                        rule_replacements = dict(
-                            option.split(":") for option in rule.options
-                        )
-                        replacements.update(rule_replacements)
+        # First populate the replacements dictionary
+        replacements: Dict[str, str] = {}
+        if resolve_entity_rules and answer_value:
+            for rule in resolve_entity_rules:
+                if rule.options:
+                    rule_replacements = dict(
+                        option.split(":") for option in rule.options
+                    )
+                    replacements.update(rule_replacements)
 
-            # Build conditional replacements list
-            conditional_replacements: List[tuple[List[str], str]] = []
-            if conditional_rules:
-                for rule in conditional_rules:
-                    if rule.options:
-                        for option in rule.options:
-                            required_words, replacement = (
-                                parse_conditional_replacement(option)
-                            )
-                            conditional_replacements.append(
-                                (required_words, replacement)
-                            )
-
-            # Apply replacements if we have any
-            if replacements or conditional_replacements:
+            # Then apply the replacements if we have any
+            if replacements:
                 print(f"Resolving entities in answer: {answer_value}")
                 if isinstance(answer_value, list):
                     transformed_list, transform_dict = replace_keywords(
-                        answer_value, replacements, conditional_replacements
+                        answer_value, replacements
                     )
                     transformations = transform_dict
                     answer_value = transformed_list
                 else:
                     transformed_value, transform_dict = replace_keywords(
-                        answer_value, replacements, conditional_replacements
+                        answer_value, replacements
                     )
                     transformations = transform_dict
                     answer_value = transformed_value
@@ -291,47 +256,31 @@ async def inference_query(
     llm_service: CompletionService,
 ) -> QueryResult:
     """Generate a response, no need for vector retrieval."""
+    # Since we are just answering this query based on data provided in the query,
+    # ther is no need to retrieve any chunks from the vector database.
+
     answer = await generate_inferred_response(
         llm_service, query, rules, format
     )
     answer_value = answer["answer"]
 
-    # Extract rules by type
+    # Extract and apply keyword replacements from all resolve_entity rules
     resolve_entity_rules = [
         rule for rule in rules if rule.type == "resolve_entity"
     ]
-    conditional_rules = [
-        rule for rule in rules if rule.type == "resolve_conditional"
-    ]
 
-    if answer_value and (resolve_entity_rules or conditional_rules):
-        # Build regular replacements
+    if resolve_entity_rules and answer_value:
+        # Combine all replacements from all resolve_entity rules
         replacements = {}
-        if resolve_entity_rules:
-            for rule in resolve_entity_rules:
-                if rule.options:
-                    rule_replacements = dict(
-                        option.split(":") for option in rule.options
-                    )
-                    replacements.update(rule_replacements)
+        for rule in resolve_entity_rules:
+            if rule.options:
+                rule_replacements = dict(
+                    option.split(":") for option in rule.options
+                )
+                replacements.update(rule_replacements)
 
-        # Build conditional replacements
-        conditional_replacements = []
-        if conditional_rules:
-            for rule in conditional_rules:
-                if rule.options:
-                    for option in rule.options:
-                        required_words, replacement = (
-                            parse_conditional_replacement(option)
-                        )
-                        conditional_replacements.append(
-                            (required_words, replacement)
-                        )
-
-        if replacements or conditional_replacements:
+        if replacements:
             print(f"Resolving entities in answer: {answer_value}")
-            answer_value, _ = replace_keywords(
-                answer_value, replacements, conditional_replacements
-            )
+            answer_value = replace_keywords(answer_value, replacements)
 
     return QueryResult(answer=answer_value, chunks=[])
