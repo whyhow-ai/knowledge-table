@@ -315,34 +315,44 @@ export const useStore = create<Store>()(
       
         // Create a Set of cell keys being rerun for easy lookup
         const rerunCellKeys = new Set(
-          cells.map(cell => `${cell.rowId}-${cell.columnId}`)
+          cells.map(cell => getCellKey(cell.rowId, cell.columnId))
         );
       
-        // Only clear resolvedEntities for the specific cells being rerun
-        editTable(activeTableId, {
-          columns: columns.map(col => ({
-            ...col,
-            resolvedEntities: (col.resolvedEntities || []).filter(entity => {
-              // Keep entities that aren't from the cells being rerun
-              const cellKey = `${entity.source.type === 'column' ? cells.find(cell => 
-                cell.columnId === entity.source.id
-              )?.rowId : ''}-${entity.source.id}`;
-              return !rerunCellKeys.has(cellKey);
-            })
-          })),
-          globalRules: globalRules.map(rule => ({ 
-            ...rule,
-            resolvedEntities: (rule.resolvedEntities || []).filter(entity => {
-              if (entity.source.type === 'global') {
-                const affectedRows = cells.filter(cell => 
-                  rerunColumnIds.has(cell.columnId)
-                ).map(cell => cell.rowId);
-                return !affectedRows.some(rowId => rerunRowIds.has(rowId));
-              }
-              return true;
-            })
-          }))
+        // Don't clear resolved entities if we're processing new rows
+        const isNewRow = cells.some(cell => {
+          const row = rowMap[cell.rowId];
+          return row && Object.keys(row.cells).length === 0;
         });
+      
+        if (!isNewRow) {
+          editTable(activeTableId, {
+            columns: columns.map(col => ({
+              ...col,
+              resolvedEntities: (col.resolvedEntities || []).filter(entity => {
+                if (entity.source.type === 'column') {
+                  const cellKey = getCellKey(
+                    cells.find(cell => cell.columnId === entity.source.id)?.rowId || '',
+                    entity.source.id
+                  );
+                  return !rerunCellKeys.has(cellKey);
+                }
+                return true;
+              })
+            })),
+            globalRules: globalRules.map(rule => ({ 
+              ...rule,
+              resolvedEntities: (rule.resolvedEntities || []).filter(entity => {
+                if (entity.source.type === 'global') {
+                  const affectedRows = cells.filter(cell => 
+                    rerunColumnIds.has(cell.columnId)
+                  ).map(cell => cell.rowId);
+                  return !affectedRows.some(rowId => rerunRowIds.has(rowId));
+                }
+                return true;
+              })
+            }))
+          });
+        }
       
         const batch = compact(
           cells.map(({ rowId, columnId }) => {
