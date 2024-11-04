@@ -127,6 +127,8 @@ export function KTGlobalRules(props: BoxProps) {
                 max_length,3,
                 <br />
                 resolve_entity,"blue:ultramarine,red:crimson",Color
+                <br />
+                resolve_conditional,"word a + word b:word c",Words
               </Code>
             </Box>
           </Group>
@@ -247,7 +249,7 @@ export function KTGlobalRules(props: BoxProps) {
 
 const csvJsonSchema = z.array(
   z.object({
-    rule_type: z.enum(["must_return", "may_return", "max_length", "resolve_entity"]),
+    rule_type: z.enum(["must_return", "may_return", "max_length", "resolve_entity", "resolve_conditional"]),
     value: z.string(),
     entity_type: z.string().optional()
   })

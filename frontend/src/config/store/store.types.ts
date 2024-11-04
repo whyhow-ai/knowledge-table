@@ -111,7 +111,7 @@ export interface AnswerTableGlobalRule extends AnswerTableRule {
 }
 
 export interface AnswerTableRule {
-  type: "must_return" | "may_return" | "max_length" | "resolve_entity";
+  type: "must_return" | "may_return" | "max_length" | "resolve_entity" | "resolve_conditional";
   options?: string[];
   length?: number;
 }
