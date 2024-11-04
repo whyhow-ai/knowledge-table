@@ -5,7 +5,11 @@ import re
 from typing import Any, Awaitable, Callable, Dict, List, Union
 
 from app.models.query_core import Chunk, FormatType, QueryType, Rule
-from app.schemas.query_api import QueryResult, SearchResponse
+from app.schemas.query_api import (
+    QueryResult,
+    ResolvedEntitySchema,
+    SearchResponse,
+)
 from app.services.llm_service import (
     CompletionService,
     generate_inferred_response,
@@ -40,58 +44,62 @@ def extract_chunks(search_response: SearchResponse) -> List[Chunk]:
 
 
 def replace_keywords(
-    text: Union[str, List[str]], keyword_replacements: dict[str, str]
-) -> tuple[Union[str, List[str]], dict[str, str]]:
+    text: Union[str, List[str]], keyword_replacements: Dict[str, str]
+) -> tuple[
+    Union[str, List[str]], Dict[str, Union[str, List[str]]]
+]:  # Changed return type
     """Replace keywords in text and return both the modified text and transformation details."""
     if not text or not keyword_replacements:
-        return text, {}
+        return text, {
+            "original": text,
+            "resolved": text,
+        }  # Return dict instead of TransformationDict
 
     # Handle list of strings
     if isinstance(text, list):
         original_text = text.copy()
         result = []
         modified = False
-        
+
         # Create a single regex pattern for all keywords
-        pattern = '|'.join(map(re.escape, keyword_replacements.keys()))
-        regex = re.compile(f'\\b({pattern})\\b')
-        
+        pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+        regex = re.compile(f"\\b({pattern})\\b")
+
         for item in text:
             # Single pass replacement for all keywords
-            new_item = regex.sub(lambda m: keyword_replacements[m.group()], item)
+            new_item = regex.sub(
+                lambda m: keyword_replacements[m.group()], item
+            )
             result.append(new_item)
             if new_item != item:
                 modified = True
-        
-        # Only return transformation if something actually changed
+
         if modified:
-            return result, {
-                "original": original_text,
-                "resolved": result
-            }
-        return result, {}
+            return result, {"original": original_text, "resolved": result}
+        return result, {"original": original_text, "resolved": result}
 
     # Handle single string
     return replace_keywords_in_string(text, keyword_replacements)
 
+
 def replace_keywords_in_string(
-    text: str, keyword_replacements: dict[str, str]
-) -> tuple[str, dict[str, str]]:
+    text: str, keyword_replacements: Dict[str, str]
+) -> tuple[str, Dict[str, Union[str, List[str]]]]:  # Changed return type
     """Keywords for single string."""
     if not text:
-        return text, {}
+        return text, {"original": text, "resolved": text}
 
     # Create a single regex pattern for all keywords
-    pattern = '|'.join(map(re.escape, keyword_replacements.keys()))
-    regex = re.compile(f'\\b({pattern})\\b')
-    
+    pattern = "|".join(map(re.escape, keyword_replacements.keys()))
+    regex = re.compile(f"\\b({pattern})\\b")
+
     # Single pass replacement
     result = regex.sub(lambda m: keyword_replacements[m.group()], text)
-    
+
     # Only return transformation if something changed
     if result != text:
         return result, {"original": text, "resolved": result}
-    return text, {}
+    return text, {"original": text, "resolved": text}
 
 
 async def process_query(
@@ -115,7 +123,10 @@ async def process_query(
     )
     answer_value = answer["answer"]
 
-    transformations: Dict[str, str] = {}
+    transformations: Dict[str, Union[str, List[str]]] = {
+        "original": "",
+        "resolved": "",
+    }
 
     result_chunks = []
 
@@ -147,33 +158,35 @@ async def process_query(
             if replacements:
                 print(f"Resolving entities in answer: {answer_value}")
                 if isinstance(answer_value, list):
-                    # Transform the list but keep track of both original and transformed
-                    transformed_list, _ = replace_keywords(answer_value, replacements)
-                    transformations = {
-                        "original": answer_value,  # Keep as list
-                        "resolved": transformed_list  # Keep as list
-                    }
+                    transformed_list, transform_dict = replace_keywords(
+                        answer_value, replacements
+                    )
+                    transformations = transform_dict
                     answer_value = transformed_list
                 else:
-                    # Handle single string case
-                    transformed_value, _ = replace_keywords(answer_value, replacements)
-                    transformations = {
-                        "original": answer_value,
-                        "resolved": transformed_value
-                    }
+                    transformed_value, transform_dict = replace_keywords(
+                        answer_value, replacements
+                    )
+                    transformations = transform_dict
                     answer_value = transformed_value
-
 
     return QueryResult(
         answer=answer_value,
         chunks=result_chunks[:10],
-        resolved_entities=[{
-            "original": transformations["original"],
-            "resolved": transformations["resolved"],
-            "source": {"type": "column", "id": "some-id"},
-            "entityType": "some-type"
-        }] if transformations else None
+        resolved_entities=(
+            [
+                ResolvedEntitySchema(
+                    original=transformations["original"],
+                    resolved=transformations["resolved"],
+                    source={"type": "column", "id": "some-id"},
+                    entityType="some-type",
+                )
+            ]
+            if transformations["original"] or transformations["resolved"]
+            else None
+        ),
     )
+
 
 # Convenience functions for specific query types
 async def decomposition_query(

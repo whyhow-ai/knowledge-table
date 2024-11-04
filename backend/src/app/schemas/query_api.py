@@ -6,8 +6,10 @@ from pydantic import BaseModel, ConfigDict
 
 from app.models.query_core import Chunk, FormatType, Rule
 
-class ResolvedEntity(BaseModel):
+
+class ResolvedEntitySchema(BaseModel):
     """Schema for resolved entity transformations."""
+
     original: Union[str, List[str]]
     resolved: Union[str, List[str]]
     source: dict[str, str]
@@ -46,7 +48,7 @@ class QueryResult(BaseModel):
 
     answer: Any
     chunks: List[Chunk]
-    resolved_entities: Optional[List[ResolvedEntity]] = None
+    resolved_entities: Optional[List[ResolvedEntitySchema]] = None
 
 
 class QueryResponseSchema(BaseModel):
@@ -58,7 +60,7 @@ class QueryResponseSchema(BaseModel):
     answer: Optional[Any] = None
     chunks: List[Chunk]
     type: str
-    resolved_entities: Optional[List[ResolvedEntity]] = None
+    resolved_entities: Optional[List[ResolvedEntitySchema]] = None
 
 
 class QueryAnswer(BaseModel):
@@ -76,7 +78,7 @@ class QueryAnswerResponse(BaseModel):
 
     answer: QueryAnswer
     chunks: List[Chunk]
-    resolved_entities: Optional[List[ResolvedEntity]] = None
+    resolved_entities: Optional[List[ResolvedEntitySchema]] = None
 
 
 # Type for search responses (used in service layer)
