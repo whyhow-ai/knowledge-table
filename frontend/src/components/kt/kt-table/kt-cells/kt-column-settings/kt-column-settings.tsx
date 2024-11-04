@@ -102,6 +102,10 @@ export function KtColumnSettings({
     });
   };
 
+  const handleClipboardEvent = (e: React.ClipboardEvent) => {
+    e.stopPropagation();
+  };
+
   const rulesMenu = (
     <Box w={430}>
       {isEmpty(state.rules) ? (
@@ -167,7 +171,11 @@ export function KtColumnSettings({
   );
 
   return (
-    <Box {...props}>
+    <Box {...props}
+      onCopyCapture={handleClipboardEvent}
+      onCutCapture={handleClipboardEvent}
+      onPasteCapture={handleClipboardEvent}
+    >
       <Group gap="xs" wrap="nowrap" justify="space-between">
         <TextInput
           autoFocus
