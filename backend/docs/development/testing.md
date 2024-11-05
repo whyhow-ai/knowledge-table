@@ -10,65 +10,65 @@ Ensure you have set up your development environment as described in the [Setup G
 
 We use pytest for our test suite. To run the tests, follow these steps:
 
-1. **Activate your virtual environment** (if not already activated):
+**1. Activate your virtual environment** (if not already activated):
 
-   ```sh
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-   ```
+```sh
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+```
 
-2. **Navigate to the backend directory**:
+**2. Navigate to the backend directory**:
 
-   ```sh
-   cd path/to/knowledge-table/backend
-   ```
+```sh
+cd path/to/knowledge-table/backend
+```
 
-3. **Run the tests**:
+**3. Run the tests**:
 
-   ```sh
-   pytest
-   ```
+```sh
+pytest
+```
 
-   This command will discover and run all tests in the project.
+This command will discover and run all tests in the project.
 
 ### Running Specific Tests
 
-- To run tests in a specific file:
+To run tests in a specific file:
 
-  ```sh
-  pytest tests/path/to/test_file.py
-  ```
+```sh
+pytest tests/path/to/test_file.py
+```
 
-- To run a specific test function:
+To run a specific test function:
 
-  ```sh
-  pytest tests/path/to/test_file.py::test_function_name
-  ```
+```sh
+pytest tests/path/to/test_file.py::test_function_name
+```
 
-## Test Coverage
+## Coverage
 
 To run tests with coverage reporting:
 
-1. **Install pytest-cov** (if not already installed):
+**1. Install pytest-cov** (if not already installed):
 
-   ```sh
-   pip install pytest-cov
-   ```
+```sh
+pip install pytest-cov
+```
 
-2. **Run tests with coverage**:
+**2. Run tests with coverage**:
 
-   ```sh
-   pytest --cov=app tests/
-   ```
+```sh
+pytest --cov=app tests/
+```
 
-   This will run the tests and display a coverage report in the terminal.
+This will run the tests and display a coverage report in the terminal.
 
-3. **Generate an HTML coverage report**:
+**3. Generate an HTML coverage report**:
 
-   ```sh
-   pytest --cov=app --cov-report=html tests/
-   ```
+```sh
+pytest --cov=app --cov-report=html tests/
+```
 
-   This creates a `htmlcov` directory. Open `htmlcov/index.html` in a web browser to view the detailed coverage report.
+This creates a `htmlcov` directory. Open `htmlcov/index.html` in a web browser to view the detailed coverage report.
 
 ## Writing Tests
 
@@ -98,6 +98,7 @@ def test_upload_document_invalid_file():
 We use GitHub Actions for continuous integration. The CI pipeline runs all tests automatically on every push and pull request.
 
 To view the CI results:
+
 1. Go to the GitHub repository.
 2. Click on the "Actions" tab.
 3. Select the workflow run you want to inspect.

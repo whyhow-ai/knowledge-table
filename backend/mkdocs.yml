@@ -28,6 +28,7 @@ nav:
   - Getting Started:
       - Welcome to Knowledge Table: index.md
       - Installation: getting-started/installation.md
+      - Docker: deployment/docker.md
   - Tutorial: tutorials/extracting-data.md
   - API Reference:
       - Overview: api/overview.md
@@ -37,44 +38,18 @@ nav:
           - Query: api/v1/endpoints/query.md
   - Developer Guide:
       - Architecture Overview: architecture.md
-      - Development Setup: development/setup.md
-      - Testing: development/testing.md
+      - Services:
+          - Document Service: services/document_service.md
+          - Graph Service: services/graph_service.md
+          - LLM Service: services/llm_service.md
+          - Query Service: services/query_service.md
       - Extending the Backend:
           - Overview: extending/overview.md
-          - LLM Services: extending/llm_services.md
-          - Vector DB Services: extending/vector_databases.md
-          - Document Loaders: extending/document_loaders.md
-  - Services:
-      - Document Service: services/document_service.md
-      - Graph Service: services/graph_service.md
-      - LLM Service: services/llm_service.md
-      - Query Service: services/query_service.md
-      - LLM:
-          - Base: services/llm/base.md
-          - Factory: services/llm/factory.md
-          - OpenAI Service: services/llm/openai_service.md
-          - Prompts: services/llm/prompts.md
-      - Loaders:
-          - Base: services/loaders/base.md
-          - Factory: services/loaders/factory.md
-          - PyPDF Service: services/loaders/pypdf_service.md
-          - Unstructured Service: services/loaders/unstructured_service.md
-      - Vector DB:
-          - Base: services/vector_db/base.md
-          - Factory: services/vector_db/factory.md
-          - Milvus Service: services/vector_db/milvus_service.md
-  - Models:
-      - Document: models/document.md
-      - Graph: models/graph.md
-      - LLM: models/llm.md
-      - Query: models/query.md
-  - Schemas:
-      - Document: schemas/document.md
-      - Graph: schemas/graph.md
-      - Query: schemas/query.md
-  - Deployment:
-      - Docker: deployment/docker.md
-      - Native: deployment/native.md
+          - Add LLM Services: extending/llm_services.md
+          - Add Vector DB Services: extending/vector_databases.md
+          - Add Document Loaders: extending/document_loaders.md
+      - Testing:
+          - Run Tests: development/testing.md
   - Contributing: CONTRIBUTING.md
 
 plugins:

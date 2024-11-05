@@ -1,120 +1,99 @@
 # Extending Document Loaders
 
-This guide explains how to add support for new document loader services in the Knowledge Table backend.
+This guide covers adding new document loaders to the Knowledge Table backend, detailing the setup and configuration.
 
-## Steps to Add a New Document Loader
+---
 
-1. **Create a new Loader service class**
+## Steps
 
-   In `src/app/services/loaders/`, create a new file `your_loader_service.py`.
+### **1. Create a Loader Service Class**
 
-   ```python
-   # your_loader_service.py
-   from typing import List, Optional
-   from langchain.schema import Document
-   from app.services.loaders.base import LoaderService
+In `src/app/services/loaders/`, create a new file, e.g., `your_loader_service.py`.
 
-   class YourLoader(LoaderService):
-       def __init__(self, api_key: Optional[str] = None):
-           """Initialize the YourLoader."""
-           self.api_key = api_key
+```python
+# your_loader_service.py
+from typing import List, Optional
+from langchain.schema import Document
+from app.services.loaders.base import LoaderService
 
-       async def load(self, file_path: str) -> List[Document]:
-           """Load document from file path."""
-           # Implement your loading logic here
-           pass
+class YourLoader(LoaderService):
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key
 
-       async def load_and_split(self, file_path: str) -> List[Document]:
-           """Load and split document from file path."""
-           # Implement your loading and splitting logic here
-           pass
-   ```
+    async def load(self, file_path: str) -> List[Document]:
+        # Implement loading logic here
+        pass
 
-2. **Update the Loader Factory**
+    async def load_and_split(self, file_path: str) -> List[Document]:
+        # Implement loading and splitting logic here
+        pass
+```
 
-   In `src/app/services/loaders/factory.py`, import your new service and update the factory method.
+### **2. Update the Loader Factory**
 
-   ```python
-   # factory.py
-   from app.services.loaders.your_loader_service import YourLoader
+In `src/app/services/loaders/factory.py`, add an import and update the factory method.
 
-   class LoaderFactory:
-       @staticmethod
-       def create_loader() -> Optional[LoaderService]:
-           loader_type = settings.loader
-           logger.info(f"Creating loader of type: {loader_type}")
+```python
+# factory.py
+from app.services.loaders.your_loader_service import YourLoader
 
-           try:
-               if loader_type == "unstructured":
-                   # ... existing unstructured loader code ...
-               elif loader_type == "pypdf":
-                   # ... existing pypdf loader code ...
-               elif loader_type == "your_loader":
-                   logger.info("Using YourLoader")
-                   return YourLoader(api_key=settings.your_loader_api_key)
-               else:
-                   logger.warning(f"No loader found for type: {loader_type}")
-                   return None
-           except ValueError as ve:
-               logger.error(f"Error creating loader: {str(ve)}")
-               raise
-           except Exception as e:
-               logger.exception(f"Error creating loader: {str(e)}")
-               return None
-   ```
+class LoaderFactory:
+    @staticmethod
+    def create_loader() -> Optional[LoaderService]:
+        loader_type = settings.loader
+        if loader_type == "your_loader":
+            return YourLoader(api_key=settings.your_loader_api_key)
+        # existing loader conditions...
+```
 
-3. **Configure the Service**
+### **3. Configure the Service**
 
-   In `src/app/core/config.py`, add configuration options for your loader.
+In `src/app/core/config.py`, add configurations for the new loader:
 
-   ```python
-   # config.py
-   from pydantic import BaseSettings
+```python
+# config.py
+from pydantic import BaseSettings
 
-   class Settings(BaseSettings):
-       loader: str = "unstructured"  # Default to unstructured
-       your_loader_api_key: Optional[str] = None
+class Settings(BaseSettings):
+    loader: str = "unstructured"
+    your_loader_api_key: Optional[str] = None
 
-   settings = Settings()
-   ```
+settings = Settings()
+```
 
-   Update your environment variable or `.env` file accordingly:
+Update your environment variables or `.env` file:
 
-   ```
-   LOADER=your_loader
-   YOUR_LOADER_API_KEY=your_api_key_here
-   ```
+```
+LOADER=your_loader
+YOUR_LOADER_API_KEY=your_api_key_here
+```
 
-4. **Implement the Loader Logic**
+### **4. Implement Loader Logic**
 
-   In your `YourLoader` class, implement the `load` and `load_and_split` methods according to your loader's specific requirements.
+Define `load` and `load_and_split` in `YourLoader` for your loader requirements.
 
-   ```python
-   async def load(self, file_path: str) -> List[Document]:
-       # Example implementation
-       your_loader = YourLoaderLibrary(api_key=self.api_key)
-       raw_document = your_loader.load_file(file_path)
-       return [Document(page_content=raw_document, metadata={"source": file_path})]
+```python
+async def load(self, file_path: str) -> List[Document]:
+    raw_document = YourLoaderLibrary(api_key=self.api_key).load_file(file_path)
+    return [Document(page_content=raw_document, metadata={"source": file_path})]
 
-   async def load_and_split(self, file_path: str) -> List[Document]:
-       # Example implementation
-       your_loader = YourLoaderLibrary(api_key=self.api_key)
-       raw_document = your_loader.load_file(file_path)
-       splits = your_loader.split_document(raw_document)
-       return [Document(page_content=split, metadata={"source": file_path, "split": i}) for i, split in enumerate(splits)]
-   ```
+async def load_and_split(self, file_path: str) -> List[Document]:
+    raw_document = YourLoaderLibrary(api_key=self.api_key).load_file(file_path)
+    splits = YourLoaderLibrary().split_document(raw_document)
+    return [Document(page_content=split, metadata={"source": file_path, "split": i}) for i, split in enumerate(splits)]
+```
 
-## Additional Considerations
+---
 
-- **Error Handling**: Implement proper error handling in your loader service.
-- **Testing**: Write unit tests for your new loader service.
-- **Performance**: Consider optimizing your implementation for large documents.
-- **Metadata**: Ensure your loader captures relevant metadata from the documents.
-- **Compatibility**: Make sure your loader returns `langchain.schema.Document` objects for compatibility with the rest of the system.
+## Considerations
 
-## Example: Implementing a PDF Loader
+- **Error Handling**: Ensure robust error handling.
+- **Testing**: Write unit tests for your loader.
+- **Performance**: Optimize for large documents.
+- **Metadata**: Capture relevant document metadata.
+- **Compatibility**: Return `langchain.schema.Document` objects for system compatibility.
 
-Here's a simplified example of how the PDFLoader is implemented:
+## Example
 
 ```python
 from typing import List
@@ -131,5 +110,3 @@ class PDFLoader(LoaderService):
         loader = LangchainPyPDFLoader(file_path)
         return loader.load_and_split()
 ```
-
-This example shows how to leverage existing libraries (in this case, Langchain's PyPDFLoader) to implement the required functionality.

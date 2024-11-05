@@ -1,4 +1,4 @@
-# 🚀 Installation Guide
+# Installation Guide
 
 This guide will walk you through setting up and running the Knowledge Table backend and frontend.
 
@@ -118,7 +118,3 @@ To ensure that everything is working correctly, you can run the unit tests:
 ```bash
 pytest
 ```
-
----
-
-🎉 **Your Knowledge Table backend and frontend setup is now complete!**

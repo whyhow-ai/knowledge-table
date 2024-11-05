@@ -2,84 +2,64 @@
 
 This guide explains how to deploy Knowledge Table using Docker.
 
-## Prerequisites
+> ## Prerequisites
+>
+> - Docker & Docker Compose installed
 
-Before you begin, ensure you have the following installed on your system:
+## Steps
 
-- Docker
-- Docker Compose
+> **Step 1:** Clone the Repository
 
-## Deployment Steps
+```sh
+git clone https://github.com/yourusername/knowledge-table.git
+cd knowledge-table
+```
 
-1. **Clone the Repository**
+> **Step 2:** Set Up Environment
 
-   ```sh
-   git clone https://github.com/yourusername/knowledge-table.git
-   cd knowledge-table
-   ```
+```sh
+cp .env.sample .env
+```
 
-2. **Environment Setup**
+Open `.env`, add your OpenAI API key:
 
-   Copy the sample environment file and edit it with your settings:
+```
+OPENAI_API_KEY=your_api_key_here
+```
 
-   ```sh
-   cp .env.sample .env
-   ```
+> **Step 3:** Build and Start Containers
 
-   Open `.env` in a text editor and add your OpenAI API key:
+```sh
+docker-compose up -d --build
+```
 
-   ```
-   OPENAI_API_KEY=your_api_key_here
-   ```
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
 
-3. **Build and Start the Containers**
+> **Step 4:** Stop the Application
 
-   Use Docker Compose to build and start the containers:
-
-   ```sh
-   docker-compose up -d --build
-   ```
-
-   This command builds the images (if they don't exist) and starts the containers in detached mode.
-
-4. **Accessing the Application**
-
-   Once the containers are up and running, you can access:
-   - The frontend at `http://localhost:3000`
-   - The backend at `http://localhost:8000`
-
-5. **Stopping the Application**
-
-   To stop the containers, run:
-
-   ```sh
-   docker-compose down
-   ```
+```sh
+docker-compose down
+```
 
 ## Troubleshooting
 
-- If you encounter any issues, check the logs of the containers:
-
+- Check container logs with:
   ```sh
   docker-compose logs
   ```
-
-- Ensure all required environment variables are set in your `.env` file.
+- Verify all required variables in `.env`.
 
 ## Updating
 
-To update to the latest version:
+> **Step 1:** Pull the latest changes
 
-1. Pull the latest changes from the repository:
+```sh
+git pull origin main
+```
 
-   ```sh
-   git pull origin main
-   ```
+> **Step 2:** Rebuild and restart:
 
-2. Rebuild and restart the containers:
-
-   ```sh
-   docker-compose up -d --build
-   ```
-
-This will ensure you're running the latest version of Knowledge Table.
+```sh
+docker-compose up -d --build
+```

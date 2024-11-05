@@ -1,6 +1,12 @@
 # Query API Overview
 
-This section covers the API endpoints related to querying documents in the Knowledge Table backend. The query system allows you to ask questions about documents using different retrieval methods, including vector search, hybrid search, and decomposed search. These queries utilize a combination of keyword searches and vector-based methods to generate answers from the document data.
+This section covers the API endpoints related to querying documents in the Knowledge Table backend. The query system allows you to ask questions about documents using different retrieval methods, including vector search, hybrid search, and decomposed search. These queries utilize a combination of keyword searches and vector-based methods to generate answers from the document data. There are currently three supported methods for retrieving data.
+
+- **Hybrid Search (Default)** - Combines both keyword and vector searches to retrieve relevant chunks from both methods, creating a more comprehensive response. Useful when the document contains both structured and unstructured data.
+
+- **Vector Search** - Performs a simple vector search on the document and retrieves the most relevant chunks of text based on the query. Ideal for finding similar passages in large documents.
+
+- **Decomposed Search** - Breaks the main query into smaller sub-queries, runs vector searches for each sub-query, and then compiles the results into a cohesive answer. Ideal for complex queries that require a step-by-step breakdown.
 
 ---
 
@@ -30,7 +36,7 @@ Run a query against a document using one of three methods: Simple Vector Search,
 | `document_id` | body | `string` | The ID of the document to query                   |
 | `prompt`      | body | `object` | A column prompt in the `QueryPromptSchema` format |
 
-### QueryPromptSchema Structure
+**QueryPromptSchema Structure**
 
 | Name          | Type      | Description                                                               |
 | ------------- | --------- | ------------------------------------------------------------------------- |
@@ -101,7 +107,7 @@ print(response.json())
 }
 ```
 
-### Error Responses
+## Error Responses
 
 | Status Code | Error                   | Description                                                          |
 | ----------- | ----------------------- | -------------------------------------------------------------------- |
@@ -110,16 +116,88 @@ print(response.json())
 
 ---
 
-### Retrieval Types
+## Schemas
 
-#### 1. Vector Search
+This file defines Pydantic schemas for API requests and responses related to queries.
 
-Performs a simple vector search on the document and retrieves the most relevant chunks of text based on the query. Ideal for finding similar passages in large documents.
+**QueryPrompt**
 
-#### 2. Hybrid Search (Default)
+Represents a query prompt.
 
-Combines both keyword and vector searches to retrieve relevant chunks from both methods, creating a more comprehensive response. Useful when the document contains both structured and unstructured data.
+- **`id`** (str): Unique identifier for the prompt.
+- **`query`** (str): The query text.
+- **`type`** (Literal["int", "str", "bool", "int_array", "str_array"]): The expected type of the answer.
+- **`entity_type`** (str): The type of entity the query is about.
+- **`rules`** (Optional[List[Rule]]): Optional list of rules to apply to the query.
 
-#### 3. Decomposed Search
+**QueryRequest**
 
-Breaks the main query into smaller sub-queries, runs vector searches for each sub-query, and then compiles the results into a cohesive answer. Ideal for complex queries that require a step-by-step breakdown.
+Represents a query request.
+
+- **`document_id`** (str): The ID of the document to query.
+- **`previous_answer`** (Optional[Union[int, str, bool, List[int], List[str]]]): The previous answer, if any.
+- **`prompt`** (QueryPrompt): The query prompt.
+- **`rag_type`** (Optional[Literal["vector", "hybrid", "decomposed"]]): The type of retrieval-augmented generation to use. Defaults to "hybrid".
+
+**VectorResponse**
+
+Represents a vector response.
+
+- **`message`** (str): A message associated with the response.
+- **`chunks`** (List[Chunk]): List of relevant chunks from the document.
+- **`keywords`** (Optional[List[str]]): Optional list of keywords extracted from the query.
+
+**QueryResponse**
+
+Represents a query response.
+
+- **`id`** (str): Unique identifier for the response.
+- **`document_id`** (str): The ID of the document queried.
+- **`prompt_id`** (str): The ID of the prompt used.
+- **`answer`** (Optional[Union[int, str, bool, List[int], List[str]]]): The answer to the query.
+- **`chunks`** (List[Chunk]): List of relevant chunks from the document.
+- **`type`** (str): The type of the answer.
+
+---
+
+**Usage**
+
+```python
+from app.schemas.query import QueryPrompt, QueryRequest, VectorResponse, QueryResponse
+from app.models.query import Rule, Chunk
+
+# Creating a query prompt
+prompt = QueryPrompt(
+    id="1",
+    query="What is the capital of France?",
+    type="str",
+    entity_type="Location",
+    rules=[Rule(type="must_return", options=["Paris", "London", "Berlin"])]
+)
+
+# Creating a query request
+request = QueryRequest(
+    document_id="doc123",
+    prompt=prompt,
+    rag_type="hybrid"
+)
+
+# Creating a vector response
+vector_response = VectorResponse(
+    message="Retrieved relevant chunks",
+    chunks=[Chunk(content="Paris is the capital of France.", page=1)],
+    keywords=["capital", "France"]
+)
+
+# Creating a query response
+query_response = QueryResponse(
+    id="resp1",
+    document_id="doc123",
+    prompt_id="1",
+    answer="Paris",
+    chunks=[Chunk(content="Paris is the capital of France.", page=1)],
+    type="str"
+)
+```
+
+These schemas are used to validate and structure data for API requests and responses related to queries in the application.

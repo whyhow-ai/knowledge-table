@@ -1,180 +1,249 @@
 # Graph Service
 
-The Graph Service module is responsible for processing table data, generating schemas, and creating triples (subject-predicate-object relationships) from the data. It's a crucial component in transforming structured table data into a graph representation.
+The Graph Service processes table data, generates schemas, and creates triples (subject-predicate-object relationships) to represent data as a graph.
 
-## Functions
+---
 
-### parse_table
+## Core Functions
 
-````python
-async def parse_table(data: Table) -> Dict[str, Any]:
-````
+**parse_table**  
+ Prepares table data for schema generation.
 
+```python
+async def parse_table(data: Table) -> Dict[str, Any]
+```
 
-Prepares the table data for schema generation.
+**generate_triples**  
+ Generates triples and chunks based on the schema and table data.
 
-**Parameters:**
-- `data` (Table): The input table data containing rows, columns, and cells.
+```python
+async def generate_triples(schema: SchemaResponseModel, table_data: Table) -> Dict[str, Any]
+```
 
-**Returns:**
-- `Dict[str, Any]`: A dictionary containing parsed table data with document information and answers for each cell.
+**generate_triples_for_relationship**  
+ Creates triples for a specific relationship across all rows.
 
-### generate_triples
+```python
+def generate_triples_for_relationship(relationship: SchemaRelationship, table_data: Table) -> List[Triple]
+```
 
-````python
-async def generate_triples(schema: SchemaResponseModel, table_data: Table) -> Dict[str, Any]:
-````
+**create_triple_for_row**  
+ Generates a single triple for a relationship and row.
 
+```python
+def create_triple_for_row(relationship: SchemaRelationship, row: Row, table_data: Table) -> Optional[Triple]
+```
 
-Generates triples and chunks from the given schema and table data.
+**generate_chunks_for_triples**  
+ Generates content chunks for each triple.
 
-**Parameters:**
-- `schema` (SchemaResponseModel): The schema containing relationships between entities.
-- `table_data` (Table): The table data to process.
+```python
+def generate_chunks_for_triples(triples: List[Triple], table_data: Table) -> List[Dict[str, Any]]
+```
 
-**Returns:**
-- `Dict[str, Any]`: A dictionary containing generated triples and chunks.
+---
 
-### generate_triples_for_relationship
+## Helper Functions
 
-````python
-def generate_triples_for_relationship(relationship: SchemaRelationship, table_data: Table) -> List[Triple]:
-````
+**get_cell_value**  
+ Retrieves the cell value for a specific entity type and row.
 
+```python
+def get_cell_value(entity_type: str, row: Row, table_data: Table) -> Optional[str]
+```
 
-Generates triples for a single relationship across all rows in the table.
+**get_label**  
+ Provides a label for an entity type, returning 'Document' if applicable.
 
-**Parameters:**
-- `relationship` (SchemaRelationship): The relationship schema to use for triple generation.
-- `table_data` (Table): The table data containing rows to process.
+```python
+def get_label(entity_type: str) -> str
+```
 
-**Returns:**
-- `List[Triple]`: A list of generated Triple objects for the given relationship.
+**generate_chunks_for_triple**  
+ Generates chunks for a single triple, associating content snippets with it.
 
-### create_triple_for_row
+```python
+def generate_chunks_for_triple(triple: Triple, table_data: Table) -> List[Dict[str, Any]]
+```
 
-````python
-def create_triple_for_row(relationship: SchemaRelationship, row: Row, table_data: Table) -> Optional[Triple]:
-````
-
-
-Creates a single triple for a given relationship and row.
-
-**Parameters:**
-- `relationship` (SchemaRelationship): The relationship schema to use for triple creation.
-- `row` (Row): The row data to process.
-- `table_data` (Table): The complete table data for context.
-
-**Returns:**
-- `Optional[Triple]`: A Triple object if both head and tail values are found, None otherwise.
-
-### get_cell_value
-
-````python
-def get_cell_value(entity_type: str, row: Row, table_data: Table) -> Optional[str]:
-````
-
-
-Gets the cell value for a given entity type and row.
-
-**Parameters:**
-- `entity_type` (str): The entity type to look for in the table columns.
-- `row` (Row): The row data to process.
-- `table_data` (Table): The complete table data for context.
-
-**Returns:**
-- `Optional[str]`: The cell value if found, None otherwise.
-
-### get_label
-
-````python
-def get_label(entity_type: str) -> str:
-````
-
-
-Gets the label for an entity type.
-
-**Parameters:**
-- `entity_type` (str): The entity type to get the label for.
-
-**Returns:**
-- `str`: 'Document' if the entity_type is 'Document', otherwise returns the entity_type itself.
-
-### generate_chunks_for_triples
-
-````python
-def generate_chunks_for_triples(triples: List[Triple], table_data: Table) -> List[Dict[str, Any]]:
-````
-
-
-Generates chunks for a list of triples.
-
-**Parameters:**
-- `triples` (List[Triple]): The list of triples to generate chunks for.
-- `table_data` (Table): The complete table data for context.
-
-**Returns:**
-- `List[Dict[str, Any]]`: A list of chunk dictionaries generated for all triples.
-
-### generate_chunks_for_triple
-
-````python
-def generate_chunks_for_triple(triple: Triple, table_data: Table) -> List[Dict[str, Any]]:
-````
-
-
-Generates chunks for a single triple.
-
-**Parameters:**
-- `triple` (Triple): The triple to generate chunks for.
-- `table_data` (Table): The complete table data for context.
-
-**Returns:**
-- `List[Dict[str, Any]]`: A list of chunk dictionaries generated for the given triple.
-
-### process_table_and_generate_triples
-
-````python
-async def process_table_and_generate_triples(table_data: Table) -> ExportData:
-````
-
-
-Processes the table data, generates a schema, and creates triples.
-
-**Parameters:**
-- `table_data` (Table): The input table data to process.
-
-**Returns:**
-- `ExportData`: An ExportData object containing the generated triples and chunks.
+---
 
 ## Usage
 
-The main entry point for using this service is the `process_table_and_generate_triples` function. It orchestrates the entire process of generating triples from table data:
+The primary function to use is `process_table_and_generate_triples`, which processes table data, generates a schema, and creates triples.
 
-1. Obtains an LLM (Language Model) service.
-2. Generates a schema using the LLM service.
-3. Creates triples based on the generated schema and table data.
-
-Example usage:
-
-````python
+```python
 table_data = Table(...)  # Your table data
 export_data = await process_table_and_generate_triples(table_data)
-````
+```
 
+---
+
+## Configuration
+
+The Graph Service relies on configurations set for processing data, schema generation, and LLM integration. Adjust these settings in the application’s configuration file.
+
+---
 
 ## Error Handling
 
-The service includes extensive error handling and logging. Errors are logged for debugging purposes, and the service aims to gracefully handle exceptions to prevent application crashes.
+The Graph Service includes logging and error handling for:
+
+- Data processing errors
+- LLM service unavailability
+- Table parsing and triple generation issues
+
+Errors are logged for debugging, and exceptions are managed to maintain stability. Logs are categorized by levels (`INFO`, `WARNING`, `ERROR`) to trace processing steps.
+
+---
 
 ## Dependencies
 
-This service depends on:
-- `whyhow` library for Node, Relation, and Triple classes
-- `app.core.dependencies` for getting the LLM service
-- `app.models.graph` for ExportData model
-- `app.models.llm` for SchemaRelationship and SchemaResponseModel
-- `app.schemas.graph` for Row and Table schemas
-- `app.services.llm_service` for generating schemas
+- **whyhow**: Provides `Node`, `Relation`, and `Triple` classes.
+- **app.core.dependencies**: Includes `get_llm_service` for LLM integration.
+- **app.services.llm_service**: Uses `generate_schema` for schema generation.
 
-Ensure all these dependencies are properly installed and configured in your environment.
+---
+
+## Models
+
+### Chunk
+
+Represents a chunk of content with associated metadata.
+
+```python
+from app.models.graph import Chunk
+
+chunk = Chunk(
+    chunk_id="chunk1",
+    content="John lives in New York.",
+    page=1,
+    triple_id="123"
+)
+```
+
+Attributes:
+
+- `chunk_id` (str): Unique identifier for the chunk.
+- `content` (str): The content of the chunk.
+- `page` (Union[int, str]): The page number or identifier.
+- `triple_id` (str): The ID of the associated triple.
+
+---
+
+### Document
+
+Represents a document in the system.
+
+```python
+from app.models.graph import Document
+
+doc = Document(
+    id="doc1",
+    name="New York Travel Guide"
+)
+```
+
+Attributes:
+
+- `id` (str): Unique identifier for the document.
+- `name` (str): The name of the document.
+
+---
+
+### Node
+
+Represents a node in the knowledge graph.
+
+```python
+from app.models.graph import Node
+
+node = Node(
+    label="Person",
+    name="John"
+)
+```
+
+Attributes:
+
+- `label` (str): The type of entity (e.g., "Person").
+- `name` (str): The name of the node.
+
+---
+
+### Relation
+
+Represents a relationship between two nodes in the knowledge graph.
+
+```python
+from app.models.graph import Relation
+
+relation = Relation(
+    name="lives_in"
+)
+```
+
+Attributes:
+
+- `name` (str): The name of the relation (e.g., "lives_in").
+
+---
+
+### Triple
+
+Represents a triple in the knowledge graph.
+
+```python
+from app.models.graph import Triple
+
+triple = Triple(
+    triple_id="123",
+    head=Node(label="Person", name="John"),
+    tail=Node(label="City", name="New York"),
+    relation=Relation(name="lives_in"),
+    chunk_ids=["chunk1"]
+)
+```
+
+Attributes:
+
+- `triple_id` (str): Unique identifier for the triple.
+- `head` (`Node`): The head node of the triple.
+- `tail` (`Node`): The tail node of the triple.
+- `relation` (`Relation`): The relation between the head and tail nodes.
+- `chunk_ids` (List[str]): List of associated chunk IDs.
+
+---
+
+### ExportData
+
+Represents the exported data containing triples and content chunks.
+
+```python
+from app.models.graph import ExportData, Triple, Node, Relation, Chunk
+
+export_data = ExportData(
+    triples=[
+        Triple(
+            triple_id="123",
+            head=Node(label="Person", name="John"),
+            tail=Node(label="City", name="New York"),
+            relation=Relation(name="lives_in"),
+            chunk_ids=["chunk1", "chunk2"]
+        )
+    ],
+    chunks=[
+        {
+            "chunk_id": "chunk1",
+            "content": "John lives in New York.",
+            "page": 1,
+            "triple_id": "123"
+        }
+    ]
+)
+```
+
+Attributes:
+
+- `triples` (List[`Triple`]): List of triples in the exported data.
+- `chunks` (List[Dict[str, Any]]): List of chunks in the exported data, where each chunk includes `chunk_id`, `content`, `page`, and `triple_id`.

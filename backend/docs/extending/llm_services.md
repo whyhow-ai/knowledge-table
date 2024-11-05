@@ -1,82 +1,92 @@
 # Extending LLM Services
 
-This guide explains how to add support for new Language Model (LLM) services.
+This guide explains how to add support for new Language Model (LLM) services to the Knowledge Table backend.
 
-## Steps to Add a New LLM Service
+---
 
-1. **Create a new LLM service class**
+## Steps
 
-   In `src/app/services/llm/`, create a new file `your_llm_service.py`.
+### **1. Create a New LLM Service Class**
 
-   ```python
-   # your_llm_service.py
-   from .base import BaseLLMService
+In `src/app/services/llm/`, create a new file, e.g., `your_llm_service.py`.
 
-   class YourLLMService(BaseLLMService):
-       def __init__(self):
-           super().__init__()
-           # Initialize your LLM client here
+```python
+# your_llm_service.py
+from .base import BaseLLMService
 
-       async def generate_response(self, prompt: str) -> str:
-           """
-           Generate a response using Your LLM.
+class YourLLMService(BaseLLMService):
+    def __init__(self):
+        super().__init__()
+        # Initialize your LLM client here
 
-           Args:
-               prompt (str): The prompt to send to the LLM.
+    async def generate_response(self, prompt: str) -> str:
+        # Implement LLM interaction logic here
+        response = ...  # Replace with actual implementation
+        return response
+```
 
-           Returns:
-               str: The generated response.
-           """
-           # Implement your LLM interaction logic here
-           response = ...  # Replace with actual implementation
-           return response
-   ```
+### **2. Update the LLM Factory**
 
-2. **Update the LLM Factory**
+In `src/app/services/llm/factory.py`, import your service and update the factory method.
 
-   In `src/app/services/llm/factory.py`, import your new service and update the factory method.
+```python
+# factory.py
+from .your_llm_service import YourLLMService
 
-   ```python
-   # factory.py
-   from .your_llm_service import YourLLMService
+class LLMFactory:
+    @staticmethod
+    def get_llm_service(service_name: str):
+        if service_name == "openai":
+            return OpenAIService()
+        elif service_name == "your_llm":
+            return YourLLMService()
+        else:
+            raise ValueError(f"Unknown LLM service: {service_name}")
+```
 
-   class LLMFactory:
-       @staticmethod
-       def get_llm_service(service_name: str):
-           if service_name == "openai":
-               return OpenAIService()
-           elif service_name == "your_llm":
-               return YourLLMService()
-           else:
-               raise ValueError(f"Unknown LLM service: {service_name}")
-   ```
+### **3. Configure the Service**
 
-3. **Configure the Service**
+In `src/app/core/config.py`, add configuration options for the new LLM.
 
-   In `src/app/core/config.py`, add a configuration option for your LLM.
+```python
+# config.py
+from pydantic import BaseSettings
 
-   ```python
-   # config.py
-   from pydantic import BaseSettings
+class Settings(BaseSettings):
+    LLM_SERVICE: str = "openai"
 
-   class Settings(BaseSettings):
-       LLM_SERVICE: str = "openai"  # Default to OpenAI
+settings = Settings()
+```
 
-   settings = Settings()
-   ```
+Update your environment or `.env` file:
 
-   Update your environment variable or `.env` file accordingly:
+```
+LLM_SERVICE=your_llm
+```
 
-   ```
-   LLM_SERVICE=your_llm
-   ```
+---
 
-4. **Use the New Service**
+## Considerations
 
-   The application will now use your LLM service based on the configuration.
-
-## Additional Considerations
-
-- **Authentication**: Ensure you handle any API keys or authentication required by your LLM service.
-- **Error Handling**: Implement proper error handling in your service.
+- **Authentication**: Handle any API keys or authentication required by the service.
+- **Error Handling**: Ensure robust error handling in your service.
 - **Testing**: Write unit tests for your new service.
+
+## Example
+
+Here's an example of how you might implement `generate_response` in `YourLLMService`:
+
+```python
+async def generate_response(self, prompt: str) -> str:
+    # Call your LLM API client with the prompt
+    try:
+        response = await self.your_llm_client.generate(
+            prompt,
+            api_key=self.api_key,
+            max_tokens=50
+        )
+        return response["text"]
+    except Exception as e:
+        logger.error(f"Error generating response: {e}")
+        return "Error in LLM generation"
+```

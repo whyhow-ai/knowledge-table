@@ -1,164 +1,257 @@
 # LLM Service
 
-This module provides functions for generating responses from a language model (LLM) based on various prompts and input data. It handles different types of queries, including keyword extraction, schema generation, and query decomposition.
+The LLM Service generates responses from a language model (LLM) based on various prompts and input data. It supports query decomposition, schema generation, and keyword extraction.
 
-## Functions
+---
 
-### generate_response
+## Core Functions
 
-````python
-async def generate_response(
-    llm_service: LLMService,
-    query: str,
-    chunks: str,
-    rules: list[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
-) -> dict[str, Any]:
-````
+**generate_response**  
+ Generates a response from the LLM based on a query and specified format.
 
+```python
+async def generate_response(llm_service: LLMService, query: str, chunks: str, rules: list[Rule], format: Literal["int", "str", "bool", "int_array", "str_array"]) -> dict[str, Any]
+```
 
-Generates a response from the language model based on the given query and format.
+**get_keywords**  
+ Extracts keywords from a query using the LLM.
 
-**Parameters:**
-- `llm_service` (LLMService): The language model service to use.
-- `query` (str): The user's query to be answered.
-- `chunks` (str): The context or relevant text chunks for answering the query.
-- `rules` (list[Rule]): A list of rules to apply when generating the response.
-- `format` (Literal["int", "str", "bool", "int_array", "str_array"]): The desired format of the response.
+```python
+async def get_keywords(llm_service: LLMService, query: str) -> dict[str, list[str] | None]
+```
 
-**Returns:**
-- `dict[str, Any]`: A dictionary containing the generated answer or an error message.
+**get_similar_keywords**  
+ Retrieves keywords similar to the provided list from text chunks.
 
-### get_keywords
+```python
+async def get_similar_keywords(llm_service: LLMService, chunks: str, rule: list[str]) -> dict[str, Any]
+```
 
-````python
-async def get_keywords(
-    llm_service: LLMService, query: str
-) -> dict[str, list[str] | None]:
-````
+**decompose_query**  
+ Breaks down a complex query into simpler sub-queries.
 
+```python
+async def decompose_query(llm_service: LLMService, query: str) -> dict[str, Any]
+```
 
-Extracts keywords from a query using the language model.
+**generate_schema**  
+ Generates a schema for a table based on column information and prompts.
 
-**Parameters:**
-- `llm_service` (LLMService): The language model service to use.
-- `query` (str): The query from which to extract keywords.
+```python
+async def generate_schema(llm_service: LLMService, data: Table) -> dict[str, Any]
+```
 
-**Returns:**
-- `dict[str, list[str] | None]`: A dictionary containing the extracted keywords or None if an error occurs.
-
-### get_similar_keywords
-
-````python
-async def get_similar_keywords(
-    llm_service: LLMService, chunks: str, rule: list[str]
-) -> dict[str, Any]:
-````
-
-
-Retrieves keywords similar to the provided keywords from the given text chunks.
-
-**Parameters:**
-- `llm_service` (LLMService): The language model service to use.
-- `chunks` (str): The text chunks to search for similar keywords.
-- `rule` (list[str]): The list of keywords to use as a reference.
-
-**Returns:**
-- `dict[str, Any]`: A dictionary containing the similar keywords found or None if an error occurs.
-
-### decompose_query
-
-````python
-async def decompose_query(
-    llm_service: LLMService, query: str
-) -> dict[str, Any]:
-````
-
-
-Decomposes a complex query into multiple simpler sub-queries.
-
-**Parameters:**
-- `llm_service` (LLMService): The language model service to use.
-- `query` (str): The complex query to be decomposed.
-
-**Returns:**
-- `dict[str, Any]`: A dictionary containing the list of sub-queries or None if an error occurs.
-
-### generate_schema
-
-````python
-async def generate_schema(
-    llm_service: LLMService, data: Table
-) -> dict[str, Any]:
-````
-
-
-Generates a schema for the table based on column information and questions.
-
-**Parameters:**
-- `llm_service` (LLMService): The language model service to use.
-- `data` (Table): The table data containing information about columns, rows, and documents.
-
-**Returns:**
-- `dict[str, Any]`: A dictionary containing the generated schema or None if an error occurs.
+---
 
 ## Helper Functions
 
-### _get_str_rule_line
+**\_get_str_rule_line**  
+ Formats instructions for string-based rules, incorporating specific response rules into the prompt.
 
-````python
-def _get_str_rule_line(str_rule: Rule | None, query: str) -> str:
-````
+```python
+def _get_str_rule_line(str_rule: Rule | None, query: str) -> str
+```
 
+**\_get_int_rule_line**  
+ Generates instructions for integer-based rules, specifying the item limit in responses.
 
-Generates a string rule line based on the given string rule and query.
+```python
+def _get_int_rule_line(int_rule: Rule | None) -> str
+```
 
-### _get_int_rule_line
-
-````python
-def _get_int_rule_line(int_rule: Rule | None) -> str:
-````
-
-
-Generates an integer rule line based on the given integer rule.
+---
 
 ## Usage
 
-These functions are typically used in conjunction with an LLM service to process queries, generate responses, and manipulate data. They are designed to be flexible and handle various types of inputs and outputs.
+These functions are used with an LLM service to handle queries, extract keywords, and generate schemas.
 
-Example usage:
-
-````python
+```python
 llm_service = get_llm_service()  # Assume this function exists to get an LLM service
 query = "What is the capital of France?"
 chunks = "Paris is the capital and most populous city of France."
-rules = [Rule(type="must_return", options=["city name"])]
+rules = [Rule(type="must_return", options=["Paris", "London", "Berlin"])]
 
 response = await generate_response(llm_service, query, chunks, rules, format="str")
 print(response)  # {'answer': 'Paris'}
 
 keywords = await get_keywords(llm_service, query)
 print(keywords)  # {'keywords': ['capital', 'France']}
-````
+```
 
+---
+
+## Configuration
+
+Settings for LLM-related operations, such as response formatting and rule handling, can be configured in the application's settings file.
+
+---
 
 ## Error Handling
 
-All functions include error handling to catch and log exceptions. In case of an error, they typically return a dictionary with a None value or an error message.
+The LLM Service includes error handling and logging for:
+
+- Query processing errors
+- Schema generation issues
+- Keyword extraction failures
+
+Functions return either a dictionary with an error message or `None` in case of failure. Logging is enabled for key operations to aid in debugging.
+
+---
 
 ## Dependencies
 
-This module depends on:
-- Various response models from `app.models.llm`
-- `Rule` model from `app.models.query`
-- `Table` schema from `app.schemas.graph`
-- `LLMService` from `app.services.llm.base`
-- Various prompt templates from `app.services.llm.prompts`
+- **app.models.llm**: For response models like `BoolResponseModel`, `IntArrayResponseModel`, etc.
+- **app.models.query**: For the `Rule` model.
+- **app.schemas.graph**: For `Table` schema.
+- **app.services.llm.base**: For `LLMService`.
+- **app.services.llm.prompts**: For prompt templates like `BASE_PROMPT`, `SCHEMA_PROMPT`, etc.
 
-Ensure all these dependencies are properly installed and imported in your environment.
-`````
+---
 
-This documentation provides an overview of the `llm_service.py` file, detailing its functions, their parameters, return values, and usage. It also includes information about helper functions, error handling, and dependencies. This should help developers understand how to use and extend the LLM service functionality in the Knowledge Table backend.
-````
+## Models
 
-````
+### BoolResponseModel
+
+Validates boolean responses.
+
+```python
+from app.models.llm import BoolResponseModel
+
+bool_response = BoolResponseModel(answer=True)
+```
+
+Attributes:
+
+- `answer` (Optional[bool]): The boolean answer to the query.
+
+---
+
+### IntResponseModel
+
+Validates integer responses.
+
+```python
+from app.models.llm import IntResponseModel
+
+int_response = IntResponseModel(answer=42)
+```
+
+Attributes:
+
+- `answer` (Optional[int]): The integer answer to the query.
+
+---
+
+### IntArrayResponseModel
+
+Validates integer array responses.
+
+```python
+from app.models.llm import IntArrayResponseModel
+
+int_array_response = IntArrayResponseModel(answer=[1, 2, 3])
+```
+
+Attributes:
+
+- `answer` (Optional[List[int]]): The list of integer answers to the query.
+
+---
+
+### StrArrayResponseModel
+
+Validates string array responses.
+
+```python
+from app.models.llm import StrArrayResponseModel
+
+str_array_response = StrArrayResponseModel(answer=["apple", "banana", "cherry"])
+```
+
+Attributes:
+
+- `answer` (Optional[List[str]]): The list of string answers to the query.
+
+---
+
+### StrResponseModel
+
+Validates string responses.
+
+```python
+from app.models.llm import StrResponseModel
+
+str_response = StrResponseModel(answer="Hello, World!")
+```
+
+Attributes:
+
+- `answer` (Optional[str]): The string answer to the query.
+
+---
+
+### KeywordsResponseModel
+
+Validates keyword responses.
+
+```python
+from app.models.llm import KeywordsResponseModel
+
+keywords_response = KeywordsResponseModel(keywords=["AI", "machine learning", "data science"])
+```
+
+Attributes:
+
+- `keywords` (Optional[List[str]]): The extracted keywords from the query.
+
+---
+
+### SubQueriesResponseModel
+
+Validates sub-query responses.
+
+```python
+from app.models.llm import SubQueriesResponseModel
+
+sub_queries_response = SubQueriesResponseModel(sub_queries=["What is AI?", "How does ML work?"])
+```
+
+Attributes:
+
+- `sub_queries` (Optional[List[str]]): The decomposed sub-queries.
+
+---
+
+### SchemaRelationship
+
+Represents a schema relationship.
+
+```python
+from app.models.llm import SchemaRelationship
+
+schema_relationship = SchemaRelationship(head="Person", relation="works_at", tail="Company")
+```
+
+Attributes:
+
+- `head` (str): The head entity of the relationship.
+- `relation` (str): The relation between the head and tail entities.
+- `tail` (str): The tail entity of the relationship.
+
+---
+
+### SchemaResponseModel
+
+Validates schema responses.
+
+```python
+from app.models.llm import SchemaResponseModel, SchemaRelationship
+
+schema_response = SchemaResponseModel(relationships=[
+    SchemaRelationship(head="Person", relation="lives_in", tail="City")
+])
+```
+
+Attributes:
+
+- `relationships` (Optional[List[`SchemaRelationship`]]): The relationships in the schema.

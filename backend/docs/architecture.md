@@ -1,15 +1,6 @@
 # Architecture Overview
 
-This document provides a comprehensive overview of the Knowledge Table backend architecture, detailing its components, their interactions, and the overall system design.
-
-## High-Level Architecture
-
-Knowledge Table is built on a modular, service-oriented architecture that allows for flexibility and extensibility. The main components are:
-
-1. API Layer
-2. Service Layer
-3. Model Layer
-4. External Integrations (LLMs, Vector Databases, Document Loaders)
+This section provides an overview of the Knowledge Table backend architecture, covering key components and their interactions. Knowledge Table follows a modular, service-oriented architecture.
 
 ```mermaid
 graph TD
@@ -22,8 +13,38 @@ graph TD
     Ext -->|Loaders| DocLoaders[Document Loaders]
     DocLoaders -->|PDF| PyPDF[PyPDF]
     DocLoaders -->|Unstructured| Unstructured[Unstructured]
-    Models -->|Persists| DB[(Database)]
 ```
+
+## Components
+
+**API Layer**
+
+_Handles HTTP requests from clients using FastAPI_
+
+- **`/documents/`**: Document upload and retrieval.
+- **`/graphs/`**: Knowledge graph management.
+- **`/queries/`**: Natural language query processing.
+
+**Service Layer**
+
+_Contains core business logic_
+
+- **Document Service**: Manages document processing and storage.
+- **Graph Service**: Handles knowledge graph creation and querying.
+- **LLM Service**: Interfaces with language models for text analysis.
+- **Query Service**: Processes queries and returns structured responses.
+
+**Model Layer**
+
+_Defines database models for documents, graphs, and queries_
+
+**External Integrations**
+
+_Connects to Language Models (LLMs), vector databases, and document loaders_
+
+- **LLM**: Supports OpenAI and is extensible to other providers.
+- **Vector Database**: Manages embeddings for similarity search using Milvus.
+- **Document Loaders**: Processes PDFs and unstructured documents.
 
 ## Project Structure
 
@@ -57,7 +78,8 @@ backend/
 │           ├── llm/
 │           │   ├── base.py
 │           │   ├── factory.py
-│           │   └── openai_service.py
+│           │   |── openai_service.py
+│           │   └── prompts.py
 │           ├── loaders/
 │           │   ├── base.py
 │           │   ├── factory.py
@@ -71,97 +93,30 @@ backend/
 └── docs/
 ```
 
-## Component Details
-
-### 1. API Layer (`app/api/`)
-
-The API layer is built using FastAPI and defines the HTTP endpoints that clients interact with.
-
-- **Endpoints**: 
-  - `/documents/`: Handle document uploads and retrieval.
-  - `/graphs/`: Manage knowledge graphs.
-  - `/queries/`: Process natural language queries.
-
-### 2. Service Layer (`app/services/`)
-
-The service layer contains the core business logic of the application.
-
-- **Document Service**: Handles document processing, storage, and retrieval.
-- **Graph Service**: Manages the creation and querying of knowledge graphs.
-- **LLM Service**: Interfaces with Language Models for text generation and analysis.
-- **Query Service**: Processes natural language queries and returns structured results.
-
-### 3. Model Layer (`app/models/`)
-
-The model layer defines the data structures and database models used in the application.
-
-- **Document**: Represents uploaded documents and their metadata.
-- **Graph**: Defines the structure of knowledge graphs.
-- **Query**: Represents user queries and their results.
-
-### 4. External Integrations
-
-- **LLM Integration** (`app/services/llm/`):
-  - Abstracts interactions with Language Models.
-  - Currently supports OpenAI, extensible to other providers.
-
-- **Vector Database Integration** (`app/services/vector_db/`):
-  - Manages vector embeddings for efficient similarity search.
-  - Currently supports Milvus, extensible to other vector databases.
-
 ## Data Flow
 
-1. **Document Upload**:
-   ```mermaid
-   sequenceDiagram
-       Client->>API: Upload Document
-       API->>DocumentService: Process Document
-       DocumentService->>Loader: Load and Parse
-       Loader->>LLMService: Generate Embeddings
-       LLMService->>VectorDB: Store Embeddings
-       DocumentService->>Database: Store Metadata
-       API->>Client: Confirmation
-   ```
+### Document Upload
 
-2. **Query Processing**:
-   ```mermaid
-   sequenceDiagram
-       Client->>API: Submit Query
-       API->>QueryService: Process Query
-       QueryService->>LLMService: Generate Query Embedding
-       QueryService->>VectorDB: Similarity Search
-       VectorDB->>QueryService: Relevant Documents
-       QueryService->>LLMService: Generate Response
-       API->>Client: Structured Response
-   ```
+```mermaid
+sequenceDiagram
+    Client->>API: Upload Document
+    API->>DocumentService: Process Document
+    DocumentService->>Loader: Parse Document
+    Loader->>LLMService: Generate Embeddings
+    LLMService->>VectorDB: Store Embeddings
+    DocumentService->>Database: Store Metadata
+    API->>Client: Confirmation
+```
 
-## Key Design Principles
+### Query Processing
 
-1. **Modularity**: Components are designed to be loosely coupled, allowing for easy replacement or extension.
-2. **Extensibility**: The use of abstract base classes and factories allows for easy addition of new services (e.g., new LLM providers).
-3. **Scalability**: The architecture supports horizontal scaling of services and the use of distributed databases.
-4. **Security**: API authentication and data encryption are implemented at various levels.
-
-## Configuration and Environment
-
-- Configuration is managed through environment variables and the `app/core/config.py` file.
-- Sensitive information (API keys, database credentials) is stored in environment variables.
-
-## Testing Strategy
-
-- Unit tests for individual components.
-- Integration tests for service interactions.
-- End-to-end tests for API endpoints.
-
-## Deployment
-
-- The application is containerized using Docker for consistent deployment across environments.
-- Kubernetes can be used for orchestration in production environments.
-
-## Future Considerations
-
-- Implementation of caching mechanisms for improved performance.
-- Addition of real-time processing capabilities.
-- Integration with more LLM providers and vector databases.
-
-This architecture provides a solid foundation for the Knowledge Table backend, allowing for efficient data processing, flexible integrations, and scalable operations.
+```mermaid
+sequenceDiagram
+    Client->>API: Submit Query
+    API->>QueryService: Process Query
+    QueryService->>LLMService: Generate Query Embedding
+    QueryService->>VectorDB: Search
+    VectorDB->>QueryService: Return Documents
+    QueryService->>LLMService: Generate Response
+    API->>Client: Structured Response
+```
