@@ -253,6 +253,18 @@ We now have 3 types of [Rules](https://medium.com/enterprise-rag/rules-extractio
 
 ---
 
+## Rules
+
+We now have 3 types of [Rules](https://medium.com/enterprise-rag/rules-extraction-guardrails-knowledge-table-studio-e84999ade353) you can now incorporate within your processes, which are:
+
+- **Entity Resolution Rules**: Resolving discrepencies between Entities or imposing a common terminology on top of Entities
+
+- **Entity Extraction Rules**: Imposing Guardrails and Context for the Entities that should be detected and returned across Documents
+
+- **Entity Relationship Rules**: Imposing Guardrails on the types of Patterns that should be returned on the Relationships between the extracted Entities
+
+---
+
 ## Extending the Project
 
 Knowledge Table is built to be flexible and customizable, allowing you to extend it to fit your workflow:

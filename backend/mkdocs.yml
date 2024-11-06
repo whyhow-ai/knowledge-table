@@ -1,0 +1,90 @@
+site_name: Knowledge Table Documentation
+site_url: https://whyhow-ai.github.io/knowledge-table/
+repo_url: https://github.com/whyhow-ai/knowledge-table
+edit_uri: blob/main/backend/docs/
+
+theme:
+  name: material
+  logo: images/wh-logo.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Getting Started:
+      - Welcome to Knowledge Table: index.md
+      - Installation: getting-started/installation.md
+      - Docker: getting-started/docker.md
+  - Tutorial: tutorials/extracting-data.md
+  - API Reference:
+      - Overview: api/overview.md
+      - Endpoints:
+          - Document: api/v1/endpoints/document.md
+          - Graph: api/v1/endpoints/graph.md
+          - Query: api/v1/endpoints/query.md
+  - Developer Guide:
+      - Architecture Overview: architecture.md
+      - Services:
+          - Document Service: services/document_service.md
+          - Graph Service: services/graph_service.md
+          - LLM Service: services/llm_service.md
+          - Query Service: services/query_service.md
+      - Extending the Backend:
+          - Overview: extending/overview.md
+          - Add LLM Services: extending/llm_services.md
+          - Add Vector DB Services: extending/vector_databases.md
+          - Add Document Loaders: extending/document_loaders.md
+      - Testing:
+          - Run Tests: testing/testing.md
+  - Contributing: CONTRIBUTING.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            show_source: false
+  - git-revision-date-localized:
+      fallback_to_build_date: true
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - codehilite
+  - footnotes
+  - pymdownx.betterem:
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
