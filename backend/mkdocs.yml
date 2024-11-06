@@ -1,10 +1,11 @@
-site_name: Knowledge Table Backend Documentation
+site_name: Knowledge Table Documentation
 site_url: https://whyhow-ai.github.io/knowledge-table/
 repo_url: https://github.com/whyhow-ai/knowledge-table
 edit_uri: blob/main/backend/docs/
 
 theme:
   name: material
+  logo: images/wh-logo.png
   features:
     - navigation.tabs
     - navigation.sections
@@ -28,7 +29,7 @@ nav:
   - Getting Started:
       - Welcome to Knowledge Table: index.md
       - Installation: getting-started/installation.md
-      - Docker: deployment/docker.md
+      - Docker: getting-started/docker.md
   - Tutorial: tutorials/extracting-data.md
   - API Reference:
       - Overview: api/overview.md
@@ -49,7 +50,7 @@ nav:
           - Add Vector DB Services: extending/vector_databases.md
           - Add Document Loaders: extending/document_loaders.md
       - Testing:
-          - Run Tests: development/testing.md
+          - Run Tests: testing/testing.md
   - Contributing: CONTRIBUTING.md
 
 plugins:

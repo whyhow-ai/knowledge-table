@@ -4,7 +4,7 @@ Knowledge Table is an open-source package designed to simplify extracting and ex
 
 **Follow the [Installation Guide](getting-started/installation.md) to get started.**
 
-![cover](cover-image.png)
+![cover](images/cover-image.png)
 
 ## Features
 
@@ -59,7 +59,7 @@ A **Rule** guides the extraction from the LLM. You can add rules on a column lev
 
 ## Testing
 
-[Click here](development/testing.md) to learn more about testing.
+[Click here](testing/testing.md) to learn more about testing.
 
 ## Contributing
 
