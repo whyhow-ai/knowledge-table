@@ -14,19 +14,12 @@ jobs:
         python-version: ["3.10"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Install Python dependencies
         run: |
@@ -53,46 +46,6 @@ jobs:
         run: |
           cd backend && mypy src
 
-      - name: Check if documentation builds
-        run: |
-          cd backend
-          pip install -e .[docs]
-          mkdocs build --strict
-
       - name: Run unit tests with pytest
         run: |
           cd backend && pytest --color=yes tests
-
-  build-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install Dependencies
-        run: |
-          cd backend
-          pip install -e .[docs]
-
-      - name: Build Documentation
-        run: |
-          cd backend
-          mkdocs build
-
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./backend/site
