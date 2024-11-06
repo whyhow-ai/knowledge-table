@@ -5,18 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
 ### Added
-- Comprehensive backend documentation covering API reference, data models, schemas, and key components
+
+- Added support for queries without source data in vector database
+- Graceful failure of triple export when no chunks are found
+- Tested Qdrant vector database service
 
 ### Changed
-- Restructured project documentation for improved clarity and accessibility
-- Updated README with new sections on documentation, architecture, and streamlined getting started guide
+
+- Separated embedding service from LLM service
+
+## [v0.1.5] - 2024-10-29
+
+### Changed
+
+- Updating backend to work with new UI
+- Tweaked query output for separating answers and chunks
+- Support for [Qdrant](https://qdrant.tech/) vector database.
+- Updated Milvus reference in the factory to be more robust to other Milvus datastores
 
 ### Improved
-- Enhanced modularity of the backend architecture, clearly defining Document, Graph, LLM, and Query services
-- Improved code organization with clear separation of models and schemas
+
+- Updating testing to Mock OpenAI client and embeddings
+
+## [v0.1.4] - 2024-10-16
+
+### Improved
+
+- Refactored add question, add document
+- Refactored csv download and export triple components
+- Refactored factories for depedency injection
+
+### Added
+
+- Added react mentions + coloring logic to highlight mentioned columns
+
+### Changed
+
+- Added document to node properties when exporting triples
+- Streamlined testing to remove complication and restriciton
 
 ## [v0.1.3] - 2024-10-13
 
@@ -27,13 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created new `core` directory for fundamental application components
 - Updated llm operations to new services in `services/llm`
 - Updated vector database operations to new services in `services/vector_db`
+- Updated tests to new directory structure
 
 ### Improved
 
 - Separated configuration from dependency injection for better maintainability and clarity
 - Created new `utils` directory for fundamental application components
 - Seperated Pydantic models into `models` and `schemas` directories
-
+- Massively uncomplicated the test files
 
 ## [v0.1.2] - 2024-10-10
 
@@ -87,13 +117,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `unstructured_loader` function for processing documents with Unstructured API
 - Error handling for Unstructured API import and usage
 
-
 ### Changed
 
 - Updated `upload_document` function to use Unstructured API when available
 - Modified project structure to support optional Unstructured integration
 - Updated installation instructions in README to reflect new dependency options
-
 
 ### Fixed
 

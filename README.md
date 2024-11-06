@@ -10,7 +10,7 @@ Our goal is to provide a familiar, spreadsheet-like interface for business users
 
 For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table-demo.whyhow.ai/).
 
-https://github.com/user-attachments/assets/0129ea64-173b-461b-a525-5d870a1e2f41
+https://github.com/user-attachments/assets/8e0e5cc6-6468-4bb5-888c-6b552e15b58a
 
 To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/).
 
@@ -68,7 +68,6 @@ Knowledge Table can be run using Docker or natively. For detailed installation a
 docker-compose up -d --build
 ```
 
-
 The frontend will be available at `http://localhost:3000`, and the backend at `http://localhost:8000`.
 
 ### Environment Setup
@@ -76,7 +75,48 @@ The frontend will be available at `http://localhost:3000`, and the backend at `h
 1. Rename `.env.sample` to `.env`.
 2. Add your OpenAI API key to the `.env` file.
 
-For more detailed setup instructions and configuration options, please see our [documentation](https://whyhow-ai.github.io/knowledge-table/).
+> **Note:** This version of this project uses OpenAI as our initial provider, but the system is designed to be flexible and can be extended to support other AI providers. If you prefer a different provider, please create an issue, submit a PR, or check back soon for updates.
+
+3. Configure the vector store in the `.env`. [Milvus](https://milvus.io) and [Qdrant](http://qdrant.tech) are the available as options.
+
+---
+
+## Development
+
+To set up the project for development:
+
+1. Clone the repository
+2. Install the project with development dependencies:
+   ```sh
+   pip install .[dev]
+   ```
+3. Run tests:
+   ```sh
+   pytest
+   ```
+4. Run linters:
+   ```sh
+   flake8
+   black .
+   isort .
+   ```
+
+---
+
+## Features
+
+### Available in this repo:
+
+- **Chunk Linking** - Link raw source text chunks to the answers for traceability and provenance.
+- **Extract with natural language** - Use natural language queries to extract structured data from unstructured documents.
+- **Customizable extraction rules** - Define rules to guide the extraction process and ensure data quality.
+- **Custom formatting** - Control the output format of your extracted data.
+- **Filtering** - Filter documents based on metadata or extracted data.
+- **Exporting as CSV or Triples** - Download extracted data as CSV or graph triples.
+- **Chained extraction** - Reference previous columns in your extraction questions using @ i.e. "What are the treatments for `@disease`?".
+- **Split Cell Into Rows** - Turn outputs within a single cell from List of Numbers or List of Values and split it into individual rows to do more complex Chained Extraction
+
+---
 
 ## Concepts
 
@@ -103,28 +143,74 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 - **Research Extraction**: Extract information with key questions of a range of research reports
 - **Metadata Generation**: Classify and tag information about your documents and files by running targeted questions against the files (i.e. "What project is this email thread about?")
 
-## Architecture
+---
 
-Knowledge Table's backend is built with a modular architecture, consisting of:
+## Export to Triples
 
-- Document Service: Handles document processing and storage
-- Graph Service: Manages graph-related operations
-- LLM Service: Interfaces with language models
-- Query Service: Processes various types of queries
+To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
 
-This modular design allows for easy extension and customization of the system.
+---
 
 ## Extending the Project
 
 Knowledge Table is designed to be flexible and extensible. You can:
 
-- Integrate new vector databases
-- Add support for different LLMs
-- Implement custom document processing pipelines
-- Extend the graph operations
-- Customize query processing
+- **Integrate with your own databases**.
+- **Create custom questions and rules**.
+- **Connect your models**.
+- **Use custom embeddings**.
+- **Scale for larger workloads**.
 
-For detailed guides on extending the project, refer to our [documentation](https://whyhow-ai.github.io/knowledge-table/).
+---
+
+## Optional Integrations
+
+### Unstructured API
+
+Knowledge Table offers optional integration with the Unstructured API for enhanced document processing capabilities. This integration allows for more advanced parsing and extraction from various document types.
+
+To use the Unstructured API integration:
+
+1. Sign up for an API key at [Unstructured.io](https://www.unstructured.io/).
+2. Set the `UNSTRUCTURED_API_KEY` environment variable in the `.env` file, or with your API key:
+   ```
+   export UNSTRUCTURED_API_KEY=your_api_key_here
+   ```
+3. Install the project with Unstructured support:
+   ```
+   pip install .[unstructured]
+   ```
+
+When the `UNSTRUCTURED_API_KEY` is set, Knowledge Table will automatically use the Unstructured API for document processing. If the key is not set or if there's an issue with the Unstructured API, the system will fall back to the default document loaders.
+
+## Note: Usage of the Unstructured API may incur costs based on your plan with Unstructured.io.
+
+## Roadmap
+
+- [ ] Expansion of Rules System
+  - [ ] Upload Extraction Rules via CSV
+  - [ ] Entity Resolution Rules
+  - [ ] Rules Dashboard
+- [ ] Support for more LLMs
+  - [ ] Azure OpenAI
+  - [ ] Llama3
+  - [ ] GPT-4
+  - [ ] Anthropic
+- [ ] Support for more vector databases
+  - [x] Milvus
+  - [x] Qdrant
+  - [ ] Weaviate
+  - [ ] Chroma
+  - [ ] Pinecone
+- [ ] Backend data stores
+  - [ ] PostgreSQL
+  - [ ] MongoDB
+  - [ ] MySQL
+  - [ ] Redis
+- [ ] Other
+  - [ ] Deployment scripts to cloud
+
+---
 
 ## Contributing
 

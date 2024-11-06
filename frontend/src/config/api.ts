@@ -1,5 +1,17 @@
 import { z } from "zod";
-import { Prompt } from "./store";
+import {
+  isArray,
+  isNil,
+  isPlainObject,
+  isString,
+  mapValues,
+  omit
+} from "lodash-es";
+import {
+  AnswerTableColumn,
+  AnswerTableGlobalRule,
+  AnswerTableRow
+} from "./store";
 
 // Upload file
 
@@ -26,158 +38,98 @@ export async function uploadFile(file: File) {
 // Delete document
 
 export async function deleteDocument(id: string) {
-  await fetch(`http://localhost:8000/api/v1/document/${id}`, { method: "DELETE" });
+  await fetch(`http://localhost:8000/api/v1/document/${id}`, {
+    method: "DELETE"
+  });
 }
 
 // Run query
 
-export const answerSchema = z
+export const chunkSchema = z
   .object({
-    id: z.string(),
-    document_id: z.string(),
-    prompt_id: z.string(),
-    type: z.enum(["int", "str", "bool", "int_array", "str_array"]),
-    answer: z.union([
-      z.null(),
-      z.number(),
-      z.string(),
-      z.boolean(),
-      z.array(z.number()),
-      z.array(z.string())
-    ]),
-    chunks: z.array(
-      z
-        .object({
-          content: z.string(),
-          page: z.number()
-        })
-        .strict()
-    )
+    content: z.string(),
+    page: z.number()
   })
   .strict();
 
-  export async function runQuery(
-    documentId: string,
-    prompt: Prompt,
-    previousAnswer?: number | string | boolean | number[] | string[]
-  ) {
-    console.log('runQuery called with:', { documentId, prompt, previousAnswer });
-    
-    const requestBody = {
-      document_id: documentId,
-      previous_answer: previousAnswer,
-      prompt: {
-        id: prompt.id,
-        entity_type: prompt.entityType,
-        query: prompt.query,
-        type: prompt.type,
-        rules: prompt.rules
-      }
-    };
-    
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-  
-    try {
-      const result = await fetch("http://localhost:8000/api/v1/query", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-  
-      console.log('Response status:', result.status);
-      console.log('Response headers:', Object.fromEntries(result.headers.entries()));
-  
-      if (!result.ok) {
-        const errorText = await result.text();
-        console.error('Error response body:', errorText);
-        throw new Error(`HTTP error! status: ${result.status}, body: ${errorText}`);
-      }
-  
-      const responseData = await result.json();
-      console.log('Response data:', responseData);
-  
-      return answerSchema.parse(responseData);
-    } catch (error) {
-      console.error('Error in runQuery:', error);
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-      throw error;
-    }
-  }
+export const answerSchema = z.union([
+  z.null(),
+  z.number(),
+  z.string(),
+  z.boolean(),
+  z.array(z.number()),
+  z.array(z.string())
+]);
 
-// Helper function to convert any value to a string
-function convertToString(value: any): string {
-  if (typeof value === 'string') return value;
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
+const queryResponseSchema = z.object({
+  answer: z.object({ answer: answerSchema }),
+  chunks: z.array(chunkSchema)
+});
 
-// Helper function to recursively convert all values in an object to strings
-function convertObjectToStrings(obj: any): any {
-  if (Array.isArray(obj)) {
-    return obj.map(convertObjectToStrings);
-  } else if (typeof obj === 'object' && obj !== null) {
-    return Object.fromEntries(
-      Object.entries(obj).map(([key, value]) => [key, convertObjectToStrings(value)])
+export async function runQuery(
+  row: AnswerTableRow,
+  column: AnswerTableColumn,
+  globalRules: AnswerTableGlobalRule[]
+) {
+  // if (!row.sourceData || !column.entityType.trim() || !column.generate) {
+  //   throw new Error(
+  //     "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
+  //   );
+  // }
+  if (!column.entityType.trim() || !column.generate) {
+    throw new Error(
+      "Row or column doesn't allow running query (missing row source data or column is empty or has generate set to false)"
     );
-  } else {
-    return convertToString(obj);
   }
+  const rules = [
+    ...column.rules,
+    ...globalRules
+      .filter(rule => rule.entityType.trim() === column.entityType.trim())
+      .map(r => omit(r, "id", "entityType"))
+  ];
+  const result = await fetch("http://localhost:8000/api/v1/query", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      document_id: row.sourceData?.document?.id
+        ? row.sourceData.document.id
+        : "00000000000000000000000000000000",
+      prompt: {
+        id: column.id,
+        entity_type: column.entityType,
+        query: column.query,
+        type: column.type,
+        rules
+      }
+    })
+  });
+  return queryResponseSchema.parse(await result.json());
 }
 
 // Export triples
+
 export async function exportTriples(tableData: any) {
-  
-  console.log('Exporting triples with data:', tableData);
-  
-  // Convert all data to strings
-  const stringifiedData = convertObjectToStrings(tableData);
-  
-  console.log('Stringified data:', stringifiedData);
-  
-  try {
-    const response = await fetch("http://localhost:8000/api/v1/graph/export-triples", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(stringifiedData) // Send the stringified data directly
-    });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+  function stringifyDeep(value: any): any {
+    if (isNil(value)) {
+      return "";
+    } else if (isString(value)) {
+      return value;
+    } else if (isArray(value)) {
+      return value.map(stringifyDeep);
+    } else if (isPlainObject(value)) {
+      return mapValues(value, stringifyDeep);
+    } else {
+      return String(value);
     }
-
-    const blob = await response.blob();
-    console.log('Received blob:', blob);
-
-    // Handle the blob (e.g., download it or process it further)
-    // For example, you could create a link to download the blob:
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'triples.json'; 
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url); 
-
-  } catch (error) {
-    console.error('Error exporting triples:', error);
-    if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-    throw error;
   }
+
+  return fetch("http://localhost:8000/api/v1/graph/export-triples", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(stringifyDeep(tableData))
+  }).then(r => r.blob());
 }

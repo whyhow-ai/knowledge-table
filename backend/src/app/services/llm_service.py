@@ -2,9 +2,9 @@
 
 import json
 import logging
-from typing import Any, List, Literal, Type, Union
+from typing import Any, List, Tuple, Type, Union
 
-from app.models.llm import (
+from app.models.llm_responses import (
     BoolResponseModel,
     IntArrayResponseModel,
     IntResponseModel,
@@ -14,13 +14,14 @@ from app.models.llm import (
     StrResponseModel,
     SubQueriesResponseModel,
 )
-from app.models.query import Rule
-from app.schemas.graph import Table
-from app.services.llm.base import LLMService
-from app.services.llm.prompts import (
+from app.models.query_core import FormatType, Rule
+from app.models.table import Table
+from app.services.llm.base import CompletionService
+from app.services.llm.openai_prompts import (
     BASE_PROMPT,
     BOOL_INSTRUCTIONS,
     DECOMPOSE_QUERY_PROMPT,
+    INFERRED_BASE_PROMPT,
     INT_ARRAY_INSTRUCTIONS,
     KEYWORD_PROMPT,
     SCHEMA_PROMPT,
@@ -32,19 +33,85 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _get_model_and_instructions(
+    format: str, rules: list[Rule], query: str
+) -> Tuple[
+    Type[
+        Union[
+            BoolResponseModel,
+            IntArrayResponseModel,
+            IntResponseModel,
+            StrArrayResponseModel,
+            StrResponseModel,
+        ]
+    ],
+    str,
+]:
+    """
+    Get the appropriate output model and instructions based on the format.
+
+    Parameters
+    ----------
+    format : str
+        The desired format of the response.
+    rules : list[Rule]
+        A list of rules to apply when generating the response.
+    query : str
+        The user's query to be answered.
+
+    Returns
+    -------
+    Tuple[Type[Union[BoolResponseModel, IntArrayResponseModel, IntResponseModel, StrArrayResponseModel, StrResponseModel]], str]
+        A tuple containing the appropriate output model and format-specific instructions.
+    """
+    str_rule = next(
+        (rule for rule in rules if rule.type in ["must_return", "may_return"]),
+        None,
+    )
+    int_rule = next(
+        (rule for rule in rules if rule.type == "max_length"), None
+    )
+
+    if format == "bool":
+        return BoolResponseModel, BOOL_INSTRUCTIONS
+    elif format in ["str_array", "str"]:
+        str_rule_line = _get_str_rule_line(str_rule, query)
+        int_rule_line = _get_int_rule_line(int_rule)
+        instructions = STR_ARRAY_INSTRUCTIONS.substitute(
+            str_rule_line=str_rule_line, int_rule_line=int_rule_line
+        )
+        return (
+            StrArrayResponseModel
+            if format == "str_array"
+            else StrResponseModel
+        ), instructions
+    elif format in ["int", "int_array"]:
+        int_rule_line = _get_int_rule_line(int_rule)
+        instructions = INT_ARRAY_INSTRUCTIONS.substitute(
+            int_rule_line=int_rule_line
+        )
+        return (
+            IntArrayResponseModel
+            if format == "int_array"
+            else IntResponseModel
+        ), instructions
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+
+
 async def generate_response(
-    llm_service: LLMService,
+    llm_service: CompletionService,
     query: str,
     chunks: str,
     rules: list[Rule],
-    format: Literal["int", "str", "bool", "int_array", "str_array"],
+    format: FormatType,
 ) -> dict[str, Any]:
     """
     Generate a response from the language model based on the given query and format.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for generating the response.
     query : str
         The user's query to be answered.
@@ -62,54 +129,10 @@ async def generate_response(
     """
     logger.info(f"Generating response for query: {query} in format: {format}")
 
-    # Set the output model based on the format
-    output_model: Type[
-        Union[
-            BoolResponseModel,
-            IntArrayResponseModel,
-            IntResponseModel,
-            StrArrayResponseModel,
-            StrResponseModel,
-        ]
-    ]
-
-    # Get the first rule that is either a must_return or may_return
-    str_rule = next(
-        (rule for rule in rules if rule.type in ["must_return", "may_return"]),
-        None,
-    )
-    int_rule = next(
-        (rule for rule in rules if rule.type == "max_length"), None
+    output_model, format_specific_instructions = _get_model_and_instructions(
+        format, rules, query
     )
 
-    # Set the format specific instructions
-    format_specific_instructions = ""
-    if format == "bool":
-        format_specific_instructions = BOOL_INSTRUCTIONS
-        output_model = BoolResponseModel
-    elif format in ["str_array", "str"]:
-        str_rule_line = _get_str_rule_line(str_rule, query)
-        int_rule_line = _get_int_rule_line(int_rule)
-        format_specific_instructions = STR_ARRAY_INSTRUCTIONS.substitute(
-            str_rule_line=str_rule_line, int_rule_line=int_rule_line
-        )
-        output_model = (
-            StrArrayResponseModel
-            if format == "str_array"
-            else StrResponseModel
-        )
-    elif format in ["int", "int_array"]:
-        int_rule_line = _get_int_rule_line(int_rule)
-        format_specific_instructions = INT_ARRAY_INSTRUCTIONS.substitute(
-            int_rule_line=int_rule_line
-        )
-        output_model = (
-            IntArrayResponseModel
-            if format == "int_array"
-            else IntResponseModel
-        )
-
-    # Create the base prompt
     prompt = BASE_PROMPT.substitute(
         query=query,
         chunks=chunks,
@@ -118,21 +141,80 @@ async def generate_response(
 
     try:
         response = await llm_service.generate_completion(prompt, output_model)
+        logger.info(f"Raw response from LLM: {response}")
+
+        if response is None or response.answer is None:
+            logger.warning("LLM returned None response")
+            return {"answer": None}
+
+        logger.info(f"Processed response: {response.answer}")
         return {"answer": response.answer}
     except Exception as e:
-        logger.error(f"Error generating response: {str(e)}")
-        return {"answer": "An error occurred while generating the response."}
+        logger.error(f"Error generating response: {str(e)}", exc_info=True)
+        return {"answer": None}
+
+
+async def generate_inferred_response(
+    llm_service: CompletionService,
+    query: str,
+    rules: list[Rule],
+    format: FormatType,
+) -> dict[str, Any]:
+    """
+    Generate a response from the language model based on the given query and format.
+
+    Parameters
+    ----------
+    llm_service : CompletionService
+        The language model service to use for generating the response.
+    query : str
+        The user's query to be answered.
+    rules : list[Rule]
+        A list of rules to apply when generating the response.
+    format : Literal["int", "str", "bool", "int_array", "str_array"]
+        The desired format of the response.
+
+    Returns
+    -------
+    dict[str, Any]
+        A dictionary containing the generated answer or None if an error occurs.
+    """
+    logger.info(
+        f"Generating inferred response for query: {query} in format: {format}"
+    )
+
+    output_model, format_specific_instructions = _get_model_and_instructions(
+        format, rules, query
+    )
+    prompt = INFERRED_BASE_PROMPT.substitute(
+        query=query,
+        format_specific_instructions=format_specific_instructions,
+    )
+
+    try:
+        response = await llm_service.generate_completion(prompt, output_model)
+        logger.info(f"Raw response from LLM: {response}")
+
+        if response is None or response.answer is None:
+            logger.warning("LLM returned None response")
+            return {"answer": None}
+
+        logger.info(f"Processed response: {response.answer}")
+        return {"answer": response.answer}
+    except Exception as e:
+        logger.error(f"Error generating response: {str(e)}", exc_info=True)
+        return {"answer": None}
 
 
 async def get_keywords(
-    llm_service: LLMService, query: str
+    llm_service: CompletionService, query: str
 ) -> dict[str, list[str] | None]:
     """
     Extract keywords from a query using the language model.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for keyword extraction.
     query : str
         The query from which to extract keywords.
@@ -160,14 +242,14 @@ async def get_keywords(
 
 
 async def get_similar_keywords(
-    llm_service: LLMService, chunks: str, rule: list[str]
+    llm_service: CompletionService, chunks: str, rule: list[str]
 ) -> dict[str, Any]:
     """
     Retrieve keywords similar to the provided keywords from the given text chunks.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for finding similar keywords.
     chunks : str
         The text chunks to search for similar keywords.
@@ -205,14 +287,14 @@ async def get_similar_keywords(
 
 
 async def decompose_query(
-    llm_service: LLMService, query: str
+    llm_service: CompletionService, query: str
 ) -> dict[str, Any]:
     """
     Decompose a complex query into multiple simpler sub-queries.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for query decomposition.
     query : str
         The complex query to be decomposed.
@@ -247,14 +329,14 @@ async def decompose_query(
 
 
 async def generate_schema(
-    llm_service: LLMService, data: Table
+    llm_service: CompletionService, data: Table
 ) -> dict[str, Any]:
     """
     Generate a schema for the table based on column information and questions.
 
     Parameters
     ----------
-    llm_service : LLMService
+    llm_service : CompletionService
         The language model service to use for schema generation.
     data : Table
         The table data containing information about columns, rows, and documents.

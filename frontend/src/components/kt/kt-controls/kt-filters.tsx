@@ -18,8 +18,8 @@ import { Empty } from "@components";
 import { plur } from "@utils/functions";
 
 export function KtFilters(props: BoxProps) {
-  const filters = useStore(store => store.filters);
-  const columns = useStore(store => store.columns);
+  const filters = useStore(store => store.getTable().filters);
+  const columns = useStore(store => store.getTable().columns);
 
   const handleAdd = () => {
     useStore.getState().addFilter({
@@ -30,7 +30,7 @@ export function KtFilters(props: BoxProps) {
   };
 
   return (
-    <Group {...props}>
+    <Group gap={8} {...props}>
       <Popover position="bottom-start">
         <Popover.Target>
           <Button leftSection={<IconFilter />}>Filters</Button>
@@ -45,7 +45,7 @@ export function KtFilters(props: BoxProps) {
                   variant="unstyled"
                   data={columns.map(column => ({
                     value: column.id,
-                    label: column.prompt.entityType
+                    label: column.entityType
                   }))}
                   comboboxProps={{ withinPortal: false }}
                   defaultValue={filter.columnId}
@@ -101,7 +101,7 @@ export function KtFilters(props: BoxProps) {
         <Paper withBorder py={4} px="xs">
           <Group>
             <Text>
-              {filters.length} {plur("cell", filters)} filters
+              {filters.length} row {plur("filter", filters)}
             </Text>
             <Anchor onClick={useStore.getState().applyFilters}>Reapply</Anchor>
           </Group>

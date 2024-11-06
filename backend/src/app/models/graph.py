@@ -1,24 +1,8 @@
 """Graph model."""
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
-
-
-class Chunk(BaseModel):
-    """Represents a chunk of content with associated metadata."""
-
-    chunk_id: str
-    content: str
-    page: Union[int, str]
-    triple_id: str
-
-
-class Document(BaseModel):
-    """Represents a document in the system with a name and an ID."""
-
-    id: str
-    name: str
 
 
 class Node(BaseModel):
@@ -26,6 +10,7 @@ class Node(BaseModel):
 
     label: str
     name: str
+    properties: Optional[Dict[str, Any]] = None
 
 
 class Relation(BaseModel):
@@ -41,15 +26,15 @@ class Triple(BaseModel):
     head: Node
     tail: Node
     relation: Relation
-    chunk_ids: List[str]
+    chunk_ids: Optional[List[str]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ExportData(BaseModel):
-    """Represents the exported data containing triples and content chunks."""
+class GraphChunk(BaseModel):
+    """Represents a chunk of content with associated metadata."""
 
-    triples: List[Triple]
-    chunks: List[Dict[str, Any]]
-
-    model_config = ConfigDict(from_attributes=True)
+    chunk_id: str
+    content: str
+    page: Union[int, str]
+    triple_id: str

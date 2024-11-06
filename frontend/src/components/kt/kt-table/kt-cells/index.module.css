@@ -1,0 +1,15 @@
+.target {
+  width: 100%;
+  height: 100%;
+
+  &.active {
+    background-color: var(--mantine-color-blue-light);
+  }
+}
+
+.dropdown {
+  padding: 0;
+  min-width: 360px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
