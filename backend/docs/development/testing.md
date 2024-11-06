@@ -2,10 +2,6 @@
 
 This guide covers how to run tests for the Knowledge Table project.
 
-## Prerequisites
-
-Ensure you have set up your development environment as described in the [Setup Guide](setup.md).
-
 ## Running Tests
 
 We use pytest for our test suite. To run the tests, follow these steps:
