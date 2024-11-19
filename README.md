@@ -12,7 +12,7 @@ For a limited demo, check out the [Knowledge Table Demo](https://knowledge-table
 
 https://github.com/user-attachments/assets/8e0e5cc6-6468-4bb5-888c-6b552e15b58a
 
-To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/).
+Also check out the WhyHow [Knowledge Graph Studio](https://github.com/whyhow-ai/knowledge-graph-studio), an open source platform that makes it easy and intuitive to create and manage RAG-native knowledge graphs. To learn more about WhyHow and our projects, visit our [website](https://whyhow.ai/) and our [blog](https://medium.com/enterprise-rag).
 
 ## Table of Contents
 
@@ -241,6 +241,7 @@ Once you've set up your questions, rules, and documents, the Knowledge Table pro
 To create the Schema for the Triples, we use an LLM to consider the Entity Type of the Column, the question that was used to generate the cells, and the values themselves, to create the schema and the triples. The document name is inserted as a node property. The vector chunk ids are also included in the JSON file of the triples, and tied to the triples created.
 
 ---
+
 ## Rules
 
 We now have 3 types of [Rules](https://medium.com/enterprise-rag/rules-extraction-guardrails-knowledge-table-studio-e84999ade353) you can now incorporate within your processes, which are:
